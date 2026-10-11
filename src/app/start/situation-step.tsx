@@ -78,7 +78,8 @@ const ORIGINS: {
   {
     id: "handover",
     label: "We are taking over from the builder",
-    detail: "The owners have elected a board. The builder still owns homes here, or left within the last year.",
+    detail:
+      "The owners have elected a board. The builder still owns homes here, or left within the last year.",
     changes:
       "You get the turnover checklist: what to check before you sign a release, and what the builder owed on the lots it still held.",
     icon: KeyRound,
@@ -86,7 +87,8 @@ const ORIGINS: {
   {
     id: "existing",
     label: "We already run our association",
-    detail: "The owners run it. Whether a manager did until now, another platform held the books, or it is brand new.",
+    detail:
+      "The owners run it. Whether a manager did until now, another platform held the books, or it is brand new.",
     changes:
       "Nothing has to be exported. You set what each home owed on the day you switch, and you are correct from there.",
     icon: Home,
@@ -95,7 +97,11 @@ const ORIGINS: {
 
 const PREVIOUSLY: { id: PreviousSetup; label: string; detail: string }[] = [
   { id: "manager", label: "A management company", detail: "You are taking the work in house" },
-  { id: "platform", label: "Another platform", detail: "PayHOA, a spreadsheet, whatever held the books" },
+  {
+    id: "platform",
+    label: "Another platform",
+    detail: "PayHOA, a spreadsheet, whatever held the books",
+  },
   { id: "fresh", label: "Nothing yet", detail: "The association is new and you are starting it" },
 ];
 
@@ -151,7 +157,9 @@ export function PropertyPicker({ draft, patch }: { draft: CommunityDraft; patch:
               onClick={() => pick(id)}
               className={cn(
                 "relative rounded-card border p-4 text-left transition-colors",
-                on ? "border-primary bg-primary-soft" : "border-border-2 bg-surface hover:bg-surface-2",
+                on
+                  ? "border-primary bg-primary-soft"
+                  : "border-border-2 bg-surface hover:bg-surface-2",
               )}
             >
               <span
@@ -165,7 +173,9 @@ export function PropertyPicker({ draft, patch }: { draft: CommunityDraft; patch:
               </span>
               <Icon className="size-5 text-fg-muted" />
               <span className="mt-2 block text-body font-semibold text-fg">{label}</span>
-              <span className="mt-0.5 block text-footnote leading-snug text-fg-muted">{detail}</span>
+              <span className="mt-0.5 block text-footnote leading-snug text-fg-muted">
+                {detail}
+              </span>
             </button>
           );
         })}
@@ -298,7 +308,9 @@ export function OriginPicker({ draft, patch }: { draft: CommunityDraft; patch: P
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block text-body font-semibold text-fg">{label}</span>
-                        <span className="block text-footnote leading-snug text-fg-muted">{detail}</span>
+                        <span className="block text-footnote leading-snug text-fg-muted">
+                          {detail}
+                        </span>
                       </span>
                       <span
                         className={cn(
@@ -325,7 +337,13 @@ function OriginCard({
   onPick,
   compact = false,
 }: {
-  option: { id: AssociationOrigin; label: string; detail: string; changes: string; icon: typeof Home };
+  option: {
+    id: AssociationOrigin;
+    label: string;
+    detail: string;
+    changes: string;
+    icon: typeof Home;
+  };
   picked: boolean;
   onPick: () => void;
   compact?: boolean;

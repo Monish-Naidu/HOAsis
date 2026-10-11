@@ -55,7 +55,12 @@ async function frameWith(page: Page, selector: string, tries = 20): Promise<Fram
     .poll(
       async () => {
         for (const f of page.frames()) {
-          if (await f.locator(selector).count().catch(() => 0)) {
+          if (
+            await f
+              .locator(selector)
+              .count()
+              .catch(() => 0)
+          ) {
             found = f;
             return true;
           }
@@ -82,7 +87,9 @@ test.describe.serial("Stripe, test mode", () => {
     test.setTimeout(120_000);
     await page.goto(await signInLink(baseURL!, `/c/${SLUG}/resident/pay`));
     await page.waitForLoadState("networkidle");
-    await expect(page.getByRole("heading", { name: "Pay", exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Pay", exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
 
     await page.getByRole("button", { name: /New card/ }).click();
     await page.getByRole("button", { name: /Continue to pay/ }).click();
@@ -99,7 +106,9 @@ test.describe.serial("Stripe, test mode", () => {
     test.setTimeout(120_000);
     await page.goto(await signInLink(baseURL!, `/c/${SLUG}/resident/pay`));
     await page.waitForLoadState("networkidle");
-    await expect(page.getByRole("heading", { name: "Pay", exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Pay", exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
 
     if (!(await page.getByRole("button", { name: /Visa/ }).count())) {
       await page.getByRole("button", { name: /Save a card or bank account/ }).click();
@@ -107,7 +116,9 @@ test.describe.serial("Stripe, test mode", () => {
       await tab.locator('[data-testid="card-tab"], [id="card-tab"]').first().click();
       await fillCard(page);
       await page.getByRole("button", { name: /Save payment method/ }).click();
-      await expect(page.getByRole("button", { name: /Visa/ }).first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("button", { name: /Visa/ }).first()).toBeVisible({
+        timeout: 30_000,
+      });
     }
     await page.getByRole("button", { name: /Visa/ }).first().click();
     await page.getByRole("button", { name: /Continue to pay/ }).click();

@@ -15,16 +15,35 @@
  */
 
 /** Hosts whose first label is an association. Local for testing. */
-export const VANITY_ROOTS = ["yourhoasis.com", "localhost"] as const;
+const VANITY_ROOTS = ["yourhoasis.com", "localhost"] as const;
 
 /** Labels that name a host or a route, never an association. Mirrors SQL. */
 const RESERVED = new Set([
-  "www", "app", "api", "mail", "admin", "board", "resident", "signin", "join",
-  "start", "auth", "about", "pricing", "library", "dev", "c", "help", "support",
-  "status", "demo", "test", "staging",
+  "www",
+  "app",
+  "api",
+  "mail",
+  "admin",
+  "board",
+  "resident",
+  "signin",
+  "join",
+  "start",
+  "auth",
+  "about",
+  "pricing",
+  "library",
+  "dev",
+  "c",
+  "help",
+  "support",
+  "status",
+  "demo",
+  "test",
+  "staging",
 ]);
 
-export function isReservedSlug(slug: string): boolean {
+function isReservedSlug(slug: string): boolean {
   return RESERVED.has(slug);
 }
 
@@ -70,8 +89,14 @@ export function sameAssociationName(a: string, b: string): boolean {
 }
 
 /** "Bothell, WA", or "" when neither is known. */
-export function placeLabel(city: string | null | undefined, state: string | null | undefined): string {
-  return [city, state].map((v) => (v ?? "").trim()).filter(Boolean).join(", ");
+export function placeLabel(
+  city: string | null | undefined,
+  state: string | null | undefined,
+): string {
+  return [city, state]
+    .map((v) => (v ?? "").trim())
+    .filter(Boolean)
+    .join(", ");
 }
 
 /** True when the string is a slug the database would accept. */

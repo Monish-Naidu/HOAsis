@@ -109,7 +109,13 @@ vi.mock("@/lib/supabase/client", () => {
 });
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -186,7 +192,10 @@ const change = (patch: Partial<Community>) => {
 let errors: string[];
 let fetched: { url: string; body: unknown }[];
 /** What a route answers, per call. Nothing means 200 with an empty body. */
-let route: (url: string, call: number) => { ok?: boolean; body?: unknown } | Promise<{ ok?: boolean; body?: unknown }> | undefined;
+let route: (
+  url: string,
+  call: number,
+) => { ok?: boolean; body?: unknown } | Promise<{ ok?: boolean; body?: unknown }> | undefined;
 
 beforeEach(async () => {
   db.statements = [];
@@ -264,36 +273,73 @@ describe("a write aimed at one row", () => {
     db.statements = [];
   });
   const cases: [label: string, statement: string, run: Run][] = [
-    ["Saving settings", "update associations", (s) => s.updateSettings({ showFundsToResidents: false })],
+    [
+      "Saving settings",
+      "update associations",
+      (s) => s.updateSettings({ showFundsToResidents: false }),
+    ],
     ["Removing the amenity", "delete amenities", (s, c) => s.removeAmenity(c.amenities[0].id)],
     [
       "Saving access",
       "update memberships",
-      (s, c) => s.setCapability(c.accounts.find((a) => a.role !== "president")!.id, "vendors", "change"),
+      (s, c) =>
+        s.setCapability(c.accounts.find((a) => a.role !== "president")!.id, "vendors", "change"),
     ],
     [
       "Saving the role (by person)",
       "update memberships",
       (s, c) => s.setAccountRole(c.accounts.find((a) => a.role !== "president")!.id, "secretary"),
     ],
-    ["Saving the role (by home)", "update memberships", (s, c) => s.setHomeRole(c.homes[3].id, "secretary")],
+    [
+      "Saving the role (by home)",
+      "update memberships",
+      (s, c) => s.setHomeRole(c.homes[3].id, "secretary"),
+    ],
     ["Saving the kind of home", "update units", (s, c) => s.setHomeType([c.homes[0].id], "condos")],
-    ["Saving what you saw", "update violation_reports", (s) => s.verifyReport("rep-1", "Pat", "Seen it")],
-    ["Closing the report", "update violation_reports", (s) => s.dismissReport("rep-1", "Nothing there")],
+    [
+      "Saving what you saw",
+      "update violation_reports",
+      (s) => s.verifyReport("rep-1", "Pat", "Seen it"),
+    ],
+    [
+      "Closing the report",
+      "update violation_reports",
+      (s) => s.dismissReport("rep-1", "Nothing there"),
+    ],
     ["Closing the ballot", "update ballots", (s, c) => s.closeBallot(c.ballots[0].id)],
-    ["Resolving the notice", "update violations", (s, c) => s.setViolationStage(c.violations[0].id, "cured")],
-    ["Removing the announcement", "delete announcements", (s, c) => s.removeAnnouncement(c.announcements[0].id)],
-    ["Saving the decision on a post", "update posts", (s, c) => s.moderatePost(c.posts[0].id, "rejected", "Off topic")],
+    [
+      "Resolving the notice",
+      "update violations",
+      (s, c) => s.setViolationStage(c.violations[0].id, "cured"),
+    ],
+    [
+      "Removing the announcement",
+      "delete announcements",
+      (s, c) => s.removeAnnouncement(c.announcements[0].id),
+    ],
+    [
+      "Saving the decision on a post",
+      "update posts",
+      (s, c) => s.moderatePost(c.posts[0].id, "rejected", "Off topic"),
+    ],
     ["Pinning", "update posts", (s, c) => s.togglePinned(c.posts[0].id)],
     ["Removing the post", "update posts", (s, c) => s.removePost(c.posts[0].id)],
     ["Saving the work order", "update requests", (s, c) => s.setWorkOrder(c.requests[0].id, null)],
     ["Ticking it off", "update action_items", (s) => s.setActionItemDone("item-1", true)],
     ["Removing the item", "delete action_items", (s) => s.removeActionItem("item-1")],
     ["Declining", "update join_requests", (s) => s.declineJoinRequest("join-1")],
-    ["Saving the decision on a request", "update requests", (s, c) => s.updateRequestStatus(c.requests[0].id, "approved")],
+    [
+      "Saving the decision on a request",
+      "update requests",
+      (s, c) => s.updateRequestStatus(c.requests[0].id, "approved"),
+    ],
     ["Noting the W-9", "update vendors", (s, c) => s.markW9Requested(c.vendors[0].id)],
     ["Removing the vendor", "delete vendors", (s, c) => s.removeVendor(c.vendors[0].id)],
-    ["Adding the owner", "update memberships", (s, c) => s.setHouseholdOwner(c.homes[0].id, { name: "Jane Doe", email: "" })],
+    [
+      "Adding the owner",
+      "update memberships",
+      (s, c) => s.setHouseholdOwner(c.homes[0].id, { name: "Jane Doe", email: "" }),
+    ],
     [
       "Saving amenities",
       "update amenities",
@@ -323,16 +369,28 @@ describe("a write aimed at one row", () => {
         });
       },
     ],
-    ["Changing who can see a document", "update documents", (s, c) => s.setDocumentVisibility(c.documents[0].id, "board")],
+    [
+      "Changing who can see a document",
+      "update documents",
+      (s, c) => s.setDocumentVisibility(c.documents[0].id, "board"),
+    ],
     ["Removing a document", "delete documents", (s, c) => s.removeDocument(c.documents[0].id)],
-    ["Saving the association", "update associations", (s) => s.updateAssociation({ ein: "12-3456789" })],
+    [
+      "Saving the association",
+      "update associations",
+      (s) => s.updateAssociation({ ein: "12-3456789" }),
+    ],
     ["Removing the shared cost", "delete shared_costs", (s) => s.removeSharedCost("cost-1")],
     [
       "Saving the template",
       "update message_templates",
       (s, c) => s.saveTemplate({ ...c.templates[0], id: UUID }),
     ],
-    ["Bringing a setup step back", "delete setup_dismissals", (s) => s.restoreSetupTask("insurance")],
+    [
+      "Bringing a setup step back",
+      "delete setup_dismissals",
+      (s) => s.restoreSetupTask("insurance"),
+    ],
   ];
 
   it.each(cases)("%s asks how many rows it changed", async (_label, statement, run) => {
@@ -343,7 +401,10 @@ describe("a write aimed at one row", () => {
     const [target] = [statement.split(" ")[1]];
     const aimed = writes().filter((s) => `${s.op} ${s.target}` === statement);
     expect(aimed, `no ${statement} ran; saw ${targets().join(", ")}`).not.toHaveLength(0);
-    expect(aimed.every((s) => s.counted), `${target} was written without a count`).toBe(true);
+    expect(
+      aimed.every((s) => s.counted),
+      `${target} was written without a count`,
+    ).toBe(true);
     expect(errors).toEqual([]);
   });
 
@@ -368,7 +429,10 @@ describe("a write aimed at one row", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setHouseholdOwner(server().homes[0].id, { name: "Jane Doe", email: "" });
+      ok = await result.current.setHouseholdOwner(server().homes[0].id, {
+        name: "Jane Doe",
+        email: "",
+      });
     });
 
     expect(ok).toBe(false);
@@ -449,7 +513,9 @@ describe("saving a whole list from a screen a moment behind", () => {
   const A = "0b9d6c1e-6f0a-4c56-9d53-3f1f0a8d2c21";
   const B = "0b9d6c1e-6f0a-4c56-9d53-3f1f0a8d2c22";
   const ids = (s: Statement) =>
-    s.filters.flatMap(([, column, value]) => (column === "id" ? (Array.isArray(value) ? value : [value]) : []));
+    s.filters.flatMap(([, column, value]) =>
+      column === "id" ? (Array.isArray(value) ? value : [value]) : [],
+    );
 
   /** A table that forgets a deleted row, and matches nothing aimed at one that is gone. */
   function keeps(table: "amenities" | "forms") {
@@ -466,7 +532,10 @@ describe("saving a whole list from a screen a moment behind", () => {
     const [first, second] = server().amenities;
     const [form] = server().forms;
     change({
-      amenities: [{ ...first, id: A }, { ...second, id: B }],
+      amenities: [
+        { ...first, id: A },
+        { ...second, id: B },
+      ],
       forms: [
         { ...form, id: A, source: "uploaded" },
         { ...form, id: B, source: "uploaded", label: "Fence request" },
@@ -485,7 +554,9 @@ describe("saving a whole list from a screen a moment behind", () => {
     act(() => {
       result.current.removeAmenity(A);
       // Still listing A: the removal has not been read back yet.
-      result.current.setAmenities(listed.map((a) => (a.id === B ? { ...a, name: "Pool, heated" } : a)));
+      result.current.setAmenities(
+        listed.map((a) => (a.id === B ? { ...a, name: "Pool, heated" } : a)),
+      );
     });
     await settled();
 
@@ -517,7 +588,9 @@ describe("saving a whole list from a screen a moment behind", () => {
     const listed = server().forms;
     act(() => {
       result.current.removeForm(A);
-      result.current.setForms(listed.map((f) => (f.id === B ? { ...f, label: "Fence or wall" } : f)));
+      result.current.setForms(
+        listed.map((f) => (f.id === B ? { ...f, label: "Fence or wall" } : f)),
+      );
       result.current.setForms(listed.filter((f) => f.id === B));
     });
     await settled();
@@ -590,7 +663,11 @@ describe("raising a notice from a report", () => {
     });
     await settled();
 
-    expect(targets()).toEqual(["update violation_reports", "insert violations", "update violation_reports"]);
+    expect(targets()).toEqual([
+      "update violation_reports",
+      "insert violations",
+      "update violation_reports",
+    ]);
     const release = writes()[2];
     expect(release.values).toEqual({ violation_id: null });
     expect(release.filters[0]).toEqual(["eq", "id", report.id]);
@@ -605,7 +682,9 @@ describe("a write that may rightly match nothing", () => {
     await act(async () => {
       // The first opening balance for a home has no earlier line, and since
       // money lines are never updated or deleted (0106) it writes one insert.
-      await result.current.setOpeningBalances("2026-07-01", [{ homeId: home.id, amountCents: 50_000 }]);
+      await result.current.setOpeningBalances("2026-07-01", [
+        { homeId: home.id, amountCents: 50_000 },
+      ]);
     });
     await settled();
 
@@ -659,7 +738,9 @@ describe("approving a request to join", () => {
     // The request used to be marked approved and the welcome sent for a home
     // that was never created.
     db.answer = (s) =>
-      s.target === "rpc:add_household" ? { error: { message: "That home is already on the roster" } } : undefined;
+      s.target === "rpc:add_household"
+        ? { error: { message: "That home is already on the roster" } }
+        : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
@@ -686,7 +767,11 @@ describe("letting somebody in on a home already on the register", () => {
 
     expect(ok).toBe(true);
     expect(targets()).toEqual(["rpc:seat_join_request", "update join_requests"]);
-    expect(writes()[0].values).toEqual({ p_request_id: request().id, p_unit_id: plainHome().id, p_as_second: false });
+    expect(writes()[0].values).toEqual({
+      p_request_id: request().id,
+      p_unit_id: plainHome().id,
+      p_as_second: false,
+    });
     // No home was made from what they typed.
     expect(targets()).not.toContain("rpc:add_household");
     expect(fetched.map((f) => f.url)).toEqual(["/api/email/invite"]);
@@ -706,7 +791,12 @@ describe("letting somebody in on a home already on the register", () => {
   it("leaves the request waiting when the database says the home has an owner", async () => {
     db.answer = (s) =>
       s.target === "rpc:seat_join_request"
-        ? { error: { message: "That home already has an owner. Add them as a second owner, or record a sale" } }
+        ? {
+            error: {
+              message:
+                "That home already has an owner. Add them as a second owner, or record a sale",
+            },
+          }
         : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
@@ -726,14 +816,25 @@ describe("letting somebody in on a home already on the register", () => {
     const { result } = renderApp();
     const target = server().homes[0];
     await act(async () => {
-      await result.current.addSecondOwner(target.id, { name: " Lee Two ", email: " lee@example.com " });
+      await result.current.addSecondOwner(target.id, {
+        name: " Lee Two ",
+        email: " lee@example.com ",
+      });
       await result.current.changeOwnerEmail(target.id, " fixed@example.com ");
     });
 
     expect(targets()).toEqual(["rpc:add_second_owner", "rpc:change_owner_email"]);
-    expect(writes()[0].values).toEqual({ p_unit_id: target.id, p_name: "Lee Two", p_email: "lee@example.com" });
+    expect(writes()[0].values).toEqual({
+      p_unit_id: target.id,
+      p_name: "Lee Two",
+      p_email: "lee@example.com",
+    });
     // The seat is found by the address it has now: a home can have two owners.
-    expect(writes()[1].values).toEqual({ p_unit_id: target.id, p_old_email: target.email, p_new_email: "fixed@example.com" });
+    expect(writes()[1].values).toEqual({
+      p_unit_id: target.id,
+      p_old_email: target.email,
+      p_new_email: "fixed@example.com",
+    });
   });
 });
 
@@ -760,7 +861,11 @@ describe("the Homeowners screen: asked to join", () => {
   it("lets them in on a home with no owner listed", async () => {
     const user = userEvent.setup();
     const home = server().homes.find((o) => o.unit === request().unit)!;
-    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, placeholder: true, displayName: "No owner yet", email: "" } : o)) });
+    change({
+      homes: server().homes.map((o) =>
+        o.id === home.id ? { ...o, placeholder: true, displayName: "No owner yet", email: "" } : o,
+      ),
+    });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -769,12 +874,19 @@ describe("the Homeowners screen: asked to join", () => {
     await user.click(screen.getByRole("button", { name: "Let them in" }));
     await settled();
 
-    expect(writes()[0]).toMatchObject({ target: "rpc:seat_join_request", values: { p_unit_id: home.id, p_as_second: false } });
+    expect(writes()[0]).toMatchObject({
+      target: "rpc:seat_join_request",
+      values: { p_unit_id: home.id, p_as_second: false },
+    });
   });
 
   it("selects nothing when what they typed matches no home, and creates nothing unless asked", async () => {
     const user = userEvent.setup();
-    change({ joinRequests: server().joinRequests.map((j) => (j.status === "pending" ? { ...j, unit: "Plot 9000" } : j)) });
+    change({
+      joinRequests: server().joinRequests.map((j) =>
+        j.status === "pending" ? { ...j, unit: "Plot 9000" } : j,
+      ),
+    });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -785,7 +897,10 @@ describe("the Homeowners screen: asked to join", () => {
     expect(writes()).toEqual([]);
 
     // The only way to make a home is the last choice, which names its label.
-    await user.selectOptions(picker(), screen.getByRole("option", { name: "Add as a new home: Plot 9000" }));
+    await user.selectOptions(
+      picker(),
+      screen.getByRole("option", { name: "Add as a new home: Plot 9000" }),
+    );
     await user.click(screen.getByRole("button", { name: "Let them in" }));
     await settled();
 
@@ -797,7 +912,11 @@ describe("the Homeowners screen: the household card and the join code", () => {
   // One on the first page of the roster, which sorts behind first, then by unit.
   const unsigned = () =>
     [...server().homes]
-      .sort((a, b) => (a.daysPastDue !== b.daysPastDue ? b.daysPastDue - a.daysPastDue : Number(a.unit) - Number(b.unit)))
+      .sort((a, b) =>
+        a.daysPastDue !== b.daysPastDue
+          ? b.daysPastDue - a.daysPastDue
+          : Number(a.unit) - Number(b.unit),
+      )
       .slice(0, 50)
       .find((o) => !o.placeholder && !server().accounts.some((a) => a.homeId === o.id))!;
 
@@ -807,7 +926,9 @@ describe("the Homeowners screen: the household card and the join code", () => {
     renderScreen(<screens.HomeownersScreen />);
 
     await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the email for ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the email for ${home.displayName}` }),
+    );
     const box = screen.getByLabelText("New owner email");
     await user.clear(box);
     await user.type(box, "right@example.com");
@@ -860,7 +981,14 @@ describe("the Homeowners screen: the household card and the join code", () => {
     for (const key of Object.keys(lookOnly) as (keyof typeof lookOnly)[]) lookOnly[key] = false;
     change({
       accounts: server().accounts.map((a) =>
-        a.id === ME ? { ...a, role: "secretary" as const, capabilities: lookOnly, views: { ...lookOnly, finances: true } } : a,
+        a.id === ME
+          ? {
+              ...a,
+              role: "secretary" as const,
+              capabilities: lookOnly,
+              views: { ...lookOnly, finances: true },
+            }
+          : a,
       ),
     });
     await act(async () => {
@@ -873,7 +1001,9 @@ describe("the Homeowners screen: the household card and the join code", () => {
     expect(screen.queryByRole("button", { name: "Copy code" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
     expect(screen.queryByRole("button", { name: /^Change the email for/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Add a second owner to/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Add a second owner to/ }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -885,7 +1015,10 @@ describe("founding an association", () => {
       if (s.target === "bank_accounts") return { error: { message: "bank_accounts is down" } };
       return undefined;
     };
-    reads.loadMyAssociations.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "assoc-new", isHome: false }]);
+    reads.loadMyAssociations.mockResolvedValue([
+      SUMMARY,
+      { ...SUMMARY, id: "assoc-new", isHome: false },
+    ]);
     const { result } = renderApp();
     const draft = {
       name: "Oak Hills",
@@ -940,7 +1073,9 @@ describe("a home's own dues", () => {
 
   it("answers false and says why when the database refused it", async () => {
     db.answer = (s) =>
-      s.target === "rpc:set_home_dues" ? { error: { message: "You cannot change dues for that home" } } : undefined;
+      s.target === "rpc:set_home_dues"
+        ? { error: { message: "You cannot change dues for that home" } }
+        : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
@@ -965,7 +1100,9 @@ describe("a home's own dues", () => {
     const home = plainHome();
     renderScreen(<screens.HomeownersScreen />);
     await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }),
+    );
     await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
@@ -980,10 +1117,14 @@ describe("a home's own dues", () => {
     const user = userEvent.setup();
     const home = plainHome();
     db.answer = (s) =>
-      s.target === "rpc:set_home_dues" ? { error: { message: "You cannot change dues for that home" } } : undefined;
+      s.target === "rpc:set_home_dues"
+        ? { error: { message: "You cannot change dues for that home" } }
+        : undefined;
     renderScreen(<screens.HomeownersScreen />);
     await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }),
+    );
     await user.clear(screen.getByLabelText("Dues for this home"));
     await user.type(screen.getByLabelText("Dues for this home"), "310");
     await user.click(screen.getByRole("button", { name: "Save dues" }));
@@ -997,13 +1138,17 @@ describe("a home's own dues", () => {
   it("Use the standard rate clears it and says what the home pays then", async () => {
     const user = userEvent.setup();
     const home = plainHome();
-    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, duesCents: 28_500 } : o)) });
+    change({
+      homes: server().homes.map((o) => (o.id === home.id ? { ...o, duesCents: 28_500 } : o)),
+    });
     await act(async () => {
       await store.refreshRemote();
     });
     renderScreen(<screens.HomeownersScreen />);
     await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }),
+    );
     expect(screen.getByText(/from its own amount/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Use the standard rate" }));
     await settled();
@@ -1052,7 +1197,10 @@ describe("founding an association with dues by home", () => {
 
   it("writes each home's own amount after the association exists, and no other home's", async () => {
     db.answer = register;
-    reads.loadMyAssociations.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "assoc-new", isHome: false }]);
+    reads.loadMyAssociations.mockResolvedValue([
+      SUMMARY,
+      { ...SUMMARY, id: "assoc-new", isHome: false },
+    ]);
     const { result } = renderApp();
     await act(async () => {
       await result.current.createRemoteAssociation(draft(rows));
@@ -1068,10 +1216,14 @@ describe("founding an association with dues by home", () => {
 
   it("says which homes did not get theirs, and still lands in the association", async () => {
     db.answer = (s) =>
-      s.target === "rpc:set_home_dues" && (s.values as { p_unit_id: string }).p_unit_id === "unit-202"
+      s.target === "rpc:set_home_dues" &&
+      (s.values as { p_unit_id: string }).p_unit_id === "unit-202"
         ? { error: { message: "set_home_dues is down" } }
         : register(s);
-    reads.loadMyAssociations.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "assoc-new", isHome: false }]);
+    reads.loadMyAssociations.mockResolvedValue([
+      SUMMARY,
+      { ...SUMMARY, id: "assoc-new", isHome: false },
+    ]);
     const { result } = renderApp();
     let id: string | undefined;
     await act(async () => {
@@ -1086,7 +1238,10 @@ describe("founding an association with dues by home", () => {
 
   it("writes nothing for homes when no home has its own amount", async () => {
     db.answer = register;
-    reads.loadMyAssociations.mockResolvedValue([SUMMARY, { ...SUMMARY, id: "assoc-new", isHome: false }]);
+    reads.loadMyAssociations.mockResolvedValue([
+      SUMMARY,
+      { ...SUMMARY, id: "assoc-new", isHome: false },
+    ]);
     const { result } = renderApp();
     await act(async () => {
       await result.current.createRemoteAssociation(draft([{ name: "", email: "", unit: "102" }]));
@@ -1097,7 +1252,12 @@ describe("founding an association with dues by home", () => {
 
 describe("recording a sale", () => {
   const seller = () => server().homes.find((o) => o.balanceCents > 0 && !o.boardRole)!;
-  const sale = { name: "Priya Nair", email: "priya@example.com", closingDate: "2026-08-20", settleBalance: true };
+  const sale = {
+    name: "Priya Nair",
+    email: "priya@example.com",
+    closingDate: "2026-08-20",
+    settleBalance: true,
+  };
 
   it("records the sale before any money, so a refused sale writes nothing", async () => {
     db.answer = (s) =>
@@ -1129,7 +1289,10 @@ describe("recording a sale", () => {
     expect(ok).toBe(true);
     expect(targets()).toEqual(["rpc:transfer_home", "insert charges", "insert ledger_entries"]);
     expect(writes()[1].values).toMatchObject({ kind: "payment", amount_cents: -home.balanceCents });
-    expect(writes()[2].values).toMatchObject({ category: "Assessments", amount_cents: home.balanceCents });
+    expect(writes()[2].values).toMatchObject({
+      category: "Assessments",
+      amount_cents: home.balanceCents,
+    });
   });
 
   it("settles what the home owes when the write runs, not what it owed when the form opened", async () => {
@@ -1137,8 +1300,11 @@ describe("recording a sale", () => {
     const { result } = renderApp();
     // A payment lands, and is read back, between the form opening and the
     // press: the first attempt is refused and the association is re-read.
-    db.answer = (s) => (s.target === "rpc:transfer_home" ? { error: { message: "Check the date" } } : undefined);
-    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, balanceCents: 10_000 } : o)) });
+    db.answer = (s) =>
+      s.target === "rpc:transfer_home" ? { error: { message: "Check the date" } } : undefined;
+    change({
+      homes: server().homes.map((o) => (o.id === home.id ? { ...o, balanceCents: 10_000 } : o)),
+    });
     await act(async () => {
       await result.current.transferHome(home.id, sale);
     });
@@ -1153,7 +1319,8 @@ describe("recording a sale", () => {
   });
 
   it("says the sale is on record when only the payment at closing failed", async () => {
-    db.answer = (s) => (s.target === "charges" ? { error: { message: "charges is down" } } : undefined);
+    db.answer = (s) =>
+      s.target === "charges" ? { error: { message: "charges is down" } } : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
@@ -1168,7 +1335,12 @@ describe("recording a sale", () => {
 });
 
 describe("an officer recording the sale of their own home", () => {
-  const sale = { name: "Priya Nair", email: "priya@example.com", closingDate: "2026-08-20", settleBalance: true };
+  const sale = {
+    name: "Priya Nair",
+    email: "priya@example.com",
+    closingDate: "2026-08-20",
+    settleBalance: true,
+  };
 
   /** The signed in officer becomes the Treasurer living in a home that owes. */
   async function treasurerAtHome() {
@@ -1217,7 +1389,10 @@ describe("an officer recording the sale of their own home", () => {
 
   it("says the balance is paid and the sale is not, when the sale is refused after the money", async () => {
     const home = await treasurerAtHome();
-    db.answer = (s) => (s.target === "rpc:transfer_home" ? { error: { message: "The new owner needs a name" } } : undefined);
+    db.answer = (s) =>
+      s.target === "rpc:transfer_home"
+        ? { error: { message: "The new owner needs a name" } }
+        : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
@@ -1225,20 +1400,29 @@ describe("an officer recording the sale of their own home", () => {
     });
 
     expect(ok).toBe(false);
-    expect(errors[0]).toContain("the balance paid at closing is recorded, but the sale was not (The new owner needs a name)");
+    expect(errors[0]).toContain(
+      "the balance paid at closing is recorded, but the sale was not (The new owner needs a name)",
+    );
     expect(errors[0]).toContain("the balance will not be paid twice");
   });
 
   it("still sells first when the home is the President's, which the database refuses", async () => {
     // ME is the President here, as in every other test in this file.
     const mine = server().accounts.find((a) => a.id === ME)!;
-    change({ homes: server().homes.map((o) => (o.id === mine.homeId ? { ...o, balanceCents: 30_000 } : o)) });
+    change({
+      homes: server().homes.map((o) => (o.id === mine.homeId ? { ...o, balanceCents: 30_000 } : o)),
+    });
     await act(async () => {
       await store.refreshRemote();
     });
     db.answer = (s) =>
       s.target === "rpc:transfer_home"
-        ? { error: { message: "This home is held by the President. Hand over the office before recording the sale." } }
+        ? {
+            error: {
+              message:
+                "This home is held by the President. Hand over the office before recording the sale.",
+            },
+          }
         : undefined;
     const { result } = renderApp();
     await act(async () => {
@@ -1288,7 +1472,9 @@ describe("two presses in quick succession", () => {
       }
       if (s.target === "payouts") {
         change({
-          payouts: server().payouts.map((p) => (p.id === id ? ({ ...p, ...values } as typeof p) : p)),
+          payouts: server().payouts.map((p) =>
+            p.id === id ? ({ ...p, ...values } as typeof p) : p,
+          ),
         });
       }
       return undefined;
@@ -1334,10 +1520,10 @@ describe("two presses in quick succession", () => {
 
     expect(saved.every((v) => v !== false)).toBe(true);
     const thread = server().requests.find((r) => r.id === request.id)!.thread;
-    expect(thread.slice(before).map((e) => e.body), "the second reply erased the first").toEqual([
-      "Can you send a photo?",
-      "And the colour sample.",
-    ]);
+    expect(
+      thread.slice(before).map((e) => e.body),
+      "the second reply erased the first",
+    ).toEqual(["Can you send a photo?", "And the colour sample."]);
     expect(thread.slice(before).map((e) => e.kind)).toEqual(["note", "note"]);
     expect(new Set(thread.map((e) => e.id)).size, "two events shared an id").toBe(thread.length);
     // The existing "request updated" email, once per saved reply.
@@ -1354,7 +1540,11 @@ describe("two presses in quick succession", () => {
     const { result } = renderApp();
     let ok = false;
     await act(async () => {
-      ok = await result.current.updateRequestStatus(request.id, "denied", "Denied. The fence is over the height limit.");
+      ok = await result.current.updateRequestStatus(
+        request.id,
+        "denied",
+        "Denied. The fence is over the height limit.",
+      );
     });
     await settled();
 
@@ -1365,7 +1555,10 @@ describe("two presses in quick succession", () => {
       decided_note: "Denied. The fence is over the height limit.",
     });
     const thread = server().requests.find((r) => r.id === request.id)!.thread;
-    expect(thread.at(-1)).toMatchObject({ kind: "status", body: "Denied. The fence is over the height limit." });
+    expect(thread.at(-1)).toMatchObject({
+      kind: "status",
+      body: "Denied. The fence is over the height limit.",
+    });
   });
 
   it("sends both replies on a thread, one after the other, for the database to append", async () => {
@@ -1409,7 +1602,9 @@ describe("saving settings", () => {
   it("does not write when the settings could not be read first", async () => {
     // Merging the patch into nothing replaced every other setting with it.
     db.answer = (s) =>
-      s.target === "associations" && s.op === "select" ? { error: { message: "timeout" } } : undefined;
+      s.target === "associations" && s.op === "select"
+        ? { error: { message: "timeout" } }
+        : undefined;
     const { result } = renderApp();
     act(() => void result.current.updateSettings({ showFundsToResidents: false }));
     await settled();
@@ -1428,7 +1623,11 @@ describe("saving settings", () => {
     await settled();
 
     expect(writes()[0].values).toEqual({
-      settings: { forumEnabled: true, banner: { title: "Hello", detail: "" }, showFundsToResidents: false },
+      settings: {
+        forumEnabled: true,
+        banner: { title: "Hello", detail: "" },
+        showFundsToResidents: false,
+      },
     });
   });
 
@@ -1436,7 +1635,12 @@ describe("saving settings", () => {
     // Each box sent the whole banner as its render saw it, so the detail,
     // saved a moment after the title, put the old title back.
     let kept: Record<string, unknown> = {
-      banner: { enabled: true, title: "Old title", detail: "Old detail", updatedDate: "2026-08-01" },
+      banner: {
+        enabled: true,
+        title: "Old title",
+        detail: "Old detail",
+        updatedDate: "2026-08-01",
+      },
     };
     db.answer = (s) => {
       if (s.target !== "associations") return undefined;
@@ -1471,7 +1675,8 @@ describe("saving settings", () => {
   });
 
   it("answers false when the save was refused, so a screen does not say saved", async () => {
-    db.answer = (s) => (s.target === "associations" && s.op === "update" ? { count: 0 } : undefined);
+    db.answer = (s) =>
+      s.target === "associations" && s.op === "update" ? { count: 0 } : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
@@ -1536,8 +1741,18 @@ describe("opening balances", () => {
     });
 
     expect(targets()).toEqual(["insert charges", "insert charges"]);
-    expect(writes()[0].values).toMatchObject({ unit_id: first.id, kind: "charge", amount_cents: 20_000, label: OPENING });
-    expect(writes()[1].values).toMatchObject({ unit_id: second.id, kind: "credit", amount_cents: -6_000, label: OPENING });
+    expect(writes()[0].values).toMatchObject({
+      unit_id: first.id,
+      kind: "charge",
+      amount_cents: 20_000,
+      label: OPENING,
+    });
+    expect(writes()[1].values).toMatchObject({
+      unit_id: second.id,
+      kind: "credit",
+      amount_cents: -6_000,
+      label: OPENING,
+    });
   });
 
   it("will not move the date of a line that is already on the books", async () => {
@@ -1549,7 +1764,9 @@ describe("opening balances", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setOpeningBalances("2026-08-01", [{ homeId: first.id, amountCents: 30_000 }]);
+      ok = await result.current.setOpeningBalances("2026-08-01", [
+        { homeId: first.id, amountCents: 30_000 },
+      ]);
     });
 
     expect(ok).toBe(false);
@@ -1623,7 +1840,9 @@ describe("what a real association is not offered yet", () => {
     for (const name of ["Amend", "Add", "Remove", "Start from this"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
-    expect(screen.queryByRole("button", { name: /Send to owners|board agenda|Save as a draft/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Send to owners|board agenda|Save as a draft/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("records a vendor payment as already made, with no route that nothing sends", async () => {
@@ -1639,7 +1858,11 @@ describe("what a real association is not offered yet", () => {
 
     // Paid, needing no approval, and on the books from the same press.
     expect(targets()).toEqual(["insert payouts", "insert ledger_entries"]);
-    expect(writes()[0].values).toMatchObject({ status: "paid", approvals_required: 0, amount_cents: 138_000 });
+    expect(writes()[0].values).toMatchObject({
+      status: "paid",
+      approvals_required: 0,
+      amount_cents: 138_000,
+    });
     // Vendor 0 has a usual category; the form starts from it.
     expect(writes()[1].values).toMatchObject({
       amount_cents: -138_000,
@@ -1649,7 +1872,11 @@ describe("what a real association is not offered yet", () => {
 
   it("asks what the payment was for, and books it under that", async () => {
     const user = userEvent.setup();
-    change({ vendors: server().vendors.map((v, i) => (i === 0 ? { ...v, defaultCategory: "Vendors" as never } : v)) });
+    change({
+      vendors: server().vendors.map((v, i) =>
+        i === 0 ? { ...v, defaultCategory: "Vendors" as never } : v,
+      ),
+    });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -1694,12 +1921,18 @@ describe("recording an owner's check or cash", () => {
 
   it("answers false when the database refused it, so no screen says recorded", async () => {
     db.answer = (s) =>
-      s.target === "rpc:record_manual_payment" ? { error: { message: "You cannot record a payment for that home" } } : undefined;
+      s.target === "rpc:record_manual_payment"
+        ? { error: { message: "You cannot record a payment for that home" } }
+        : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
       ok = await result.current.recordManualPayment({
-        homeId: UNIT, amountCents: 100, method: "cash", reference: "", receivedOn: "2026-10-01",
+        homeId: UNIT,
+        amountCents: 100,
+        method: "cash",
+        reference: "",
+        receivedOn: "2026-10-01",
       });
     });
     expect(ok).toBe(false);
@@ -1713,7 +1946,11 @@ describe("a credit on a statement", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.addCredit({ homeId: home.id, amountCents: 2_500, reason: " Late fee waived " });
+      ok = await result.current.addCredit({
+        homeId: home.id,
+        amountCents: 2_500,
+        reason: " Late fee waived ",
+      });
     });
     expect(ok).toBe(true);
     expect(targets()).toEqual(["rpc:add_credit"]);
@@ -1732,7 +1969,10 @@ describe("an opening bank balance", () => {
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 8_600_000, asOf: "2026-09-01" });
+      ok = await result.current.setOpeningBankBalance(ACCOUNT, {
+        amountCents: 8_600_000,
+        asOf: "2026-09-01",
+      });
     });
     expect(ok).toBe(true);
     expect(targets()).toEqual(["insert ledger_entries"]);
@@ -1748,10 +1988,15 @@ describe("an opening bank balance", () => {
 
   it("corrects an earlier figure with a line for the difference, and deletes nothing", async () => {
     db.answer = (s) =>
-      s.op === "select" && s.target === "ledger_entries" ? { data: [{ amount_cents: 8_000_000 }] } : undefined;
+      s.op === "select" && s.target === "ledger_entries"
+        ? { data: [{ amount_cents: 8_000_000 }] }
+        : undefined;
     const { result } = renderApp();
     await act(async () => {
-      await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 8_600_000, asOf: "2026-09-01" });
+      await result.current.setOpeningBankBalance(ACCOUNT, {
+        amountCents: 8_600_000,
+        asOf: "2026-09-01",
+      });
     });
     expect(targets()).toEqual(["insert ledger_entries"]);
     expect(writes()[0].values).toMatchObject({
@@ -1763,11 +2008,16 @@ describe("an opening bank balance", () => {
 
   it("writes nothing when the figure is already what is on the books", async () => {
     db.answer = (s) =>
-      s.op === "select" && s.target === "ledger_entries" ? { data: [{ amount_cents: 8_600_000 }] } : undefined;
+      s.op === "select" && s.target === "ledger_entries"
+        ? { data: [{ amount_cents: 8_600_000 }] }
+        : undefined;
     const { result } = renderApp();
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.setOpeningBankBalance(ACCOUNT, { amountCents: 8_600_000, asOf: "2026-09-01" });
+      ok = await result.current.setOpeningBankBalance(ACCOUNT, {
+        amountCents: 8_600_000,
+        asOf: "2026-09-01",
+      });
     });
     expect(ok).toBe(true);
     expect(targets()).toEqual([]);
@@ -1803,7 +2053,11 @@ describe("the opening balances screen, for a real association", () => {
     });
     expect(await screen.findByRole("button", { name: "Saved" })).toBeDisabled();
     expect(targets()).toEqual(["insert charges"]);
-    expect(writes().every((s) => (s.filters[0]?.[2] ?? (s.values as { unit_id: string }).unit_id) === home.id)).toBe(true);
+    expect(
+      writes().every(
+        (s) => (s.filters[0]?.[2] ?? (s.values as { unit_id: string }).unit_id) === home.id,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -1828,7 +2082,15 @@ describe("a board reply", () => {
   it("says the email did not go when the route sent none, and sent when it did", async () => {
     const thread = server().threads.find((t) => t.homeId)!;
     const { result } = renderApp();
-    route = () => ({ body: { sent: 0, failed: 1, already: 0, remaining: 0, errors: ["a@b.com: Invalid `to` field"] } });
+    route = () => ({
+      body: {
+        sent: 0,
+        failed: 1,
+        already: 0,
+        remaining: 0,
+        errors: ["a@b.com: Invalid `to` field"],
+      },
+    });
     let email: unknown;
     await act(async () => {
       email = await result.current.replyToThread(thread.id, "On it.");
@@ -1874,7 +2136,10 @@ describe("a notice about a home", () => {
     await settled();
 
     expect(targets()).toEqual(["insert violations"]);
-    expect(writes()[0].values).toMatchObject({ rule: "Trash cans", fix: "Bring them in by Tuesday" });
+    expect(writes()[0].values).toMatchObject({
+      rule: "Trash cans",
+      fix: "Bring them in by Tuesday",
+    });
   });
 });
 
@@ -1883,7 +2148,8 @@ describe("filing a request", () => {
 
   it("answers with the number the database kept, not the one the form made up", async () => {
     // Somebody else already holds 200, so the row was stored as 201.
-    db.answer = (s) => (s.target === "requests" ? { data: { reference: "REQ-2026-201" } } : undefined);
+    db.answer = (s) =>
+      s.target === "requests" ? { data: { reference: "REQ-2026-201" } } : undefined;
     const { result } = renderApp();
     let stored: string | null | void = null;
     await act(async () => {
@@ -1896,7 +2162,9 @@ describe("filing a request", () => {
 
   it("answers null when the request was not saved, so the form does not say submitted", async () => {
     db.answer = (s) =>
-      s.target === "requests" ? { error: { message: "new row violates row-level security policy" } } : undefined;
+      s.target === "requests"
+        ? { error: { message: "new row violates row-level security policy" } }
+        : undefined;
     const { result } = renderApp();
     let stored: string | null | void = "unset";
     await act(async () => {
@@ -1914,7 +2182,9 @@ describe("emailing what the board wrote", () => {
   it("asks again while homes remain, and says nothing when all of them were reached", async () => {
     // The server stops before its time limit and answers with who is left.
     const left = [60, 20, 0];
-    route = (_url, call) => ({ body: { sent: 40, failed: left[call - 1], remaining: left[call - 1] } });
+    route = (_url, call) => ({
+      body: { sent: 40, failed: left[call - 1], remaining: left[call - 1] },
+    });
     const { result } = renderApp();
     act(() => result.current.addAnnouncement(post));
     await settled();
@@ -1934,7 +2204,9 @@ describe("emailing what the board wrote", () => {
     await waitFor(() => expect(errors).toHaveLength(1));
 
     expect(fetched).toHaveLength(1);
-    expect(errors).toEqual(["Emailing the announcement: 2 emails were not sent. The announcement is posted in Messages."]);
+    expect(errors).toEqual([
+      "Emailing the announcement: 2 emails were not sent. The announcement is posted in Messages.",
+    ]);
   });
 
   it("stops asking after twelve calls and says who was left", async () => {
@@ -1945,7 +2217,9 @@ describe("emailing what the board wrote", () => {
     await waitFor(() => expect(errors).toHaveLength(1));
 
     expect(fetched).toHaveLength(12);
-    expect(errors).toEqual(["Emailing the announcement: 488 emails were not sent. The announcement is posted in Messages."]);
+    expect(errors).toEqual([
+      "Emailing the announcement: 488 emails were not sent. The announcement is posted in Messages.",
+    ]);
   });
 
   it("does not keep asking a server that is not getting any further", async () => {
@@ -1957,7 +2231,9 @@ describe("emailing what the board wrote", () => {
     await waitFor(() => expect(errors).toHaveLength(1));
 
     expect(fetched).toHaveLength(2);
-    expect(errors).toEqual(["Emailing the announcement: 500 emails were not sent. The announcement is posted in Messages."]);
+    expect(errors).toEqual([
+      "Emailing the announcement: 500 emails were not sent. The announcement is posted in Messages.",
+    ]);
   });
 
   it("says so when everybody already had it, and nobody was emailed", async () => {
@@ -2019,29 +2295,57 @@ describe("emailing what the board wrote", () => {
 });
 
 describe("a meeting after the notice", () => {
-  const upcoming = () => server().meetings.find((m) => m.status === "scheduled" && m.date >= "2026-08-20") ?? server().meetings[0];
-  const held = () => server().meetings.find((m) => m.status !== "cancelled" && m.date <= "2026-08-20") ?? server().meetings[0];
+  const upcoming = () =>
+    server().meetings.find((m) => m.status === "scheduled" && m.date >= "2026-08-20") ??
+    server().meetings[0];
+  const held = () =>
+    server().meetings.find((m) => m.status !== "cancelled" && m.date <= "2026-08-20") ??
+    server().meetings[0];
 
   it("moves, cancels and minutes through one function each", async () => {
     const { result } = renderApp();
     await act(async () => {
-      await result.current.rescheduleMeeting(upcoming().id, { date: "2030-01-05", time: "7:00 PM" });
+      await result.current.rescheduleMeeting(upcoming().id, {
+        date: "2030-01-05",
+        time: "7:00 PM",
+      });
       await result.current.cancelMeeting(upcoming().id, " Storm warning ");
-      await result.current.recordMinutes(held().id, "  Approved the budget.  ", [{ name: "Arya Mehr", unit: "7", channel: "in-person" }]);
+      await result.current.recordMinutes(held().id, "  Approved the budget.  ", [
+        { name: "Arya Mehr", unit: "7", channel: "in-person" },
+      ]);
     });
     await settled();
-    expect(targets()).toEqual(["rpc:reschedule_meeting", "rpc:cancel_meeting", "rpc:record_minutes"]);
+    expect(targets()).toEqual([
+      "rpc:reschedule_meeting",
+      "rpc:cancel_meeting",
+      "rpc:record_minutes",
+    ]);
     const [move, cancel, minutes] = writes().map((s) => s.values);
-    expect(move).toEqual({ p_meeting_id: upcoming().id, p_held_on: "2030-01-05", p_held_at: "7:00 PM", p_location: null });
+    expect(move).toEqual({
+      p_meeting_id: upcoming().id,
+      p_held_on: "2030-01-05",
+      p_held_at: "7:00 PM",
+      p_location: null,
+    });
     expect(cancel).toEqual({ p_meeting_id: upcoming().id, p_reason: "Storm warning" });
-    expect(minutes).toMatchObject({ p_meeting_id: held().id, p_minutes: "Approved the budget.", p_attended: [{ name: "Arya Mehr", unit: "7", role: null, channel: "in-person" }] });
+    expect(minutes).toMatchObject({
+      p_meeting_id: held().id,
+      p_minutes: "Approved the budget.",
+      p_attended: [{ name: "Arya Mehr", unit: "7", role: null, channel: "in-person" }],
+    });
   });
 
   it("writes nothing for a past day, a blank reason or thin minutes", async () => {
     const { result } = renderApp();
-    expect(() => result.current.rescheduleMeeting(upcoming().id, { date: "2026-08-19" })).toThrow("Pick a date that has not passed.");
-    expect(() => result.current.cancelMeeting(upcoming().id, "")).toThrow("Say why the meeting is cancelled.");
-    expect(() => result.current.recordMinutes(held().id, "short", [])).toThrow("Write the minutes first.");
+    expect(() => result.current.rescheduleMeeting(upcoming().id, { date: "2026-08-19" })).toThrow(
+      "Pick a date that has not passed.",
+    );
+    expect(() => result.current.cancelMeeting(upcoming().id, "")).toThrow(
+      "Say why the meeting is cancelled.",
+    );
+    expect(() => result.current.recordMinutes(held().id, "short", [])).toThrow(
+      "Write the minutes first.",
+    );
     await settled();
     expect(writes()).toHaveLength(0);
   });
@@ -2083,7 +2387,9 @@ describe("sending a meeting's notice", () => {
 
     expect(dated()).toHaveLength(1);
     expect(dated()[0].values).toHaveProperty("notice_sent_on");
-    expect(said).toBe("Notice posted in the app. Email did not go out: the email service could not send it.");
+    expect(said).toBe(
+      "Notice posted in the app. Email did not go out: the email service could not send it.",
+    );
     expect(errors, "the toast tells it, not a second red toast").toEqual([]);
   });
 
@@ -2099,7 +2405,9 @@ describe("sending a meeting's notice", () => {
     await settled();
 
     expect(dated()).toEqual([]);
-    expect(said).toBe("Notice posted in the app. Email did not go out: the mail service could not be reached.");
+    expect(said).toBe(
+      "Notice posted in the app. Email did not go out: the mail service could not be reached.",
+    );
   });
 
   it("records it and says how many were emailed", async () => {
@@ -2124,7 +2432,9 @@ describe("sending a meeting's notice", () => {
         failed: 40,
         already: 0,
         remaining: 0,
-        errors: ["a@example.com: You can only send testing emails to your own email address (x@y.com)."],
+        errors: [
+          "a@example.com: You can only send testing emails to your own email address (x@y.com).",
+        ],
       },
     });
     const { result } = renderApp();
@@ -2181,7 +2491,14 @@ describe("sending a meeting's notice", () => {
         const row = s.values as { id: string; title: string; body: string };
         change({
           announcements: [
-            { id: row.id, title: row.title, body: row.body, category: "Governance", author: "Pat", postedDate: "2026-08-20" },
+            {
+              id: row.id,
+              title: row.title,
+              body: row.body,
+              category: "Governance",
+              author: "Pat",
+              postedDate: "2026-08-20",
+            },
             ...server().announcements,
           ],
         });
@@ -2228,11 +2545,31 @@ describe("what the assistant is told", () => {
     const held = server().meetings[0];
     change({
       ballots: [
-        { ...ballot, id: "past", title: "Past ballot", audience: "owners", status: "open", closesDate: "2020-01-01" },
-        { ...ballot, id: "live", title: "Live ballot", audience: "owners", status: "open", closesDate: "2099-01-01" },
+        {
+          ...ballot,
+          id: "past",
+          title: "Past ballot",
+          audience: "owners",
+          status: "open",
+          closesDate: "2020-01-01",
+        },
+        {
+          ...ballot,
+          id: "live",
+          title: "Live ballot",
+          audience: "owners",
+          status: "open",
+          closesDate: "2099-01-01",
+        },
       ],
       meetings: [
-        { ...held, id: "gone", title: "Last year's meeting", status: "scheduled", date: "2020-01-01" },
+        {
+          ...held,
+          id: "gone",
+          title: "Last year's meeting",
+          status: "scheduled",
+          date: "2020-01-01",
+        },
         { ...held, id: "next", title: "Next meeting", status: "scheduled", date: "2099-01-01" },
       ],
     });
@@ -2274,7 +2611,8 @@ describe("screens that said saved before they knew", () => {
 
   it("the collections policy does not say saved when the write was refused", async () => {
     const user = userEvent.setup();
-    db.answer = (s) => (s.target === "associations" && s.op === "update" ? { count: 0 } : undefined);
+    db.answer = (s) =>
+      s.target === "associations" && s.op === "update" ? { count: 0 } : undefined;
     renderScreen(<screens.CollectionPolicyCard />);
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
@@ -2292,7 +2630,11 @@ describe("screens that said saved before they knew", () => {
   it("the roster does not say a home was re-typed when the write was refused", async () => {
     const user = userEvent.setup();
     const home = server().homes.find((o) => !o.placeholder)!;
-    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, homeType: "single-family" as const } : o)) });
+    change({
+      homes: server().homes.map((o) =>
+        o.id === home.id ? { ...o, homeType: "single-family" as const } : o,
+      ),
+    });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -2312,7 +2654,11 @@ describe("screens that said saved before they knew", () => {
   it("the roster says it once the write has landed", async () => {
     const user = userEvent.setup();
     const home = server().homes.find((o) => !o.placeholder)!;
-    change({ homes: server().homes.map((o) => (o.id === home.id ? { ...o, homeType: "single-family" as const } : o)) });
+    change({
+      homes: server().homes.map((o) =>
+        o.id === home.id ? { ...o, homeType: "single-family" as const } : o,
+      ),
+    });
     await act(async () => {
       await store.refreshRemote();
     });
@@ -2322,7 +2668,9 @@ describe("screens that said saved before they knew", () => {
     await user.selectOptions(screen.getByLabelText(`Kind of home for ${home.unit}`), "condos");
     await settled();
 
-    expect(await screen.findByText(/is a condo\. It is billed that way from the next bill/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/is a condo\. It is billed that way from the next bill/),
+    ).toBeInTheDocument();
   });
 });
 
@@ -2344,7 +2692,10 @@ describe("inviting everybody who has not signed up", () => {
       await store.refreshRemote();
     });
     route = (_url, call) => ({
-      body: call === 1 ? { sent: 190, failed: 0, already: 9, remaining: 0 } : { sent: 2, failed: 0, already: 0, remaining: 0 },
+      body:
+        call === 1
+          ? { sent: 190, failed: 0, already: 9, remaining: 0 }
+          : { sent: 2, failed: 0, already: 0, remaining: 0 },
     });
     renderScreen(<screens.HomeownersScreen />);
 
@@ -2355,7 +2706,9 @@ describe("inviting everybody who has not signed up", () => {
     expect(
       await screen.findByText("192 invitations sent, 9 already invited in the last hour"),
     ).toBeInTheDocument();
-    const sent = fetched.filter((f) => f.url === "/api/email/invite").map((f) => (f.body as { unitIds: string[] }).unitIds);
+    const sent = fetched
+      .filter((f) => f.url === "/api/email/invite")
+      .map((f) => (f.body as { unitIds: string[] }).unitIds);
     expect(sent.map((ids) => ids.length)).toEqual([199, 2]);
     expect(new Set(sent.flat()).size).toBe(201);
   });
@@ -2365,7 +2718,9 @@ describe("sending reminders", () => {
   /** Homes at a rung with a letter, as the ladder reads them. */
   async function owed() {
     const { collectionsLadder, policyFor } = await import("@/lib/collections");
-    return collectionsLadder(server(), policyFor(server().settings)).rows.filter((r) => r.actionDue);
+    return collectionsLadder(server(), policyFor(server().settings)).rows.filter(
+      (r) => r.actionDue,
+    );
   }
 
   const sendButton = (count: number) => new RegExp(`^Send ${count} letters?$`);
@@ -2417,7 +2772,15 @@ describe("sending reminders", () => {
           tag: "Billing",
           toRole: "board",
           messages: [
-            { id: "m-1", at: server().asOf, from: "Pat", fromRole: "board", direction: "outbound", channel: "email", body: "Reminder." },
+            {
+              id: "m-1",
+              at: server().asOf,
+              from: "Pat",
+              fromRole: "board",
+              direction: "outbound",
+              channel: "email",
+              body: "Reminder.",
+            },
           ],
         },
         ...server().threads,
@@ -2439,7 +2802,9 @@ describe("sending reminders", () => {
     expect(sentTo).toHaveLength(before.length - 1);
     expect(sentTo).not.toContain(already.id);
     expect(
-      screen.getByText(new RegExp(`^Sent ${before.length - 1} letters?, each filled in from its own record$`)),
+      screen.getByText(
+        new RegExp(`^Sent ${before.length - 1} letters?, each filled in from its own record$`),
+      ),
     ).toBeInTheDocument();
   });
 
@@ -2532,7 +2897,10 @@ describe("a person who holds two homes", () => {
       await result.current.setAutopay({ day: 3, capCents: 50000 } as never);
     });
     const autopay = writes().find((s) => s.target === "rpc:set_my_home_autopay");
-    expect(autopay?.values).toMatchObject({ p_association_id: ASSOCIATION, p_unit_id: second.homeId });
+    expect(autopay?.values).toMatchObject({
+      p_association_id: ASSOCIATION,
+      p_unit_id: second.homeId,
+    });
 
     act(() => result.current.chooseHome(first.homeId));
     expect(result.current.account?.homeId).toBe(first.homeId);

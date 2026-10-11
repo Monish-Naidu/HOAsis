@@ -110,7 +110,11 @@ describe("nextAutopayDate", () => {
         expect(date >= today, `${date} is before ${today}`).toBe(true);
         expect(new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10)).toBe(date);
         // A next charge date already behind today is never handed back.
-        const stale = nextAutopayDate({ plan: { day }, today, nextChargeDate: `${today.slice(0, 8)}01` });
+        const stale = nextAutopayDate({
+          plan: { day },
+          today,
+          nextChargeDate: `${today.slice(0, 8)}01`,
+        });
         expect(stale >= today, `${stale} is before ${today}`).toBe(true);
       }
     }
@@ -134,7 +138,11 @@ describe("autopaySource", () => {
   });
 
   it("starts a new plan on the method picked in the pay panel", () => {
-    const from = autopaySource({ isRemote: true, instruments: [visa, bank], panelSelection: "bank" });
+    const from = autopaySource({
+      isRemote: true,
+      instruments: [visa, bank],
+      panelSelection: "bank",
+    });
     expect(from?.id).toBe("bank");
   });
 
@@ -143,7 +151,11 @@ describe("autopaySource", () => {
       autopaySource({ isRemote: true, instruments: [bank, visa], panelSelection: "new-card" })?.id,
     ).toBe("visa");
     expect(
-      autopaySource({ isRemote: true, instruments: [unconfirmed, bank], panelSelection: "new-bank" })?.id,
+      autopaySource({
+        isRemote: true,
+        instruments: [unconfirmed, bank],
+        panelSelection: "new-bank",
+      })?.id,
     ).toBe("bank");
     // The plan's method was removed: the next best, not nothing.
     expect(

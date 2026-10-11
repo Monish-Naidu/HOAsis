@@ -28,8 +28,7 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
   const [choices, setChoices] = useState(["Yes", "No"]);
   const [closesOn, setClosesOn] = useState(addDays(today, 14));
 
-  const field =
-    fieldClass;
+  const field = fieldClass;
   const ready =
     title.trim().length > 2 &&
     choices.filter((c) => c.trim()).length >= 2 &&
@@ -50,7 +49,10 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
       id: `bal-${today}-${seq}`,
       reference: `BAL-${today.slice(0, 4)}-${String(seq).padStart(3, "0")}`,
       title: title.trim(),
-      body: body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
+      body: body
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean),
       kind: "poll",
       audience: "owners",
       status: "open",

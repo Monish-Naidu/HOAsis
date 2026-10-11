@@ -44,6 +44,10 @@ pnpm db:verify  # every database check, against the Supabase project in .env.loc
 `pnpm check` also runs on every push (`.github/workflows/ci.yml`). `.env.example` lists the
 keys; with none set the app builds and serves the demo only.
 
+For the local Supabase stack, Docker setup, and linking the app to local Auth and Postgres, see
+[`docs/local-development.md`](docs/local-development.md). The browser demo does not need that
+stack or any service credentials.
+
 ## Two modes, one set of screens
 
 - **Signed in.** Data lives in Postgres. Every table is scoped to an association by row level
@@ -64,7 +68,7 @@ Positioning comes from `docs/research/payhoa-competitive-teardown.md`. Three cla
 the design:
 
 1. **Books that tie out.** Reconciliation status is a first-class, always-visible concept.
-   Transactions that need a human decision are held *out* of every report until confirmed,
+   Transactions that need a human decision are held _out_ of every report until confirmed,
    and the dashboard says so instead of quietly averaging them in. Nothing is auto-categorized:
    suggestions carry a confidence score and require a click.
 2. **An app residents use.** Pay, look something up, file a request. Payment methods quote

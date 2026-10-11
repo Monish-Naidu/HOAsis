@@ -93,10 +93,26 @@ export function CollectionPolicyCard() {
       {editing ? (
         <div className="px-5 pb-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <DayField label="Reminder" value={draft.reminderDay} onChange={(v) => set({ reminderDay: v })} />
-            <DayField label="Formal notice" value={draft.lateNoticeDay} onChange={(v) => set({ lateNoticeDay: v })} />
-            <DayField label="Final notice" value={draft.demandDay} onChange={(v) => set({ demandDay: v })} />
-            <DayField label="Attorney" value={draft.counselDay} onChange={(v) => set({ counselDay: v })} />
+            <DayField
+              label="Reminder"
+              value={draft.reminderDay}
+              onChange={(v) => set({ reminderDay: v })}
+            />
+            <DayField
+              label="Formal notice"
+              value={draft.lateNoticeDay}
+              onChange={(v) => set({ lateNoticeDay: v })}
+            />
+            <DayField
+              label="Final notice"
+              value={draft.demandDay}
+              onChange={(v) => set({ demandDay: v })}
+            />
+            <DayField
+              label="Attorney"
+              value={draft.counselDay}
+              onChange={(v) => set({ counselDay: v })}
+            />
             <label className="block">
               <span className="mb-1.5 block text-footnote font-medium text-fg">Late fee</span>
               <div className="relative">
@@ -113,7 +129,9 @@ export function CollectionPolicyCard() {
                   className={cn(field, "pl-7")}
                 />
               </div>
-              <span className="mt-1 block text-footnote text-fg-subtle">Charged once, with the notice</span>
+              <span className="mt-1 block text-footnote text-fg-subtle">
+                Charged once, with the notice
+              </span>
             </label>
             <label className="block">
               <span className="mb-1.5 block text-footnote font-medium text-fg">Shortest plan</span>
@@ -130,7 +148,9 @@ export function CollectionPolicyCard() {
                   months
                 </span>
               </div>
-              <span className="mt-1 block text-footnote text-fg-subtle">Offered with the final notice</span>
+              <span className="mt-1 block text-footnote text-fg-subtle">
+                Offered with the final notice
+              </span>
             </label>
           </div>
 
@@ -168,11 +188,19 @@ export function CollectionPolicyCard() {
         </div>
       ) : (
         <ol className="grid gap-x-6 gap-y-2 px-5 pb-5 sm:grid-cols-2">
-          <Rung day={saved.reminderDay} label="Friendly reminder" detail="The amount and how to pay" />
+          <Rung
+            day={saved.reminderDay}
+            label="Friendly reminder"
+            detail="The amount and how to pay"
+          />
           <Rung
             day={saved.lateNoticeDay}
             label="Formal notice"
-            detail={saved.lateFeeCents > 0 ? `Carries the ${money(saved.lateFeeCents)} late fee` : "No late fee"}
+            detail={
+              saved.lateFeeCents > 0
+                ? `Carries the ${money(saved.lateFeeCents)} late fee`
+                : "No late fee"
+            }
           />
           <Rung
             day={saved.demandDay}
@@ -186,8 +214,7 @@ export function CollectionPolicyCard() {
   );
 }
 
-const field =
-  cn(fieldClass, "tnum");
+const field = cn(fieldClass, "tnum");
 
 function DayField({
   label,

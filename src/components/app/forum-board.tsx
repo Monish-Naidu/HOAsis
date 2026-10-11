@@ -179,9 +179,15 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
       {/* The same title every other page has, lit tile and all. It was a
           bare heading here, the one page in either shell without its tile. */}
       {moderate ? (
-        <PageHeader title="Community" description={`${pluralize(posts.length, "post")} from your neighbors`} />
+        <PageHeader
+          title="Community"
+          description={`${pluralize(posts.length, "post")} from your neighbors`}
+        />
       ) : (
-        <ResidentTitle title="Community" subtitle={`${pluralize(posts.length, "post")} from your neighbors`} />
+        <ResidentTitle
+          title="Community"
+          subtitle={`${pluralize(posts.length, "post")} from your neighbors`}
+        />
       )}
 
       {account ? (
@@ -253,7 +259,10 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   size="sm"
                   onClick={() => {
                     const undo = moderatePost(post.id, "published");
-                    notify(`Published ${post.author}'s post`, "ok", { label: "Undo", onClick: undo });
+                    notify(`Published ${post.author}'s post`, "ok", {
+                      label: "Undo",
+                      onClick: undo,
+                    });
                   }}
                 >
                   <Check className="size-3.5" />
@@ -263,8 +272,15 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const undo = moderatePost(post.id, "rejected", "Does not fit the community rules");
-                    notify(`Rejected ${post.author}'s post`, "warn", { label: "Undo", onClick: undo });
+                    const undo = moderatePost(
+                      post.id,
+                      "rejected",
+                      "Does not fit the community rules",
+                    );
+                    notify(`Rejected ${post.author}'s post`, "warn", {
+                      label: "Undo",
+                      onClick: undo,
+                    });
                   }}
                 >
                   <X className="size-3.5" />
@@ -298,7 +314,12 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
           const showTitle = p.title && !p.body.startsWith(p.title);
           const isLiked = liked.has(p.id);
           return (
-            <Card key={p.id} as="article" id={`post-${p.id}`} className="scroll-mt-32 lg:scroll-mt-24">
+            <Card
+              key={p.id}
+              as="article"
+              id={`post-${p.id}`}
+              className="scroll-mt-32 lg:scroll-mt-24"
+            >
               <div className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar name={p.author} tone={p.authorRole ? "brand" : "neutral"} />
@@ -367,16 +388,26 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 </button>
                 {moderate ? (
                   <span className="ml-auto flex gap-1">
-                    <button type="button" onClick={() => togglePinned(p.id)} className={actionButton}>
+                    <button
+                      type="button"
+                      onClick={() => togglePinned(p.id)}
+                      className={actionButton}
+                    >
                       {p.pinned ? "Unpin" : "Pin"}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         const undo = removePost(p.id);
-                        notify(`Removed ${p.author}'s post`, "warn", { label: "Undo", onClick: undo });
+                        notify(`Removed ${p.author}'s post`, "warn", {
+                          label: "Undo",
+                          onClick: undo,
+                        });
                       }}
-                      className={cn(actionButton, "text-danger hover:bg-danger-soft hover:text-danger")}
+                      className={cn(
+                        actionButton,
+                        "text-danger hover:bg-danger-soft hover:text-danger",
+                      )}
                     >
                       Remove
                     </button>

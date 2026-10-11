@@ -4,7 +4,13 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/money/transactions",
   // The review queue link opens on the whole year, where the demo's waiting lines are.
   useSearchParams: () => new URLSearchParams("status=needs-review&period=this-year"),
@@ -50,7 +56,9 @@ describe("Transactions: Reverse", () => {
 
     await user.click(screen.getAllByRole("button", { name: "Reverse" })[0]);
     // Nothing is sent without a reason.
-    const submit = screen.getAllByRole("button", { name: "Reverse" }).find((b) => b.getAttribute("type") === "submit")!;
+    const submit = screen
+      .getAllByRole("button", { name: "Reverse" })
+      .find((b) => b.getAttribute("type") === "submit")!;
     expect(submit).toBeDisabled();
     await user.type(screen.getByLabelText(/^Why reverse /), "Entered twice");
     await user.click(submit);

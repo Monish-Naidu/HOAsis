@@ -71,8 +71,8 @@ describe("seatPlan", () => {
 describe("homeOption", () => {
   it("says the home, its address and who owns it", () => {
     expect(homeOption(community, home("3"))).toBe("Unit 3 · 3 Founder Way · Pat Lee");
-    expect(homeOption(community, home("3", { placeholder: true, displayName: "No owner yet" }))).toBe(
-      "Unit 3 · 3 Founder Way · No owner yet",
-    );
+    expect(
+      homeOption(community, home("3", { placeholder: true, displayName: "No owner yet" })),
+    ).toBe("Unit 3 · 3 Founder Way · No owner yet");
   });
 });

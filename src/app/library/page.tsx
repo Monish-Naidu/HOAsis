@@ -19,8 +19,8 @@ export default function LibraryPage() {
           </h1>
           <p className="mt-4 max-w-2xl text-headline leading-relaxed text-fg-muted">
             No account, no email gate. Most of this applies wherever you are. The state specific
-            pieces are marked, because that is the part boards most often get wrong and least
-            often find written down.
+            pieces are marked, because that is the part boards most often get wrong and least often
+            find written down.
           </p>
         </header>
         <LibraryBrowser articles={libraryArticles} />

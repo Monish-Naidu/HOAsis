@@ -108,9 +108,7 @@ test.describe("public site", () => {
 
       // A transparent body borrows the host's ground and can render one
       // theme's text on the other theme's background.
-      const background = await page.evaluate(
-        () => getComputedStyle(document.body).backgroundColor,
-      );
+      const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
       expect(background, `${theme}: body has no background of its own`).not.toBe(
         "rgba(0, 0, 0, 0)",
       );

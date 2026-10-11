@@ -23,7 +23,12 @@ const SHOWN = 3;
 export function Announcements() {
   const { community } = useAppState();
   const newestFirst = pinnedFirst(
-    currentAnnouncements(community.announcements, community.meetings, community.documents, todayIsoDate()),
+    currentAnnouncements(
+      community.announcements,
+      community.meetings,
+      community.documents,
+      todayIsoDate(),
+    ),
   );
   const pinned = newestFirst.find((a) => a.pinned);
   const others = newestFirst.filter((a) => a !== pinned);

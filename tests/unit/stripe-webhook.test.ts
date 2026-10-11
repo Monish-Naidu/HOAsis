@@ -24,7 +24,12 @@ const fake = createFakeSupabase({
   rpc: { data: "payment-1", error: null },
   "units.select": { data: { associations: { stripe_account_id: "acct_test" } }, error: null },
   "payment_instruments.select": {
-    data: [{ id: "inst-1", detail: { token: "pm_1", status: "verifying", verifyUrl: "u", setupIntentId: "seti_1" } }],
+    data: [
+      {
+        id: "inst-1",
+        detail: { token: "pm_1", status: "verifying", verifyUrl: "u", setupIntentId: "seti_1" },
+      },
+    ],
   },
 });
 
@@ -45,10 +50,12 @@ vi.mock("@/lib/app-errors", () => ({ recordAppError }));
 
 // The email to the people who hold finances. Mocked: what is tested here is
 // when the webhook asks for it and that a failure never becomes a 500.
-const sendDisputeNotice = vi.fn<(input: object) => Promise<{ sent: number; failed: number }>>(async () => ({
-  sent: 1,
-  failed: 0,
-}));
+const sendDisputeNotice = vi.fn<(input: object) => Promise<{ sent: number; failed: number }>>(
+  async () => ({
+    sent: 1,
+    failed: 0,
+  }),
+);
 vi.mock("@/lib/email/dispute", () => ({ sendDisputeNotice }));
 
 const syncAccountStatus = vi.fn(async () => undefined);
@@ -119,7 +126,10 @@ beforeEach(() => {
 
 describe("the webhook route", () => {
   it("ignores a succeeded intent sent from an account that is not the unit's", async () => {
-    const event = { ...intentEvent("payment_intent.succeeded", { latest_charge: null }), account: "acct_other" };
+    const event = {
+      ...intentEvent("payment_intent.succeeded", { latest_charge: null }),
+      account: "acct_other",
+    };
     const response = await POST(signedRequest(event) as never);
     expect(response.status).toBe(200);
     expect(rpcCalls()).toHaveLength(0);
@@ -130,7 +140,11 @@ describe("the webhook route", () => {
         level: "error",
         route: "stripe/webhook",
         message: "Settled payment not recorded",
-        extra: expect.objectContaining({ intentId: "pi_1", account: "acct_other", unitId: "unit-1" }),
+        extra: expect.objectContaining({
+          intentId: "pi_1",
+          account: "acct_other",
+          unitId: "unit-1",
+        }),
       }),
     );
   });
@@ -148,14 +162,19 @@ describe("the webhook route", () => {
 
   it("asks for a processing intent again too when the lookup fails", async () => {
     fake.once("units.select", { data: null, error: { message: "fetch failed" } });
-    const response = await POST(signedRequest(intentEvent("payment_intent.processing", {})) as never);
+    const response = await POST(
+      signedRequest(intentEvent("payment_intent.processing", {})) as never,
+    );
     expect(response.status).toBe(500);
     expect(withMethod("upsert")).toHaveLength(0);
   });
 
   it("does not ask for a retry over a unit id that can never match", async () => {
     // Postgres refusing the id as a uuid is a permanent no, not an outage.
-    fake.once("units.select", { data: null, error: { message: "invalid input syntax for type uuid", code: "22P02" } });
+    fake.once("units.select", {
+      data: null,
+      error: { message: "invalid input syntax for type uuid", code: "22P02" },
+    });
     const response = await POST(
       signedRequest(intentEvent("payment_intent.succeeded", { latest_charge: null })) as never,
     );
@@ -182,16 +201,19 @@ describe("the webhook route", () => {
       signedRequest(intentEvent("payment_intent.succeeded", { latest_charge: null })) as never,
     );
     expect(response.status).toBe(200);
-    expect(rpcCalls("record_payment")[0].args).toEqual(["record_payment", {
-      p_unit_id: "unit-1",
-      p_amount_cents: 6000,
-      p_rail: "ach",
-      p_processor_fee_cents: 0,
-      p_platform_fee_cents: 150,
-      p_platform_fee_paid_by: "owner",
-      p_stripe_payment_intent_id: "pi_1",
-      p_paid_by: "profile-1",
-    }]);
+    expect(rpcCalls("record_payment")[0].args).toEqual([
+      "record_payment",
+      {
+        p_unit_id: "unit-1",
+        p_amount_cents: 6000,
+        p_rail: "ach",
+        p_processor_fee_cents: 0,
+        p_platform_fee_cents: 150,
+        p_platform_fee_paid_by: "owner",
+        p_stripe_payment_intent_id: "pi_1",
+        p_paid_by: "profile-1",
+      },
+    ]);
     expect(recordAppError).not.toHaveBeenCalled();
   });
 
@@ -206,12 +228,18 @@ describe("the webhook route", () => {
   it("records Stripe's own fee, not the application fee on the same transaction", async () => {
     const retrieve = vi
       .spyOn(stripe().charges, "retrieve")
-      .mockResolvedValue(chargeWith({ payment_method_details: { type: "us_bank_account" } }) as never);
+      .mockResolvedValue(
+        chargeWith({ payment_method_details: { type: "us_bank_account" } }) as never,
+      );
     const response = await POST(
       signedRequest(intentEvent("payment_intent.succeeded", { latest_charge: "ch_1" })) as never,
     );
     expect(response.status).toBe(200);
-    expect(retrieve).toHaveBeenCalledWith("ch_1", { expand: ["balance_transaction"] }, { stripeAccount: "acct_test" });
+    expect(retrieve).toHaveBeenCalledWith(
+      "ch_1",
+      { expand: ["balance_transaction"] },
+      { stripeAccount: "acct_test" },
+    );
     expect(rpcCalls("record_payment")[0].args).toEqual([
       "record_payment",
       expect.objectContaining({ p_processor_fee_cents: 258, p_rail: "ach" }),
@@ -220,16 +248,30 @@ describe("the webhook route", () => {
 
   it("names the wallet when a card payment came through one", async () => {
     vi.spyOn(stripe().charges, "retrieve").mockResolvedValue(
-      chargeWith({ payment_method_details: { type: "card", card: { wallet: { type: "apple_pay" } } } }) as never,
+      chargeWith({
+        payment_method_details: { type: "card", card: { wallet: { type: "apple_pay" } } },
+      }) as never,
     );
-    await POST(signedRequest(intentEvent("payment_intent.succeeded", { latest_charge: "ch_1" })) as never);
-    expect(rpcCalls("record_payment")[0].args).toEqual(["record_payment", expect.objectContaining({ p_rail: "apple-pay" })]);
+    await POST(
+      signedRequest(intentEvent("payment_intent.succeeded", { latest_charge: "ch_1" })) as never,
+    );
+    expect(rpcCalls("record_payment")[0].args).toEqual([
+      "record_payment",
+      expect.objectContaining({ p_rail: "apple-pay" }),
+    ]);
 
     vi.spyOn(stripe().charges, "retrieve").mockResolvedValue(
-      chargeWith({ payment_method_details: { type: "card", card: { wallet: { type: "google_pay" } } } }) as never,
+      chargeWith({
+        payment_method_details: { type: "card", card: { wallet: { type: "google_pay" } } },
+      }) as never,
     );
-    await POST(signedRequest(intentEvent("payment_intent.succeeded", { latest_charge: "ch_1" })) as never);
-    expect(rpcCalls("record_payment").at(-1)!.args).toEqual(["record_payment", expect.objectContaining({ p_rail: "google-pay" })]);
+    await POST(
+      signedRequest(intentEvent("payment_intent.succeeded", { latest_charge: "ch_1" })) as never,
+    );
+    expect(rpcCalls("record_payment").at(-1)!.args).toEqual([
+      "record_payment",
+      expect.objectContaining({ p_rail: "google-pay" }),
+    ]);
   });
 
   it("stores a processing intent as a pending row that never overwrites", async () => {
@@ -257,7 +299,7 @@ describe("the webhook route", () => {
   it("acknowledges a pending row that can never be written, and says so on /admin", async () => {
     fake.once("payments.upsert", {
       error: { message: "violates foreign key constraint", code: "23503" },
-    } );
+    });
     const response = await POST(
       signedRequest(intentEvent("payment_intent.processing", {})) as never,
     );
@@ -310,14 +352,20 @@ describe("the webhook route", () => {
 
   it("writes nothing for an intent missing its metadata", async () => {
     const response = await POST(
-      signedRequest(intentEvent("payment_intent.succeeded", { metadata: {}, latest_charge: null })) as never,
+      signedRequest(
+        intentEvent("payment_intent.succeeded", { metadata: {}, latest_charge: null }),
+      ) as never,
     );
     expect(response.status).toBe(200);
     expect(rpcCalls()).toHaveLength(0);
     expect(tableCalls()).toHaveLength(0);
     // Money settled that the books cannot place: said out loud on /admin.
     expect(recordAppError).toHaveBeenCalledWith(
-      expect.objectContaining({ level: "error", message: "Settled payment not recorded", associationId: null }),
+      expect.objectContaining({
+        level: "error",
+        message: "Settled payment not recorded",
+        associationId: null,
+      }),
     );
   });
 
@@ -357,7 +405,11 @@ describe("the webhook route", () => {
     const response = await POST(signedRequest(event) as never);
     expect(response.status).toBe(200);
     expect(withMethod("delete")).toHaveLength(1);
-    expect(withMethod("delete")[0].chain).toContainEqual(["eq", "detail->>setupIntentId", "seti_1"]);
+    expect(withMethod("delete")[0].chain).toContainEqual([
+      "eq",
+      "detail->>setupIntentId",
+      "seti_1",
+    ]);
   });
 
   it("asks for a succeeded SetupIntent again when the verifying bank could not be read", async () => {
@@ -365,7 +417,9 @@ describe("the webhook route", () => {
     // bank marked verifying for good.
     fake.once("payment_instruments.select", { data: null, error: { message: "fetch failed" } });
     const response = await POST(
-      signedRequest(objectEvent("setup_intent.succeeded", { object: "setup_intent", id: "seti_1" })) as never,
+      signedRequest(
+        objectEvent("setup_intent.succeeded", { object: "setup_intent", id: "seti_1" }),
+      ) as never,
     );
     expect(response.status).toBe(500);
     expect(withMethod("update")).toHaveLength(0);
@@ -374,7 +428,9 @@ describe("the webhook route", () => {
   it("asks for a succeeded SetupIntent again when the verifying mark could not be cleared", async () => {
     fake.once("payment_instruments.update", { error: { message: "fetch failed" } });
     const response = await POST(
-      signedRequest(objectEvent("setup_intent.succeeded", { object: "setup_intent", id: "seti_1" })) as never,
+      signedRequest(
+        objectEvent("setup_intent.succeeded", { object: "setup_intent", id: "seti_1" }),
+      ) as never,
     );
     expect(response.status).toBe(500);
     expect(withMethod("update")[0].argsOf("update")).toEqual([{ detail: { token: "pm_1" } }]);
@@ -383,13 +439,17 @@ describe("the webhook route", () => {
   it("asks for a failed SetupIntent again when the bank could not be removed", async () => {
     fake.once("payment_instruments.delete", { error: { message: "fetch failed" } });
     const response = await POST(
-      signedRequest(objectEvent("setup_intent.setup_failed", { object: "setup_intent", id: "seti_1" })) as never,
+      signedRequest(
+        objectEvent("setup_intent.setup_failed", { object: "setup_intent", id: "seti_1" }),
+      ) as never,
     );
     expect(response.status).toBe(500);
     // A canceled one takes the same path.
     fake.once("payment_instruments.delete", { error: { message: "fetch failed" } });
     const canceled = await POST(
-      signedRequest(objectEvent("setup_intent.canceled", { object: "setup_intent", id: "seti_1" })) as never,
+      signedRequest(
+        objectEvent("setup_intent.canceled", { object: "setup_intent", id: "seti_1" }),
+      ) as never,
     );
     expect(canceled.status).toBe(500);
   });
@@ -405,7 +465,13 @@ describe("the webhook route", () => {
 });
 
 describe("refunds", () => {
-  const refunded = { object: "charge", id: "ch_1", payment_intent: "pi_1", amount: 6150, amount_refunded: 6000 };
+  const refunded = {
+    object: "charge",
+    id: "ch_1",
+    payment_intent: "pi_1",
+    amount: 6150,
+    amount_refunded: 6000,
+  };
 
   it("hands a refund to record_refund with the amount actually refunded", async () => {
     const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
@@ -423,8 +489,12 @@ describe("refunds", () => {
   });
 
   it("writes nothing for a refund event with nothing refunded, or no intent behind it", async () => {
-    await POST(signedRequest(objectEvent("charge.refunded", { ...refunded, amount_refunded: 0 })) as never);
-    await POST(signedRequest(objectEvent("charge.refunded", { ...refunded, payment_intent: null })) as never);
+    await POST(
+      signedRequest(objectEvent("charge.refunded", { ...refunded, amount_refunded: 0 })) as never,
+    );
+    await POST(
+      signedRequest(objectEvent("charge.refunded", { ...refunded, payment_intent: null })) as never,
+    );
     expect(rpcCalls()).toHaveLength(0);
   });
 
@@ -442,7 +512,9 @@ describe("refunds", () => {
       // The refund got here before the payment was recorded. A 200 was the
       // last Stripe would ever say about it.
       fake.once("rpc", { data: null, error: null });
-      const retrieve = vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue(ourIntent as never);
+      const retrieve = vi
+        .spyOn(stripe().paymentIntents, "retrieve")
+        .mockResolvedValue(ourIntent as never);
       const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
       expect(response.status).toBe(500);
       // Asked of the account the event came from: these are direct charges.
@@ -453,7 +525,10 @@ describe("refunds", () => {
     it("acknowledges a refund on a charge that was never ours", async () => {
       // No metadata of ours: some other charge on the connected account.
       fake.once("rpc", { data: null, error: null });
-      vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue({ ...ourIntent, metadata: {} } as never);
+      vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue({
+        ...ourIntent,
+        metadata: {},
+      } as never);
       const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
       expect(response.status).toBe(200);
       expect(tableCalls()).toHaveLength(0);
@@ -462,14 +537,19 @@ describe("refunds", () => {
     it("acknowledges one whose unit is not on the account the event came from", async () => {
       fake.once("rpc", { data: null, error: null });
       vi.spyOn(stripe().paymentIntents, "retrieve").mockResolvedValue(ourIntent as never);
-      fake.once("units.select", { data: { associations: { stripe_account_id: "acct_other" } }, error: null });
+      fake.once("units.select", {
+        data: { associations: { stripe_account_id: "acct_other" } },
+        error: null,
+      });
       const response = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
       expect(response.status).toBe(200);
     });
 
     it("asks again when it cannot tell: the intent or the unit could not be read", async () => {
       fake.once("rpc", { data: null, error: null });
-      vi.spyOn(stripe().paymentIntents, "retrieve").mockRejectedValueOnce(new Error("Stripe is down"));
+      vi.spyOn(stripe().paymentIntents, "retrieve").mockRejectedValueOnce(
+        new Error("Stripe is down"),
+      );
       const unread = await POST(signedRequest(objectEvent("charge.refunded", refunded)) as never);
       expect(unread.status).toBe(500);
 
@@ -483,14 +563,30 @@ describe("refunds", () => {
 });
 
 describe("chargebacks", () => {
-  const dispute = { object: "dispute", id: "dp_1", payment_intent: "pi_1", amount: 6000, reason: "fraudulent", status: "lost" };
-  const payment = { data: { association_id: "assoc-1", unit_id: "unit-1", amount_cents: 6000 }, error: null };
+  const dispute = {
+    object: "dispute",
+    id: "dp_1",
+    payment_intent: "pi_1",
+    amount: 6000,
+    reason: "fraudulent",
+    status: "lost",
+  };
+  const payment = {
+    data: { association_id: "assoc-1", unit_id: "unit-1", amount_cents: 6000 },
+    error: null,
+  };
 
   it("puts an opened chargeback on /admin as an error, against the payment's association", async () => {
     fake.once("payments.select", payment);
-    const response = await POST(signedRequest(objectEvent("charge.dispute.created", dispute)) as never);
+    const response = await POST(
+      signedRequest(objectEvent("charge.dispute.created", dispute)) as never,
+    );
     expect(response.status).toBe(200);
-    expect(fake.callsTo("payments")[0].chain).toContainEqual(["eq", "stripe_payment_intent_id", "pi_1"]);
+    expect(fake.callsTo("payments")[0].chain).toContainEqual([
+      "eq",
+      "stripe_payment_intent_id",
+      "pi_1",
+    ]);
     expect(recordAppError).toHaveBeenCalledWith(
       expect.objectContaining({
         level: "error",
@@ -509,14 +605,24 @@ describe("chargebacks", () => {
     fake.once("payments.select", payment);
     await POST(signedRequest(objectEvent("charge.dispute.closed", dispute)) as never);
     expect(recordAppError).toHaveBeenCalledWith(
-      expect.objectContaining({ level: "warn", message: "Chargeback closed: lost", associationId: "assoc-1" }),
+      expect.objectContaining({
+        level: "warn",
+        message: "Chargeback closed: lost",
+        associationId: "assoc-1",
+      }),
     );
   });
 
   it("emails the people who hold finances the day a chargeback opens, with the evidence deadline", async () => {
     fake.once("payments.select", payment);
-    const opened = { ...dispute, status: "needs_response", evidence_details: { due_by: Date.UTC(2026, 9, 21, 23, 59, 59) / 1000 } };
-    const response = await POST(signedRequest(objectEvent("charge.dispute.created", opened)) as never);
+    const opened = {
+      ...dispute,
+      status: "needs_response",
+      evidence_details: { due_by: Date.UTC(2026, 9, 21, 23, 59, 59) / 1000 },
+    };
+    const response = await POST(
+      signedRequest(objectEvent("charge.dispute.created", opened)) as never,
+    );
     expect(response.status).toBe(200);
     expect(sendDisputeNotice).toHaveBeenCalledTimes(1);
     expect(sendDisputeNotice).toHaveBeenCalledWith({
@@ -542,13 +648,19 @@ describe("chargebacks", () => {
     );
 
     fake.once("payments.select", payment);
-    await POST(signedRequest(objectEvent("charge.dispute.closed", { ...dispute, status: "won" })) as never);
+    await POST(
+      signedRequest(objectEvent("charge.dispute.closed", { ...dispute, status: "won" })) as never,
+    );
     expect(sendDisputeNotice).toHaveBeenLastCalledWith(expect.objectContaining({ kind: "won" }));
   });
 
   it("sends nothing for a closing that is neither won nor lost", async () => {
     fake.once("payments.select", payment);
-    await POST(signedRequest(objectEvent("charge.dispute.closed", { ...dispute, status: "warning_closed" })) as never);
+    await POST(
+      signedRequest(
+        objectEvent("charge.dispute.closed", { ...dispute, status: "warning_closed" }),
+      ) as never,
+    );
     expect(sendDisputeNotice).not.toHaveBeenCalled();
     expect(recordAppError).toHaveBeenCalledTimes(1);
   });
@@ -557,7 +669,9 @@ describe("chargebacks", () => {
     // A 500 would have Stripe send the event again for a problem that is ours.
     fake.once("payments.select", payment);
     sendDisputeNotice.mockRejectedValueOnce(new Error("Resend is down"));
-    const response = await POST(signedRequest(objectEvent("charge.dispute.created", dispute)) as never);
+    const response = await POST(
+      signedRequest(objectEvent("charge.dispute.created", dispute)) as never,
+    );
     expect(response.status).toBe(200);
     expect(recordAppError).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -569,7 +683,9 @@ describe("chargebacks", () => {
 
   it("emails nobody when the payment behind the dispute is not ours", async () => {
     fake.once("payments.select", { data: null, error: null });
-    const response = await POST(signedRequest(objectEvent("charge.dispute.created", dispute)) as never);
+    const response = await POST(
+      signedRequest(objectEvent("charge.dispute.created", dispute)) as never,
+    );
     expect(response.status).toBe(200);
     expect(sendDisputeNotice).not.toHaveBeenCalled();
     expect(recordAppError).toHaveBeenCalledWith(expect.objectContaining({ associationId: null }));
@@ -578,7 +694,9 @@ describe("chargebacks", () => {
   it("asks for the event again when the disputed payment could not be read", async () => {
     // Nothing has been sent or recorded yet, so a retry is safe.
     fake.once("payments.select", { data: null, error: { message: "fetch failed" } });
-    const response = await POST(signedRequest(objectEvent("charge.dispute.created", dispute)) as never);
+    const response = await POST(
+      signedRequest(objectEvent("charge.dispute.created", dispute)) as never,
+    );
     expect(response.status).toBe(500);
     expect(sendDisputeNotice).not.toHaveBeenCalled();
     expect(recordAppError).not.toHaveBeenCalled();
@@ -589,10 +707,16 @@ describe("account.updated", () => {
   it("refreshes the cached status of the association that owns the account", async () => {
     fake.once("associations.select", { data: { id: "assoc-1" }, error: null });
     const response = await POST(
-      signedRequest(objectEvent("account.updated", { object: "account", id: "acct_test" })) as never,
+      signedRequest(
+        objectEvent("account.updated", { object: "account", id: "acct_test" }),
+      ) as never,
     );
     expect(response.status).toBe(200);
-    expect(fake.callsTo("associations")[0].chain).toContainEqual(["eq", "stripe_account_id", "acct_test"]);
+    expect(fake.callsTo("associations")[0].chain).toContainEqual([
+      "eq",
+      "stripe_account_id",
+      "acct_test",
+    ]);
     expect(syncAccountStatus).toHaveBeenCalledWith("assoc-1", "acct_test");
   });
 });

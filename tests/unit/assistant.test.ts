@@ -47,7 +47,10 @@ describe("assistant", () => {
   });
 
   it("refuses to leak balances when the board has funds switched off", () => {
-    const answer = answerQuestion("how much money does the hoa have", scope({ fundsVisible: false }));
+    const answer = answerQuestion(
+      "how much money does the hoa have",
+      scope({ fundsVisible: false }),
+    );
     expect(answer.text).toContain("not published");
     expect(answer.facts).toBeUndefined();
     expect(answer.text).not.toMatch(/\$[\d,]/);

@@ -16,7 +16,9 @@ describe("confirmedReference", () => {
     // Owner B has no requests, so the form says 200. A neighbour already
     // holds 200 and the database stored this one as 201.
     expect(confirmedReference({ isRemote: true, guessed: "REQ-2026-200" })).toBeNull();
-    expect(confirmedReference({ isRemote: true, guessed: "REQ-2026-200", stored: true })).toBeNull();
+    expect(
+      confirmedReference({ isRemote: true, guessed: "REQ-2026-200", stored: true }),
+    ).toBeNull();
   });
 
   it("shows what the database stored once the write answers with it", () => {

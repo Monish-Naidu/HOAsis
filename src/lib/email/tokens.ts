@@ -30,22 +30,14 @@ export function signUnsubscribe(profileId: string, category: string): string {
 }
 
 /** Constant time, so a wrong signature reveals nothing about the right one. */
-export function verifyUnsubscribe(
-  profileId: string,
-  category: string,
-  token: string,
-): boolean {
+export function verifyUnsubscribe(profileId: string, category: string, token: string): boolean {
   const expected = signUnsubscribe(profileId, category);
   const a = Buffer.from(expected);
   const b = Buffer.from(token);
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-export function unsubscribeUrl(
-  origin: string,
-  profileId: string,
-  category: string,
-): string {
+export function unsubscribeUrl(origin: string, profileId: string, category: string): string {
   const params = new URLSearchParams({
     p: profileId,
     c: category,

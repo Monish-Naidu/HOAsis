@@ -89,7 +89,9 @@ export function CostTrend({
       <p className="tnum mt-1 min-h-[20px] text-footnote text-fg-muted">
         {active ? (
           <>
-            <span className="font-semibold text-fg">{formatDate(active.periodStart, "medium")}</span>
+            <span className="font-semibold text-fg">
+              {formatDate(active.periodStart, "medium")}
+            </span>
             {" · "}
             {money(active.totalCents)} across {active.homes} homes
             {" · "}
@@ -97,9 +99,7 @@ export function CostTrend({
             {active.usageAmount ? ` · ${active.usageAmount.toLocaleString("en-US")} units` : ""}
           </>
         ) : (
-          <>
-            Peak {shortMoney(peakCents)}. Hover a month for the bill and what each home paid.
-          </>
+          <>Peak {shortMoney(peakCents)}. Hover a month for the bill and what each home paid.</>
         )}
       </p>
     </div>

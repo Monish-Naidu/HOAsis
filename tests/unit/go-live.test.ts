@@ -37,7 +37,8 @@ function community(patch: (c: Community) => void = () => {}): Community {
   return c;
 }
 
-const item = (c: Community, key: string) => goLiveChecklist(c, TODAY).items.find((i) => i.key === key)!;
+const item = (c: Community, key: string) =>
+  goLiveChecklist(c, TODAY).items.find((i) => i.key === key)!;
 
 describe("goLiveChecklist", () => {
   it("reads the roster and dues off the records", () => {
@@ -81,7 +82,14 @@ describe("goLiveChecklist", () => {
 
     const issued = community((x) => {
       x.homeCharges[x.homes[1].id] = [
-        { id: "c1", date: "2026-09-01", label: "September 2026 dues", kind: "charge", amountCents: 5000, balanceAfterCents: 5000 },
+        {
+          id: "c1",
+          date: "2026-09-01",
+          label: "September 2026 dues",
+          kind: "charge",
+          amountCents: 5000,
+          balanceAfterCents: 5000,
+        },
       ];
     });
     expect(item(issued, "first-bill").detail).toMatch(/have been billed/);
@@ -89,7 +97,14 @@ describe("goLiveChecklist", () => {
     const opening = community((x) => {
       x.association.duesCents = 0;
       x.homeCharges[x.homes[1].id] = [
-        { id: "c1", date: "2026-09-01", label: "Balance brought forward", kind: "charge", amountCents: 5000, balanceAfterCents: 5000 },
+        {
+          id: "c1",
+          date: "2026-09-01",
+          label: "Balance brought forward",
+          kind: "charge",
+          amountCents: 5000,
+          balanceAfterCents: 5000,
+        },
       ];
     });
     expect(item(opening, "first-bill").done).toBe(false);
@@ -101,14 +116,31 @@ describe("goLiveChecklist", () => {
     expect(item(none, "invites").detail).toMatch(/1 owner has an email/);
 
     const sent = community((x) => {
-      x.emailLog = [{ id: "e1", to: "marcus@example.com", category: "invite", subject: "x", sentAt: "2026-09-25T10:00:00Z" }];
+      x.emailLog = [
+        {
+          id: "e1",
+          to: "marcus@example.com",
+          category: "invite",
+          subject: "x",
+          sentAt: "2026-09-25T10:00:00Z",
+        },
+      ];
     });
     expect(item(sent, "invites").done).toBe(true);
 
     const joined = community((x) => {
       x.accounts = [
         ...x.accounts,
-        { id: "p2", homeId: x.homes[1].id, name: "Marcus Bell", email: "marcus@example.com", unit: "2", role: "resident", capabilities: x.accounts[0].capabilities, views: x.accounts[0].views },
+        {
+          id: "p2",
+          homeId: x.homes[1].id,
+          name: "Marcus Bell",
+          email: "marcus@example.com",
+          unit: "2",
+          role: "resident",
+          capabilities: x.accounts[0].capabilities,
+          views: x.accounts[0].views,
+        },
       ];
     });
     expect(item(joined, "invites").done).toBe(true);

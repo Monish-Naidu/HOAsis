@@ -46,8 +46,7 @@ async function cardOn(subscription: Stripe.Subscription) {
   const method = subscription.default_payment_method;
   if (!method) return { brand: null, last4: null };
   try {
-    const pm =
-      typeof method === "string" ? await stripe().paymentMethods.retrieve(method) : method;
+    const pm = typeof method === "string" ? await stripe().paymentMethods.retrieve(method) : method;
     if (pm.card) return { brand: pm.card.brand, last4: pm.card.last4 };
     if (pm.us_bank_account) {
       return { brand: pm.us_bank_account.bank_name ?? "bank", last4: pm.us_bank_account.last4 };
@@ -69,7 +68,9 @@ async function writeSubscription(admin: Admin, subscription: Stripe.Subscription
     .update({
       billing_subscription_id: gone ? null : subscription.id,
       billing_customer_id:
-        typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id,
+        typeof subscription.customer === "string"
+          ? subscription.customer
+          : subscription.customer.id,
       billing_brand: gone ? null : card.brand,
       billing_last4: gone ? null : card.last4,
       subscription_status: status,

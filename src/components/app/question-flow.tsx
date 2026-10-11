@@ -154,7 +154,10 @@ export function QuestionFlow({
         {question.body}
 
         {failure ? (
-          <p className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-footnote text-danger" role="status">
+          <p
+            className="mt-6 rounded-lg bg-danger-soft px-3 py-2 text-footnote text-danger"
+            role="status"
+          >
             {failure}
           </p>
         ) : null}

@@ -106,12 +106,18 @@ describe("the line a board reads when a send stopped", () => {
 
 describe("telling a repeat from a first send", () => {
   it("matches the same address whatever its case", () => {
-    expect(sentKey(" Gwen@Example.com ", "$285.00 due", "unit-1")).toBe(sentKey("gwen@example.com", "$285.00 due", "unit-1"));
+    expect(sentKey(" Gwen@Example.com ", "$285.00 due", "unit-1")).toBe(
+      sentKey("gwen@example.com", "$285.00 due", "unit-1"),
+    );
   });
 
   it("keeps two homes of one owner apart, and two subjects apart", () => {
-    expect(sentKey("gwen@example.com", "$285.00 due", "unit-1")).not.toBe(sentKey("gwen@example.com", "$285.00 due", "unit-2"));
-    expect(sentKey("gwen@example.com", "$285.00 due", "unit-1")).not.toBe(sentKey("gwen@example.com", "$300.00 due", "unit-1"));
+    expect(sentKey("gwen@example.com", "$285.00 due", "unit-1")).not.toBe(
+      sentKey("gwen@example.com", "$285.00 due", "unit-2"),
+    );
+    expect(sentKey("gwen@example.com", "$285.00 due", "unit-1")).not.toBe(
+      sentKey("gwen@example.com", "$300.00 due", "unit-1"),
+    );
   });
 });
 
@@ -139,7 +145,11 @@ describe("what was already sent in the last hour", () => {
   const admin = { from: vi.fn(() => chain) } as never;
 
   const logged = (count: number): Row[] =>
-    Array.from({ length: count }, (_, i) => ({ to_email: `owner${i + 1}@example.com`, subject: "$285.00 due", unit_id: `unit-${i + 1}` }));
+    Array.from({ length: count }, (_, i) => ({
+      to_email: `owner${i + 1}@example.com`,
+      subject: "$285.00 due",
+      unit_id: `unit-${i + 1}`,
+    }));
 
   beforeEach(() => {
     filters.length = 0;
@@ -150,13 +160,21 @@ describe("what was already sent in the last hour", () => {
 
   it("reads this association's successes in this category since an hour ago", async () => {
     const now = Date.UTC(2026, 9, 4, 18, 0, 0);
-    const seen = await recentlySent(admin, { associationId: "assoc-1", category: "assessment", now: () => now });
+    const seen = await recentlySent(admin, {
+      associationId: "assoc-1",
+      category: "assessment",
+      now: () => now,
+    });
     expect(seen.has(sentKey("gwen@example.com", "$285.00 due", "unit-1"))).toBe(true);
     expect(filters).toContainEqual(["eq", "association_id", "assoc-1"]);
     expect(filters).toContainEqual(["eq", "category", "assessment"]);
     // A send that failed is not a send.
     expect(filters).toContainEqual(["is", "error", null]);
-    expect(filters).toContainEqual(["gte", "sent_at", new Date(now - REPEAT_WINDOW_MS).toISOString()]);
+    expect(filters).toContainEqual([
+      "gte",
+      "sent_at",
+      new Date(now - REPEAT_WINDOW_MS).toISOString(),
+    ]);
     // One short page is the whole answer: no second read.
     expect(ranges).toEqual([[0, LOG_PAGE - 1]]);
   });

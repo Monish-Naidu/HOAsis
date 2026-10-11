@@ -3,7 +3,16 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, ChevronDown, Plus, Printer, ShieldQuestion, X } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader, Segmented, Select, textareaClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  PageHeader,
+  Segmented,
+  Select,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { EvidenceViewer } from "@/components/app/evidence-viewer";
 import { NoticeLetter } from "@/components/app/notice-letter";
 import { AddPhotoForm } from "@/components/app/notice-forms";
@@ -29,10 +38,8 @@ import { useHomeLabel } from "@/components/app/use-home-label";
 
 type Tab = "open" | "resolved";
 
-const INPUT =
-  cn(textareaClass, "mt-1.5");
+const INPUT = cn(textareaClass, "mt-1.5");
 const LABEL = "text-footnote font-semibold text-fg-muted";
-
 
 export function NoticesBoard() {
   // `?open=` from search lands on one notice, expanded, on the right list.
@@ -69,7 +76,9 @@ function Notices() {
     );
   const resolved = community.violations
     .filter((v) => v.stage === "cured")
-    .sort((a, b) => (b.resolvedDate ?? b.nextActionDate).localeCompare(a.resolvedDate ?? a.nextActionDate));
+    .sort((a, b) =>
+      (b.resolvedDate ?? b.nextActionDate).localeCompare(a.resolvedDate ?? a.nextActionDate),
+    );
   const rows = tab === "open" ? open : resolved;
   const counts = { open: open.length, resolved: resolved.length };
 
@@ -105,7 +114,12 @@ function Notices() {
               setCreating(false);
               setTab("open");
             } catch (error) {
-              notify(error instanceof Error ? error.message : "The notice was not sent. Check the details and try again.", "warn");
+              notify(
+                error instanceof Error
+                  ? error.message
+                  : "The notice was not sent. Check the details and try again.",
+                "warn",
+              );
             }
           }}
         />
@@ -191,7 +205,7 @@ function NoticeRow({
                 Owner says fixed
               </Badge>
             ) : null}
-                      </div>
+          </div>
           <p className={cn("mt-0.5 text-body text-fg-muted", !open && "line-clamp-1")}>
             {violation.rule}
             {violation.fix ? ` · ${violation.fix}` : ""}

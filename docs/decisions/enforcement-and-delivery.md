@@ -9,8 +9,8 @@ something it has not.
 **The question.** Should residents be able to report a neighbour, and if so,
 what happens to the report?
 
-**The answer.** Yes, and it goes to the board privately as an *input to an
-investigation*. It cannot become a notice until a board member has gone and
+**The answer.** Yes, and it goes to the board privately as an _input to an
+investigation_. It cannot become a notice until a board member has gone and
 looked and written down what they saw. The reporter's name is held and never
 shown to the accused.
 

@@ -26,7 +26,6 @@ function wrap(ui: ReactNode) {
   return render(<AppStateProvider>{ui}</AppStateProvider>);
 }
 
-
 /** Drives settings from inside the provider, the way the settings screen does. */
 function AdminControls() {
   const { updateSettings, signIn } = useAppState();
@@ -45,7 +44,10 @@ describe("sign in", () => {
     // the visitor itself (2026-10-06). The page keeps one row with two links.
     wrap(<SignInPanel />);
     expect(screen.getByRole("link", { name: "Open the demo" })).toHaveAttribute("href", "/demo");
-    expect(screen.getByRole("link", { name: "As an owner" })).toHaveAttribute("href", "/demo?as=owner");
+    expect(screen.getByRole("link", { name: "As an owner" })).toHaveAttribute(
+      "href",
+      "/demo?as=owner",
+    );
     expect(screen.queryByRole("button", { name: /Arya Mehr/ })).not.toBeInTheDocument();
   });
 

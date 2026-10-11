@@ -52,9 +52,7 @@ describe("collections ladder", () => {
   it("counts only households that owe a step today as due now", () => {
     const ladder = collectionsLadder(mehrMeadows, P);
     expect(ladder.dueNow.every((r) => r.stage !== "current")).toBe(true);
-    expect(ladder.totalCents).toBe(
-      ladder.rows.reduce((t, r) => t + r.home.balanceCents, 0),
-    );
+    expect(ladder.totalCents).toBe(ladder.rows.reduce((t, r) => t + r.home.balanceCents, 0));
   });
 
   it("says how long until the next rung rather than only the current one", () => {
@@ -150,7 +148,10 @@ describe("a notice that has already gone out", () => {
 
   it("does not take an owner's reply to an older letter for the new notice", () => {
     // The reply moves the thread's date to yesterday. It is not a letter.
-    const replied = thread("Billing", [[12, "outbound"], [1, "inbound"]]);
+    const replied = thread("Billing", [
+      [12, "outbound"],
+      [1, "inbound"],
+    ]);
     expect(replied.updatedDate).toBe(addDays(asOf, -1));
     const ladder = collectionsLadder(community(P.lateNoticeDay + 1, [replied]), P);
     expect(ladder.rows[0].actionDue).toBe(true);

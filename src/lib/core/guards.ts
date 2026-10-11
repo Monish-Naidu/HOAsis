@@ -15,7 +15,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Almost every domain record is identified by a string id. */
-export function hasId(value: unknown): value is { id: string } {
+function hasId(value: unknown): value is { id: string } {
   return isRecord(value) && typeof value.id === "string";
 }
 
@@ -42,8 +42,7 @@ export function isSession(value: unknown): value is StoredSession {
   // "admin" is the pre-2026-09-01 name for the board view. Accepting it keeps
   // every session written before the rename signed in; app-state normalizes
   // the value where the session is read.
-  const viewOk =
-    value.view === "resident" || value.view === "board" || value.view === "admin";
+  const viewOk = value.view === "resident" || value.view === "board" || value.view === "admin";
   return accountOk && viewOk;
 }
 

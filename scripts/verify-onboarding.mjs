@@ -8,9 +8,7 @@
  */
 import { createHarness } from "./lib/harness.mjs";
 
-const {
-  admin, anon, stamp, PASSWORD, check, cleanup, cleanupAll, report,
-} = createHarness({
+const { admin, anon, stamp, PASSWORD, check, cleanup, cleanupAll, report } = createHarness({
   passwordPrefix: "onboard-",
 });
 
@@ -49,9 +47,16 @@ try {
   // 1. The founder signs up.
   const founder = await signUp(founderEmail, "Dana Whitcomb");
   const { data: profile } = await admin
-    .from("profiles").select("full_name, email").eq("id", founder.userId).single();
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", founder.userId)
+    .single();
   check("signing up creates a profile", profile?.email === founderEmail, profile?.email ?? "none");
-  check("the profile carries the name given at signup", profile?.full_name === "Dana Whitcomb", profile?.full_name);
+  check(
+    "the profile carries the name given at signup",
+    profile?.full_name === "Dana Whitcomb",
+    profile?.full_name,
+  );
 
   // 2. They found an association, inviting a neighbor by email.
   const { data: associationId, error: createError } = await founder.client.rpc(
@@ -71,25 +76,50 @@ try {
       ],
     },
   );
-  check("a signed in person can found an association", !createError && Boolean(associationId), createError?.message ?? "");
+  check(
+    "a signed in person can found an association",
+    !createError && Boolean(associationId),
+    createError?.message ?? "",
+  );
   if (associationId) cleanup.associations.push(associationId);
 
   // 3. The founder is President with full capabilities.
   const { data: mine } = await founder.client.rpc("my_associations");
   const found = (mine ?? []).find((m) => m.association_id === associationId);
   check("the founder is President", found?.role === "president", found?.role ?? "none");
-  check("the founder holds permissions", (found?.capabilities ?? []).includes("permissions"), String(found?.capabilities));
+  check(
+    "the founder holds permissions",
+    (found?.capabilities ?? []).includes("permissions"),
+    String(found?.capabilities),
+  );
 
   // 4. Every home exists, including the one with no email.
-  const { data: units } = await founder.client.from("units").select("label").eq("association_id", associationId);
-  check("every home is on the register", (units ?? []).length === 3, `${(units ?? []).length} units`);
+  const { data: units } = await founder.client
+    .from("units")
+    .select("label")
+    .eq("association_id", associationId);
+  check(
+    "every home is on the register",
+    (units ?? []).length === 3,
+    `${(units ?? []).length} units`,
+  );
 
   // 5. A stranger cannot found an association on somebody else's behalf.
   const { error: anonError } = await anon().rpc("create_association", {
-    p_name: "Fake HOA", p_city: "X", p_state: "WA", p_dues_cents: 100,
-    p_dues_cadence: "monthly", p_due_day: 1, p_founder_name: "Nobody", p_founder_unit: "1",
+    p_name: "Fake HOA",
+    p_city: "X",
+    p_state: "WA",
+    p_dues_cents: 100,
+    p_dues_cadence: "monthly",
+    p_due_day: 1,
+    p_founder_name: "Nobody",
+    p_founder_unit: "1",
   });
-  check("a signed out visitor cannot found an association", Boolean(anonError), anonError?.message?.slice(0, 40) ?? "no error");
+  check(
+    "a signed out visitor cannot found an association",
+    Boolean(anonError),
+    anonError?.message?.slice(0, 40) ?? "no error",
+  );
 
   // 6. The invited neighbor signs up later and their seat is waiting.
   const neighbor = await signUp(neighborEmail, "Marcus Bell");
@@ -107,7 +137,11 @@ try {
 
   // 7. They see their own home and not the founder's charges.
   const { data: neighborUnits } = await neighbor.client.rpc("my_unit_ids");
-  check("the neighbor holds exactly one home", (neighborUnits ?? []).length === 1, String((neighborUnits ?? []).length));
+  check(
+    "the neighbor holds exactly one home",
+    (neighborUnits ?? []).length === 1,
+    String((neighborUnits ?? []).length),
+  );
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {

@@ -19,8 +19,8 @@ const STORAGE_KEY = "hoasis-theme";
 const DEFAULT_MODE: Mode = "auto";
 
 /** Night runs from 8pm up to 7am, local time. */
-export const NIGHT_STARTS = 20;
-export const NIGHT_ENDS = 7;
+const NIGHT_STARTS = 20;
+const NIGHT_ENDS = 7;
 
 /**
  * Runs before paint so the navy never flashes white on a dark-mode reload.
@@ -56,7 +56,7 @@ function getServerSnapshot(): Mode {
   return DEFAULT_MODE;
 }
 
-export function isNight(date: Date): boolean {
+function isNight(date: Date): boolean {
   const h = date.getHours();
   return h >= NIGHT_STARTS || h < NIGHT_ENDS;
 }
@@ -111,10 +111,13 @@ function subscribe(onChange: () => void) {
   let timer: number | undefined;
   const arm = () => {
     window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      if (getSnapshot() === "auto") applyToDocument("auto");
-      arm();
-    }, msUntilNextBoundary(new Date()) + 1000);
+    timer = window.setTimeout(
+      () => {
+        if (getSnapshot() === "auto") applyToDocument("auto");
+        arm();
+      },
+      msUntilNextBoundary(new Date()) + 1000,
+    );
   };
   const onVisible = () => {
     if (document.visibilityState !== "visible") return;
@@ -203,34 +206,34 @@ export function ThemeToggle({
 
   return (
     <div className={className}>
-    <div
-      className="flex w-full items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5 [&>button]:flex-1"
-      role="radiogroup"
-      aria-label="Color theme"
-    >
-      {options.map(({ value, icon: Icon, label, hint }) => (
-        <button
-          key={value}
-          type="button"
-          role="radio"
-          aria-checked={mode === value}
-          aria-label={label}
-          title={hint}
-          onClick={() => setMode(value)}
-          className={cn(
-            "flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-2 text-footnote font-medium transition-colors",
-            mode === value ? "bg-surface-3 text-fg" : "text-fg-muted hover:text-fg",
-          )}
-        >
-          <Icon className="hidden size-4 min-[400px]:block" strokeWidth={2} />
-          {/* Words always, glyphs when there is room: a moon and a monitor mean little on their own. */}
-          <span>{label}</span>
-        </button>
-      ))}
-    </div>
-    <p className="mt-1.5 text-footnote text-fg-muted">
-      Evenings: {options.find((o) => o.value === "auto")!.hint.replace(/^D/, "d")}
-    </p>
+      <div
+        className="flex w-full items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5 [&>button]:flex-1"
+        role="radiogroup"
+        aria-label="Color theme"
+      >
+        {options.map(({ value, icon: Icon, label, hint }) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={mode === value}
+            aria-label={label}
+            title={hint}
+            onClick={() => setMode(value)}
+            className={cn(
+              "flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-2 text-footnote font-medium transition-colors",
+              mode === value ? "bg-surface-3 text-fg" : "text-fg-muted hover:text-fg",
+            )}
+          >
+            <Icon className="hidden size-4 min-[400px]:block" strokeWidth={2} />
+            {/* Words always, glyphs when there is room: a moon and a monitor mean little on their own. */}
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-1.5 text-footnote text-fg-muted">
+        Evenings: {options.find((o) => o.value === "auto")!.hint.replace(/^D/, "d")}
+      </p>
     </div>
   );
 }

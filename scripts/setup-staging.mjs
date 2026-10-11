@@ -30,14 +30,21 @@ const NEEDED = [
 const missing = NEEDED.filter((name) => !(env[name] ?? "").trim());
 if (missing.length) {
   console.error(`.env.staging is missing: ${missing.join(", ")}.`);
-  console.error("Create the project on supabase.com (free plan), then paste its values in. See docs/work-tracker.md.");
+  console.error(
+    "Create the project on supabase.com (free plan), then paste its values in. See docs/work-tracker.md.",
+  );
   process.exit(1);
 }
 
 const ref = new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0];
 const production = loadEnv();
-if (production.NEXT_PUBLIC_SUPABASE_URL && new URL(production.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0] === ref) {
-  console.error("Refusing: .env.staging points at the same project as .env.local. Staging has to be a different project.");
+if (
+  production.NEXT_PUBLIC_SUPABASE_URL &&
+  new URL(production.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0] === ref
+) {
+  console.error(
+    "Refusing: .env.staging points at the same project as .env.local. Staging has to be a different project.",
+  );
   process.exit(1);
 }
 
@@ -60,22 +67,38 @@ for (const address of addresses) {
     encoding: "utf8",
   });
   // Never echo the command or its raw output: both can carry the password.
-  const said = `${run.stdout ?? ""}${run.stderr ?? ""}`.replaceAll(env.SUPABASE_DB_PASSWORD, "[hidden]").replaceAll(password, "[hidden]");
+  const said = `${run.stdout ?? ""}${run.stderr ?? ""}`
+    .replaceAll(env.SUPABASE_DB_PASSWORD, "[hidden]")
+    .replaceAll(password, "[hidden]");
   if (run.status === 0) {
     const applied = (said.match(/Applying migration/g) ?? []).length;
     console.log(applied ? `  ${applied} migrations applied.` : "  Already up to date.");
     pushed = true;
     break;
   }
-  console.log(`  could not connect that way (${said.split("\n").find((line) => /error|failed|refused|timeout/i.test(line))?.trim().slice(0, 160) ?? "no reason given"}).`);
+  console.log(
+    `  could not connect that way (${
+      said
+        .split("\n")
+        .find((line) => /error|failed|refused|timeout/i.test(line))
+        ?.trim()
+        .slice(0, 160) ?? "no reason given"
+    }).`,
+  );
 }
 if (!pushed) {
-  console.error("No address worked. Check the database password in .env.staging, and set STAGING_REGION there if the project is not in us-west-2.");
+  console.error(
+    "No address worked. Check the database password in .env.staging, and set STAGING_REGION there if the project is not in us-west-2.",
+  );
   process.exit(1);
 }
 
 if (process.argv.includes("--vercel")) {
-  for (const name of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
+  for (const name of [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]) {
     // Remove the Preview value if there is one, then set staging's. A name
     // that had no Preview value makes the removal fail, which is fine.
     spawnSync("npx", ["vercel", "env", "rm", name, "preview", "--yes"], { stdio: "ignore" });
@@ -84,7 +107,11 @@ if (process.argv.includes("--vercel")) {
       stdio: ["pipe", "ignore", "pipe"],
       encoding: "utf8",
     });
-    console.log(add.status === 0 ? `Vercel Preview: ${name} set to staging.` : `Vercel Preview: ${name} was NOT set (${(add.stderr ?? "").trim().split("\n").pop()?.slice(0, 120)}).`);
+    console.log(
+      add.status === 0
+        ? `Vercel Preview: ${name} set to staging.`
+        : `Vercel Preview: ${name} was NOT set (${(add.stderr ?? "").trim().split("\n").pop()?.slice(0, 120)}).`,
+    );
   }
   console.log("Pull request previews use staging from their next build.");
 }

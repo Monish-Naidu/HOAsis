@@ -17,10 +17,36 @@
 import { spawnSync } from "node:child_process";
 
 const SUITES = [
-  "rls", "isolation", "onboarding", "money", "stripe", "community-life",
-  "email", "signin-routing", "safety", "scale", "a-year", "three-years",
-  "profile", "board-actions", "ranked-list", "join-flow", "roster-import",
-  "late-fees", "access", "sale-privacy", "owners", "two-homes", "billing-lock", "append-only", "rollups", "fiscal-years", "attachments", "meetings", "fines", "sign-out",
+  "rls",
+  "isolation",
+  "onboarding",
+  "money",
+  "stripe",
+  "community-life",
+  "email",
+  "signin-routing",
+  "safety",
+  "scale",
+  "a-year",
+  "three-years",
+  "profile",
+  "board-actions",
+  "ranked-list",
+  "join-flow",
+  "roster-import",
+  "late-fees",
+  "access",
+  "sale-privacy",
+  "owners",
+  "two-homes",
+  "billing-lock",
+  "append-only",
+  "rollups",
+  "fiscal-years",
+  "attachments",
+  "meetings",
+  "fines",
+  "sign-out",
 ];
 
 const only = process.argv.slice(2);
@@ -28,9 +54,17 @@ const failed = [];
 for (const suite of SUITES) {
   if (only.length && !only.includes(suite)) continue;
   console.log(`\n=== verify-${suite}`);
-  const run = spawnSync(process.execPath, [new URL(`./verify-${suite}.mjs`, import.meta.url).pathname], { stdio: "inherit" });
+  const run = spawnSync(
+    process.execPath,
+    [new URL(`./verify-${suite}.mjs`, import.meta.url).pathname],
+    { stdio: "inherit" },
+  );
   if (run.status !== 0) failed.push(suite);
 }
 
-console.log(failed.length ? `\nFAILED: ${failed.map((s) => `verify-${s}`).join(", ")}` : "\nEvery database check passed.");
+console.log(
+  failed.length
+    ? `\nFAILED: ${failed.map((s) => `verify-${s}`).join(", ")}`
+    : "\nEvery database check passed.",
+);
 process.exit(failed.length ? 1 : 0);

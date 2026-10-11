@@ -5,7 +5,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/communications",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -53,16 +59,20 @@ describe("the board inbox", () => {
     const user = userEvent.setup();
     wrap(<BoardCommunications />);
     act(() => seen.state.signIn("acct-dana"));
-    const toTreasurer = seen.state.threads.filter((t) => t.toRole === "treasurer").map((t) => t.subject);
+    const toTreasurer = seen.state.threads
+      .filter((t) => t.toRole === "treasurer")
+      .map((t) => t.subject);
     expect(toTreasurer.length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("button", { name: "Mine" }));
-    for (const subject of toTreasurer) expect(within(list()).getByText(subject)).toBeInTheDocument();
+    for (const subject of toTreasurer)
+      expect(within(list()).getByText(subject)).toBeInTheDocument();
     const toBoard = seen.state.threads.find((t) => t.toRole === "board")!;
     expect(within(list()).getByText(toBoard.subject)).toBeInTheDocument();
 
     act(() => seen.state.signIn("acct-arya"));
-    for (const subject of toTreasurer) expect(within(list()).queryByText(subject)).not.toBeInTheDocument();
+    for (const subject of toTreasurer)
+      expect(within(list()).queryByText(subject)).not.toBeInTheDocument();
     expect(within(list()).getByText(toBoard.subject)).toBeInTheDocument();
   });
 
@@ -72,7 +82,8 @@ describe("the board inbox", () => {
     act(() => seen.state.signIn("acct-arya"));
     await user.click(screen.getByRole("button", { name: "Mine" }));
     await user.click(screen.getByRole("button", { name: "All" }));
-    for (const t of seen.state.threads) expect(within(list()).getByText(t.subject)).toBeInTheDocument();
+    for (const t of seen.state.threads)
+      expect(within(list()).getByText(t.subject)).toBeInTheDocument();
   });
 
   it("stores the office on a thread an owner starts in the demo", async () => {
@@ -80,7 +91,13 @@ describe("the board inbox", () => {
     act(() => seen.state.signIn("acct-monish"));
     const home = seen.state.community.homes.find((o) => o.id === "own-042")!;
     await act(async () => {
-      await seen.state.messageBoard(home.id, "Budget question", "Where did the surplus go?", "Billing", "treasurer");
+      await seen.state.messageBoard(
+        home.id,
+        "Budget question",
+        "Where did the surplus go?",
+        "Billing",
+        "treasurer",
+      );
     });
     const made = seen.state.threads.find((t) => t.subject === "Budget question");
     expect(made?.toRole).toBe("treasurer");

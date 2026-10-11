@@ -40,12 +40,7 @@ const KIND_LABEL: Record<AccountKind, string> = {
   cd: "Certificate",
 };
 
-function base(
-  institution: string,
-  mask: string,
-  kind: AccountKind,
-  today: ISODate,
-): BankAccount {
+function base(institution: string, mask: string, kind: AccountKind, today: ISODate): BankAccount {
   return {
     id: `bank-${kind}-${mask}`,
     name: `${KIND_LABEL[kind]} account`,
@@ -72,10 +67,7 @@ function base(
  * The account number is used to derive a mask and is then gone. Nothing that
  * could move money out of the account is kept.
  */
-export function connectManualAccount(
-  input: ManualAccountInput,
-  today: ISODate,
-): BankAccount {
+export function connectManualAccount(input: ManualAccountInput, today: ISODate): BankAccount {
   const institution = input.institution.trim();
   if (!institution) {
     throw new ValidationError("Enter the name of the bank or credit union");
@@ -101,10 +93,7 @@ export function connectManualAccount(
 }
 
 /** Connects an account handed over by the bank, where no number was typed here. */
-export function connectLinkedAccount(
-  input: LinkedAccountInput,
-  today: ISODate,
-): BankAccount {
+export function connectLinkedAccount(input: LinkedAccountInput, today: ISODate): BankAccount {
   return base(input.institution, input.mask, input.kind, today);
 }
 

@@ -31,7 +31,11 @@ const billing = (status: string) => ({
 });
 const request = (path: string) => {
   const url = new URL(`http://localhost${path}`);
-  return { headers: new Headers({ authorization: "Bearer secret" }), nextUrl: url, url: url.toString() } as never;
+  return {
+    headers: new Headers({ authorization: "Bearer secret" }),
+    nextUrl: url,
+    url: url.toString(),
+  } as never;
 };
 
 beforeEach(() => {
@@ -41,8 +45,15 @@ beforeEach(() => {
 
 describe("assessments run", () => {
   const association = (status: string) => ({
-    id: "a1", name: "Cedar HOA", dues_cents: 10000, dues_cadence: "monthly", due_day: 1,
-    fiscal_year_start: "01-01", created_at: "2025-01-01T00:00:00Z", billing_starts_on: null, ...billing(status),
+    id: "a1",
+    name: "Cedar HOA",
+    dues_cents: 10000,
+    dues_cadence: "monthly",
+    due_day: 1,
+    fiscal_year_start: "01-01",
+    created_at: "2025-01-01T00:00:00Z",
+    billing_starts_on: null,
+    ...billing(status),
   });
 
   it("bills nothing and adds no late fees for a cancelled association, and says why", async () => {
@@ -57,7 +68,10 @@ describe("assessments run", () => {
     tables({ associations: [association("active")] });
     const { GET } = await import("@/app/api/assessments/run/route");
     await GET(request("/api/assessments/run"));
-    expect(fake.callsTo("rpc:assess_late_fees")[0].args).toEqual(["assess_late_fees", expect.anything()]);
+    expect(fake.callsTo("rpc:assess_late_fees")[0].args).toEqual([
+      "assess_late_fees",
+      expect.anything(),
+    ]);
   });
 });
 
@@ -75,24 +89,55 @@ describe("bill emails", () => {
 });
 
 describe("autopay run", () => {
-  const member = { id: "m1", unit_id: "u1", association_id: "a1", profile_id: "p1", full_name: "Rae", invited_email: null, autopay: { day: 1, rail: "card" } };
+  const member = {
+    id: "m1",
+    unit_id: "u1",
+    association_id: "a1",
+    profile_id: "p1",
+    full_name: "Rae",
+    invited_email: null,
+    autopay: { day: 1, rail: "card" },
+  };
   const association = (status: string) => ({
-    id: "a1", name: "Cedar HOA", slug: "cedar", stripe_account_id: "acct_1", stripe_charges_enabled: true,
-    dues_cents: 10000, dues_by_type: {}, deleted_at: null, ...billing(status),
+    id: "a1",
+    name: "Cedar HOA",
+    slug: "cedar",
+    stripe_account_id: "acct_1",
+    stripe_charges_enabled: true,
+    dues_cents: 10000,
+    dues_by_type: {},
+    deleted_at: null,
+    ...billing(status),
   });
 
   it("charges nobody whose board is locked, and says why", async () => {
-    tables({ memberships: [member], associations: [association("canceled")], units: [{ label: "2" }], charges: [], autopay_runs: null, payments: [] });
+    tables({
+      memberships: [member],
+      associations: [association("canceled")],
+      units: [{ label: "2" }],
+      charges: [],
+      autopay_runs: null,
+      payments: [],
+    });
     const { GET } = await import("@/app/api/autopay/run/route");
     const body = await (await GET(request("/api/autopay/run"))).json();
     expect(body.charged).toEqual([]);
-    expect(body.waiting).toEqual([expect.stringContaining("the association's subscription is not paid")]);
+    expect(body.waiting).toEqual([
+      expect.stringContaining("the association's subscription is not paid"),
+    ]);
     expect(inserted("autopay_runs")).toBe(false);
   });
 
   it("does not look at a home already charged this month", async () => {
     // The month's runs are read once; a home in them is never queried.
-    tables({ memberships: [member], associations: [association("active")], units: [{ label: "2" }], charges: [], autopay_runs: [{ unit_id: "u1", state: "charged" }], payments: [] });
+    tables({
+      memberships: [member],
+      associations: [association("active")],
+      units: [{ label: "2" }],
+      charges: [],
+      autopay_runs: [{ unit_id: "u1", state: "charged" }],
+      payments: [],
+    });
     const { GET } = await import("@/app/api/autopay/run/route");
     const body = await (await GET(request("/api/autopay/run"))).json();
     expect(body.checked).toBe(0);

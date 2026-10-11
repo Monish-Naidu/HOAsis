@@ -58,11 +58,11 @@ Marketing photography from [Unsplash](https://unsplash.com), used under the
 [Unsplash License](https://unsplash.com/license), which permits commercial use
 without attribution. Credited anyway, because the photographers did the work.
 
-| File | Source |
-| --- | --- |
+| File               | Source                                         |
+| ------------------ | ---------------------------------------------- |
 | `neighborhood.jpg` | unsplash.com/photos/1592595896551-12b371d546d5 |
-| `aerial.jpg` | unsplash.com/photos/1524813686514-a57563d77965 |
-| `evening.jpg` | unsplash.com/photos/1494526585095-c41746248156 |
+| `aerial.jpg`       | unsplash.com/photos/1524813686514-a57563d77965 |
+| `evening.jpg`      | unsplash.com/photos/1494526585095-c41746248156 |
 
 Two of these are copied into `public/community` as the seeded photos of two
 homes, so the attribution above covers them too:
@@ -73,15 +73,15 @@ Library photography, one per group rather than one per article. A photograph
 for each of thirty-three pages would be filler on the twenty-four state
 reference pages, and filler reads as filler.
 
-| File | Shows | Source |
-| --- | --- | --- |
+| File                          | Shows                                        | Source                                         |
+| ----------------------------- | -------------------------------------------- | ---------------------------------------------- |
 | `library/getting-started.jpg` | Books and a calendar, planning a first month | unsplash.com/photos/1507831228884-93d43e81a99d |
-| `library/money.jpg` | Tax forms, a calculator and a pen | unsplash.com/photos/1554224155-6726b3ff858f |
-| `library/reserves.jpg` | Shingles being stripped from a roof | unsplash.com/photos/1633759593085-1eaeb724fc88 |
-| `library/records.jpg` | A long table set for a meeting | unsplash.com/photos/1503423571797-2d2bb372094a |
-| `library/rules.jpg` | A white picket fence on a residential street | unsplash.com/photos/1717206438385-d9196506f00d |
-| `library/buying.jpg` | A for sale sign | unsplash.com/photos/1725379448168-e33c5e09d47e |
-| `library/state-law.jpg` | A state capitol dome | unsplash.com/photos/1573181759662-1c146525b21f |
+| `library/money.jpg`           | Tax forms, a calculator and a pen            | unsplash.com/photos/1554224155-6726b3ff858f    |
+| `library/reserves.jpg`        | Shingles being stripped from a roof          | unsplash.com/photos/1633759593085-1eaeb724fc88 |
+| `library/records.jpg`         | A long table set for a meeting               | unsplash.com/photos/1503423571797-2d2bb372094a |
+| `library/rules.jpg`           | A white picket fence on a residential street | unsplash.com/photos/1717206438385-d9196506f00d |
+| `library/buying.jpg`          | A for sale sign                              | unsplash.com/photos/1725379448168-e33c5e09d47e |
+| `library/state-law.jpg`       | A state capitol dome                         | unsplash.com/photos/1573181759662-1c146525b21f |
 
 `product-*.png` are screenshots of this application, captured by
 `scripts/product-shots.mjs`. Re-run it after a design change; an old shot is

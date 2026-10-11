@@ -20,7 +20,11 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseAdmin: () => fake.client }));
 
 /** Each update as the table, the values set and the filters that picked the row. */
 const writes = () =>
-  fake.writes().map((call) => ({ table: call.target, values: call.argsOf("update")![0] as Record<string, unknown>, filters: call.chain }));
+  fake.writes().map((call) => ({
+    table: call.target,
+    values: call.argsOf("update")![0] as Record<string, unknown>,
+    filters: call.chain,
+  }));
 
 const { POST } = await import("@/app/api/billing/webhook/route");
 const signer = new Stripe("sk_test_unit");
@@ -66,7 +70,11 @@ describe("billing webhook", () => {
 
   it("records a new trialing subscription against the association in its metadata", async () => {
     const response = await POST(
-      signed({ id: "evt_1", type: "customer.subscription.created", data: { object: subscription() } }) as never,
+      signed({
+        id: "evt_1",
+        type: "customer.subscription.created",
+        data: { object: subscription() },
+      }) as never,
     );
     expect(response.status).toBe(200);
     expect(writes()).toHaveLength(1);
@@ -82,14 +90,25 @@ describe("billing webhook", () => {
 
   it("moves to active when Stripe does", async () => {
     await POST(
-      signed({ id: "evt_2", type: "customer.subscription.updated", data: { object: subscription({ status: "active" }) } }) as never,
+      signed({
+        id: "evt_2",
+        type: "customer.subscription.updated",
+        data: { object: subscription({ status: "active" }) },
+      }) as never,
     );
-    expect(writes()[0].values).toMatchObject({ subscription_status: "active", billing_subscription_id: "sub_1" });
+    expect(writes()[0].values).toMatchObject({
+      subscription_status: "active",
+      billing_subscription_id: "sub_1",
+    });
   });
 
   it("clears the card and marks canceled when the subscription is deleted", async () => {
     await POST(
-      signed({ id: "evt_3", type: "customer.subscription.deleted", data: { object: subscription({ status: "canceled" }) } }) as never,
+      signed({
+        id: "evt_3",
+        type: "customer.subscription.deleted",
+        data: { object: subscription({ status: "canceled" }) },
+      }) as never,
     );
     expect(writes()[0].values).toMatchObject({
       subscription_status: "canceled",
@@ -102,14 +121,22 @@ describe("billing webhook", () => {
 
   it("finds the association by customer when metadata is missing", async () => {
     await POST(
-      signed({ id: "evt_4", type: "customer.subscription.updated", data: { object: subscription({ metadata: {} }) } }) as never,
+      signed({
+        id: "evt_4",
+        type: "customer.subscription.updated",
+        data: { object: subscription({ metadata: {} }) },
+      }) as never,
     );
     expect(writes()[0].filters).toContainEqual(["eq", "id", "assoc-by-customer"]);
   });
 
   it("marks past due on a failed invoice, keyed by customer, only once", async () => {
     await POST(
-      signed({ id: "evt_5", type: "invoice.payment_failed", data: { object: { id: "in_1", object: "invoice", customer: "cus_1" } } }) as never,
+      signed({
+        id: "evt_5",
+        type: "invoice.payment_failed",
+        data: { object: { id: "in_1", object: "invoice", customer: "cus_1" } },
+      }) as never,
     );
     expect(writes()[0].values).toMatchObject({ subscription_status: "past_due" });
     expect(writes()[0].values.past_due_since).toBeTruthy();
@@ -119,7 +146,11 @@ describe("billing webhook", () => {
 
   it("returns to active on a paid invoice, but only for a row with a subscription", async () => {
     await POST(
-      signed({ id: "evt_6", type: "invoice.paid", data: { object: { id: "in_2", object: "invoice", customer: "cus_1" } } }) as never,
+      signed({
+        id: "evt_6",
+        type: "invoice.paid",
+        data: { object: { id: "in_2", object: "invoice", customer: "cus_1" } },
+      }) as never,
     );
     expect(writes()[0].values).toEqual({ subscription_status: "active", past_due_since: null });
     expect(writes()[0].filters).toContainEqual(["not", "billing_subscription_id", "is", null]);
@@ -127,7 +158,11 @@ describe("billing webhook", () => {
 
   it("ignores events it does not handle", async () => {
     const response = await POST(
-      signed({ id: "evt_7", type: "customer.created", data: { object: { id: "cus_9", object: "customer" } } }) as never,
+      signed({
+        id: "evt_7",
+        type: "customer.created",
+        data: { object: { id: "cus_9", object: "customer" } },
+      }) as never,
     );
     expect(response.status).toBe(200);
     expect(writes()).toHaveLength(0);

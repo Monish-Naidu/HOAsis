@@ -89,20 +89,20 @@ find it applied to them. The existing `enforcing-rules-fairly` still covers the 
 
 Migration for the twelve articles already in the file:
 
-| Existing slug | Current topic | Proposed group |
-| --- | --- | --- |
-| `self-managing-vs-management-company` | Getting started | Getting started |
-| `first-90-days-on-a-board` | Getting started | Getting started |
-| `reserve-study-basics` | Reserves | Reserves |
-| `collecting-late-assessments` | Money | Money |
-| `reading-an-hoa-budget` | Money | Money |
-| `running-a-board-meeting` | Meetings and voting | Records and meetings |
-| `electronic-voting` | Meetings and voting | Records and meetings |
-| `enforcing-rules-fairly` | Rules and enforcement | Rules and enforcement |
-| `washington-reserve-and-records` | Legal | superseded by `washington-hoa-law` |
-| `california-davis-stirling` | Legal | superseded by `california-hoa-law` |
-| `florida-2026-website-rule` | Legal | superseded by `florida-hoa-law` |
-| `texas-open-meetings-and-fines` | Legal | superseded by `texas-hoa-law` |
+| Existing slug                         | Current topic         | Proposed group                     |
+| ------------------------------------- | --------------------- | ---------------------------------- |
+| `self-managing-vs-management-company` | Getting started       | Getting started                    |
+| `first-90-days-on-a-board`            | Getting started       | Getting started                    |
+| `reserve-study-basics`                | Reserves              | Reserves                           |
+| `collecting-late-assessments`         | Money                 | Money                              |
+| `reading-an-hoa-budget`               | Money                 | Money                              |
+| `running-a-board-meeting`             | Meetings and voting   | Records and meetings               |
+| `electronic-voting`                   | Meetings and voting   | Records and meetings               |
+| `enforcing-rules-fairly`              | Rules and enforcement | Rules and enforcement              |
+| `washington-reserve-and-records`      | Legal                 | superseded by `washington-hoa-law` |
+| `california-davis-stirling`           | Legal                 | superseded by `california-hoa-law` |
+| `florida-2026-website-rule`           | Legal                 | superseded by `florida-hoa-law`    |
+| `texas-open-meetings-and-fines`       | Legal                 | superseded by `texas-hoa-law`      |
 
 The four existing state articles are thin and, in places, wrong in ways this research fixes.
 `florida-2026-website-rule` states the 150 parcel threshold, which is the condominium number,
@@ -116,41 +116,41 @@ kept in alphabetical order by name.
 
 33 new articles. State-specific pieces are marked with the state code; `all` means it applies everywhere.
 
-| Slug | Title | Group | State | What it covers |
-| --- | --- | --- | --- | --- |
-| `first-30-days-self-managed-board` | The first 30 days of a self-managed board | Getting started | all | An ordered plan for a new board, grounded in the filings and deadlines that actually bind |
-| `developer-turnover-checklist` | What to demand at turnover from the developer | Getting started | all | Turnover is the one moment a board has leverage. Here is the list to hold the developer to |
-| `hoa-federal-income-tax` | HOA federal income tax, 1120-H and 1120 | Money | all | Why a nonprofit association still files a federal return, and what the section 528 election requires |
-| `hoa-insurance-what-the-association-carries` | HOA insurance: what the association carries | Money | all | Master policy, D and O, fidelity bond, and the owner coverage nobody explains |
-| `billing-utilities-back-to-owners` | Billing utilities back to owners: submetering, RUBS, and the law | Money | all | Master meter, submeter, or RUBS: what each one is, what the law allows, and where boards get caught |
-| `reserve-studies-and-percent-funded` | Reserve studies and percent funded, explained | Reserves | all | How to read a reserve study, what percent funded means, and what the number does not tell you |
-| `florida-condo-milestone-and-sirs` | Florida milestone inspections and structural integrity reserve studies | Reserves | FL | The Chapter 718 inspection and reserve rules with the deadlines, thresholds, and what can still be waived |
-| `responding-to-a-records-request` | How to answer a member's records request | Records and meetings | all | Every state gives members an inspection right, but the deadlines and the charges differ a lot |
-| `lender-project-eligibility` | Why an underfunded association makes homes harder to sell | Buying and selling | all | Mortgage investors underwrite your association, not just the buyer. Here is what they check |
-| `arizona-hoa-law` | Arizona HOA law: the planned community and condominium acts | State law | AZ | Records, meetings, fines, collections and the state hearing process Arizona boards have to follow |
-| `arizona-recent-changes` | What changed for Arizona HOA boards in 2024, 2025 and 2026 | State law | AZ | Sixteen bills across three sessions, with chapter numbers and the dates each one starts binding |
-| `california-hoa-law` | California HOA law: what the Davis-Stirling Act requires | State law | CA | Every scheduled duty a California board has, with the section number and the deadline |
-| `california-recent-changes` | What changed for California HOAs in 2024, 2025, and 2026 | State law | CA | The bills that actually passed, the sections they moved, and the dates they took effect |
-| `california-hoa-elections` | How to run a legal HOA election in California | State law | CA | The Davis-Stirling election deadlines, the inspector rules, and the mistakes that void a count |
-| `colorado-hoa-law` | Colorado HOA law: what CCIOA requires of your board | State law | CO | Registration, policies, records, meetings, budgets, fines and collections under CCIOA |
-| `colorado-recent-changes` | Colorado HOA law changes: 2022 through 2026 | State law | CO | Bill numbers and effective dates for every recent change to Colorado collections and enforcement |
-| `florida-hoa-law` | Florida HOA law, a board member's guide to Chapter 720 | State law | FL | What Chapter 720 actually requires of a Florida homeowners association board, with the numbers |
-| `florida-recent-changes` | What changed for Florida association boards in 2024, 2025, and 2026 | State law | FL | The bills that actually became law, with chapter numbers and effective dates |
-| `georgia-hoa-law` | Georgia HOA law: the opt in nobody told you about | State law | GA | Georgia's Property Owners' Association Act only applies if your declaration says it does |
-| `georgia-recent-changes` | Georgia's 2024 and 2026 HOA laws, and what changes when | State law | GA | HB 220 took effect in 2024; SB 406 adds state registration starting January 1, 2027 |
-| `illinois-hoa-law` | Illinois HOA and condo law for board members | State law | IL | Two different acts, two different sets of deadlines, and boards mix them up constantly |
-| `illinois-recent-changes` | What changed in Illinois community association law since 2024 | State law | IL | Small but real changes on FHA sales, accessible parking, and the ombudsperson sunset |
-| `nevada-hoa-law` | Nevada HOA law: what NRS 116 requires of your board | State law | NV | Reserves, budgets, records, meetings, fines and the nine-month super priority lien under NRS 116 |
-| `nevada-recent-changes` | Nevada HOA law changes from the 2023 and 2025 sessions | State law | NV | Electronic ballots, website rules, records fees, solar deadlines and the new $5,000 fine |
-| `north-carolina-hoa-law` | North Carolina HOA law, what a board actually has to do | State law | NC | Chapter 47F, what applies to pre-1999 communities, and the rules boards get wrong |
-| `texas-hoa-law` | Texas HOA law: what Chapter 209 requires of your board | State law | TX | Recording, records, meetings, fines and collections under the Texas Residential Property Owners Protection Act |
-| `texas-recent-changes` | What changed for Texas HOA boards in 2023, 2025 and 2026 | State law | TX | The bills that actually reached the governor, with numbers and effective dates |
-| `utah-hoa-law` | Utah HOA law, a board member's guide | State law | UT | Registration, reserves, records, fines, collections and the deductible rule Utah boards get backwards |
-| `utah-recent-changes` | What changed in Utah HOA law, 2024 to 2026 | State law | UT | Bill numbers, chapter numbers and effective dates for three sessions of Utah HOA legislation |
-| `virginia-hoa-law` | Virginia HOA law, the board's obligations in plain terms | State law | VA | Title 55.1, the CIC Board filing, records, fines, liens, reserves, and resale |
-| `virginia-recent-changes` | What changed for Virginia HOAs in 2024, 2025, and 2026 | State law | VA | Bill numbers, code sections, and effective dates for three sessions of changes |
-| `washington-hoa-law` | Washington HOA law, a board member's guide | State law | WA | WUCIOA, the 2028 repeal of the old chapters, and the rules that already apply to every association |
-| `washington-recent-changes` | What changed in Washington HOA law, 2024 to 2026 | State law | WA | Bill numbers and effective dates for the WUCIOA rollout, the new collection rules, and the 2026 bills |
+| Slug                                         | Title                                                                  | Group                | State | What it covers                                                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------------- | -------------------- | ----- | -------------------------------------------------------------------------------------------------------------- |
+| `first-30-days-self-managed-board`           | The first 30 days of a self-managed board                              | Getting started      | all   | An ordered plan for a new board, grounded in the filings and deadlines that actually bind                      |
+| `developer-turnover-checklist`               | What to demand at turnover from the developer                          | Getting started      | all   | Turnover is the one moment a board has leverage. Here is the list to hold the developer to                     |
+| `hoa-federal-income-tax`                     | HOA federal income tax, 1120-H and 1120                                | Money                | all   | Why a nonprofit association still files a federal return, and what the section 528 election requires           |
+| `hoa-insurance-what-the-association-carries` | HOA insurance: what the association carries                            | Money                | all   | Master policy, D and O, fidelity bond, and the owner coverage nobody explains                                  |
+| `billing-utilities-back-to-owners`           | Billing utilities back to owners: submetering, RUBS, and the law       | Money                | all   | Master meter, submeter, or RUBS: what each one is, what the law allows, and where boards get caught            |
+| `reserve-studies-and-percent-funded`         | Reserve studies and percent funded, explained                          | Reserves             | all   | How to read a reserve study, what percent funded means, and what the number does not tell you                  |
+| `florida-condo-milestone-and-sirs`           | Florida milestone inspections and structural integrity reserve studies | Reserves             | FL    | The Chapter 718 inspection and reserve rules with the deadlines, thresholds, and what can still be waived      |
+| `responding-to-a-records-request`            | How to answer a member's records request                               | Records and meetings | all   | Every state gives members an inspection right, but the deadlines and the charges differ a lot                  |
+| `lender-project-eligibility`                 | Why an underfunded association makes homes harder to sell              | Buying and selling   | all   | Mortgage investors underwrite your association, not just the buyer. Here is what they check                    |
+| `arizona-hoa-law`                            | Arizona HOA law: the planned community and condominium acts            | State law            | AZ    | Records, meetings, fines, collections and the state hearing process Arizona boards have to follow              |
+| `arizona-recent-changes`                     | What changed for Arizona HOA boards in 2024, 2025 and 2026             | State law            | AZ    | Sixteen bills across three sessions, with chapter numbers and the dates each one starts binding                |
+| `california-hoa-law`                         | California HOA law: what the Davis-Stirling Act requires               | State law            | CA    | Every scheduled duty a California board has, with the section number and the deadline                          |
+| `california-recent-changes`                  | What changed for California HOAs in 2024, 2025, and 2026               | State law            | CA    | The bills that actually passed, the sections they moved, and the dates they took effect                        |
+| `california-hoa-elections`                   | How to run a legal HOA election in California                          | State law            | CA    | The Davis-Stirling election deadlines, the inspector rules, and the mistakes that void a count                 |
+| `colorado-hoa-law`                           | Colorado HOA law: what CCIOA requires of your board                    | State law            | CO    | Registration, policies, records, meetings, budgets, fines and collections under CCIOA                          |
+| `colorado-recent-changes`                    | Colorado HOA law changes: 2022 through 2026                            | State law            | CO    | Bill numbers and effective dates for every recent change to Colorado collections and enforcement               |
+| `florida-hoa-law`                            | Florida HOA law, a board member's guide to Chapter 720                 | State law            | FL    | What Chapter 720 actually requires of a Florida homeowners association board, with the numbers                 |
+| `florida-recent-changes`                     | What changed for Florida association boards in 2024, 2025, and 2026    | State law            | FL    | The bills that actually became law, with chapter numbers and effective dates                                   |
+| `georgia-hoa-law`                            | Georgia HOA law: the opt in nobody told you about                      | State law            | GA    | Georgia's Property Owners' Association Act only applies if your declaration says it does                       |
+| `georgia-recent-changes`                     | Georgia's 2024 and 2026 HOA laws, and what changes when                | State law            | GA    | HB 220 took effect in 2024; SB 406 adds state registration starting January 1, 2027                            |
+| `illinois-hoa-law`                           | Illinois HOA and condo law for board members                           | State law            | IL    | Two different acts, two different sets of deadlines, and boards mix them up constantly                         |
+| `illinois-recent-changes`                    | What changed in Illinois community association law since 2024          | State law            | IL    | Small but real changes on FHA sales, accessible parking, and the ombudsperson sunset                           |
+| `nevada-hoa-law`                             | Nevada HOA law: what NRS 116 requires of your board                    | State law            | NV    | Reserves, budgets, records, meetings, fines and the nine-month super priority lien under NRS 116               |
+| `nevada-recent-changes`                      | Nevada HOA law changes from the 2023 and 2025 sessions                 | State law            | NV    | Electronic ballots, website rules, records fees, solar deadlines and the new $5,000 fine                       |
+| `north-carolina-hoa-law`                     | North Carolina HOA law, what a board actually has to do                | State law            | NC    | Chapter 47F, what applies to pre-1999 communities, and the rules boards get wrong                              |
+| `texas-hoa-law`                              | Texas HOA law: what Chapter 209 requires of your board                 | State law            | TX    | Recording, records, meetings, fines and collections under the Texas Residential Property Owners Protection Act |
+| `texas-recent-changes`                       | What changed for Texas HOA boards in 2023, 2025 and 2026               | State law            | TX    | The bills that actually reached the governor, with numbers and effective dates                                 |
+| `utah-hoa-law`                               | Utah HOA law, a board member's guide                                   | State law            | UT    | Registration, reserves, records, fines, collections and the deductible rule Utah boards get backwards          |
+| `utah-recent-changes`                        | What changed in Utah HOA law, 2024 to 2026                             | State law            | UT    | Bill numbers, chapter numbers and effective dates for three sessions of Utah HOA legislation                   |
+| `virginia-hoa-law`                           | Virginia HOA law, the board's obligations in plain terms               | State law            | VA    | Title 55.1, the CIC Board filing, records, fines, liens, reserves, and resale                                  |
+| `virginia-recent-changes`                    | What changed for Virginia HOAs in 2024, 2025, and 2026                 | State law            | VA    | Bill numbers, code sections, and effective dates for three sessions of changes                                 |
+| `washington-hoa-law`                         | Washington HOA law, a board member's guide                             | State law            | WA    | WUCIOA, the 2028 repeal of the old chapters, and the rules that already apply to every association             |
+| `washington-recent-changes`                  | What changed in Washington HOA law, 2024 to 2026                       | State law            | WA    | Bill numbers and effective dates for the WUCIOA rollout, the new collection rules, and the 2026 bills          |
 
 ## 3. The articles
 

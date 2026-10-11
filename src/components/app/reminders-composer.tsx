@@ -78,7 +78,12 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
     if (!edit) return;
     const template = templates.find((t) => t.id === edit.id);
     if (!template) return;
-    saveTemplate({ ...template, subject: edit.subject, body: edit.body, updatedDate: todayIsoDate() });
+    saveTemplate({
+      ...template,
+      subject: edit.subject,
+      body: edit.body,
+      updatedDate: todayIsoDate(),
+    });
     setEdit(null);
     notify(`Saved "${template.name}"`);
   }
@@ -169,7 +174,11 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
           })}
           {waiting.map((row) => (
             <li key={row.home.id} className="flex items-center gap-3 px-5 py-3 opacity-70">
-              <Avatar name={row.home.members[0] ?? row.home.displayName} className="size-8" tone="neutral" />
+              <Avatar
+                name={row.home.members[0] ?? row.home.displayName}
+                className="size-8"
+                tone="neutral"
+              />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-body font-medium text-fg">
                   {row.home.displayName}
@@ -215,8 +224,8 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
             ) : null
           ) : (
             <p className="text-body leading-relaxed text-fg-muted">
-              Reminders start at {policy.reminderDay} days past due. Nothing goes out before
-              that, and every home gets the same steps on the same days.
+              Reminders start at {policy.reminderDay} days past due. Nothing goes out before that,
+              and every home gets the same steps on the same days.
             </p>
           )}
         </div>
@@ -265,7 +274,9 @@ function LetterPreview({
         {home.email ? ` · ${home.email}` : ""}
       </p>
       <p className="mt-2 text-body font-semibold text-fg">{letter.subject}</p>
-      <div className="mt-3 whitespace-pre-wrap text-body leading-relaxed text-fg">{letter.body}</div>
+      <div className="mt-3 whitespace-pre-wrap text-body leading-relaxed text-fg">
+        {letter.body}
+      </div>
       {children ? <div className="mt-4">{children}</div> : null}
     </div>
   );
@@ -287,13 +298,12 @@ function LetterEditor({
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const field =
-    fieldClass;
+  const field = fieldClass;
   return (
     <div>
       <p className="text-footnote text-fg-muted">
-        Editing &ldquo;{template.name}&rdquo;. The change applies to every home getting this
-        letter, now and next month.
+        Editing &ldquo;{template.name}&rdquo;. The change applies to every home getting this letter,
+        now and next month.
       </p>
       <label className="mt-3 block">
         <span className="mb-1 block text-footnote font-semibold text-fg-muted">Subject</span>

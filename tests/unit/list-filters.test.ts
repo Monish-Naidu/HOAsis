@@ -3,7 +3,9 @@ import { homeFilterCounts, matchesHomeFilter } from "@/lib/roster-filters";
 import { ladderFilterCounts, matchesLadderFilter } from "@/lib/collections";
 import { applyRequestFilters, requestFilterCounts } from "@/lib/request-filters";
 
-const home = (over: Partial<{ daysPastDue: number; placeholder: boolean; autopay: boolean; email: string }>) => ({
+const home = (
+  over: Partial<{ daysPastDue: number; placeholder: boolean; autopay: boolean; email: string }>,
+) => ({
   daysPastDue: 0,
   placeholder: false,
   autopay: false,
@@ -20,7 +22,13 @@ describe("homeowner chips", () => {
   ];
 
   it("counts each chip with the same rule that filters the list", () => {
-    expect(homeFilterCounts(homes)).toEqual({ all: 4, "paid-up": 2, "past-due": 1, autopay: 1, "no-email": 2 });
+    expect(homeFilterCounts(homes)).toEqual({
+      all: 4,
+      "paid-up": 2,
+      "past-due": 1,
+      autopay: 1,
+      "no-email": 2,
+    });
     for (const f of ["paid-up", "past-due", "autopay", "no-email"] as const) {
       expect(homes.filter((o) => matchesHomeFilter(o, f))).toHaveLength(homeFilterCounts(homes)[f]);
     }
@@ -47,12 +55,20 @@ describe("past due chips", () => {
 
   it("counts a rung and the homes whose autopay failed", () => {
     const counts = ladderFilterCounts(rows, new Set(["b", "c"]));
-    expect(counts).toMatchObject({ all: 3, reminder: 2, demand: 1, counsel: 0, "autopay-failed": 2 });
+    expect(counts).toMatchObject({
+      all: 3,
+      reminder: 2,
+      demand: 1,
+      counsel: 0,
+      "autopay-failed": 2,
+    });
   });
 
   it("filters by rung and by autopay", () => {
     expect(rows.filter((r) => matchesLadderFilter(r, "demand"))).toHaveLength(1);
-    expect(rows.filter((r) => matchesLadderFilter(r, "autopay-failed", new Set(["a"])))).toHaveLength(1);
+    expect(
+      rows.filter((r) => matchesLadderFilter(r, "autopay-failed", new Set(["a"]))),
+    ).toHaveLength(1);
     expect(rows.filter((r) => matchesLadderFilter(r, "autopay-failed"))).toHaveLength(0);
   });
 });

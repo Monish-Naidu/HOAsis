@@ -102,7 +102,10 @@ test.describe("governing documents", () => {
       "constitutes a quorum",
     );
 
-    await page.getByRole("button", { name: /Read the exact wording/ }).first().click();
+    await page
+      .getByRole("button", { name: /Read the exact wording/ })
+      .first()
+      .click();
     await expect(page.locator("main")).toContainText("As written in the");
 
     const after = (await inspect(page)).text;
@@ -118,7 +121,9 @@ test.describe("governing documents", () => {
     expect(health.text, "no open amendment is surfaced").toContain("Open for your vote");
 
     await page.getByText("See exactly what changes").first().click();
-    await expect(page.locator("main")).toContainText("shall not deny an application for a solar energy system");
+    await expect(page.locator("main")).toContainText(
+      "shall not deny an application for a solar energy system",
+    );
 
     const opened = (await inspect(page)).text;
     // The added paragraph, not a description of it.
@@ -189,7 +194,9 @@ test.describe("governing documents", () => {
     );
 
     await page.getByRole("button", { name: "Rules and regulations" }).click();
-    await expect(page.locator("main")).toContainText("Policies most associations are expected to have");
+    await expect(page.locator("main")).toContainText(
+      "Policies most associations are expected to have",
+    );
     const rules = (await inspect(page)).text;
     expect(rules, "no starter policy is offered at the rules layer").toContain(
       "Policies most associations are expected to have",
@@ -238,15 +245,15 @@ test.describe("importing a document", () => {
     // Importing the same file twice, or an amended copy that restates one
     // article, is the likeliest mistake here. A button that appears to work
     // and adds nothing is worse than a refusal that says why.
-    await page.getByLabel("The text of the document").fill(
-      "DECLARATION OF COVENANTS\n\nARTICLE VII. Architectural control\n\nNo exterior alteration shall be made without approval.\n",
-    );
+    await page
+      .getByLabel("The text of the document")
+      .fill(
+        "DECLARATION OF COVENANTS\n\nARTICLE VII. Architectural control\n\nNo exterior alteration shall be made without approval.\n",
+      );
     await expect(page.locator("main")).toContainText("already exists in the CC&Rs");
 
     const health = await inspect(page);
-    expect(health.text, "the collision was not reported").toContain(
-      "already exists in the CC&Rs",
-    );
+    expect(health.text, "the collision was not reported").toContain("already exists in the CC&Rs");
     expect(health.text, "the article was not marked").toContain("Already on file");
     await expect(
       page.getByRole("button", { name: /^Add \d+ article/ }),
@@ -259,23 +266,25 @@ test.describe("importing a document", () => {
     await page.goto("/board/documents/import");
     await expectHealthy(page, "document import");
 
-    await page.getByLabel("The text of the document").fill(
-      [
-        "RULES AND REGULATIONS",
-        "of Willow Creek Estates Homeowners Association",
-        "Adopted by resolution of the Board of Directors.",
-        "",
-        "Section 7.1 Quiet hours",
-        "",
-        "No amplified sound shall be audible at a lot line between 10:00 p.m. and 7:00 a.m.",
-        "",
-        "Section 7.2",
-        "",
-        "Holiday lighting",
-        "",
-        "Holiday lighting may be displayed from November 15 to January 15.",
-      ].join("\n"),
-    );
+    await page
+      .getByLabel("The text of the document")
+      .fill(
+        [
+          "RULES AND REGULATIONS",
+          "of Willow Creek Estates Homeowners Association",
+          "Adopted by resolution of the Board of Directors.",
+          "",
+          "Section 7.1 Quiet hours",
+          "",
+          "No amplified sound shall be audible at a lot line between 10:00 p.m. and 7:00 a.m.",
+          "",
+          "Section 7.2",
+          "",
+          "Holiday lighting",
+          "",
+          "Holiday lighting may be displayed from November 15 to January 15.",
+        ].join("\n"),
+      );
     await expect(page.locator("main")).toContainText("Section 7.1");
 
     const parsed = await inspect(page);
@@ -315,9 +324,9 @@ test.describe("importing a document", () => {
     await page.goto("/board/documents/import");
     await page.waitForLoadState("networkidle");
 
-    await page.getByLabel("The text of the document").fill(
-      "ARTICLE XX. Pets\n\nNo more than two domestic animals shall be kept upon a Lot.\n",
-    );
+    await page
+      .getByLabel("The text of the document")
+      .fill("ARTICLE XX. Pets\n\nNo more than two domestic animals shall be kept upon a Lot.\n");
     await page.getByRole("button", { name: /^Add \d+ article/ }).click();
     await expect(page.getByRole("button", { name: "Added" })).toBeVisible();
 

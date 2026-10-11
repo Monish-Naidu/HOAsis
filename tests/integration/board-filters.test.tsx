@@ -56,14 +56,19 @@ describe("Homeowners filters", () => {
       ["Autopay on", counts.autopay],
       ["No email on file", counts["no-email"]],
     ] as const) {
-      expect(screen.getByRole("button", { name: new RegExp(`^${name}\\s*${count}$`) })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: new RegExp(`^${name}\\s*${count}$`) }),
+      ).toBeInTheDocument();
     }
   });
 
   it("opens on the filter in the URL", () => {
     url.search = "filter=past-due";
     open(<HomeownersScreen />);
-    expect(screen.getByRole("button", { name: /^Past due/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Past due/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("writes a chosen chip back to the URL", async () => {
@@ -94,7 +99,10 @@ describe("Past due filters", () => {
     const group = screen.getByRole("group", { name: "Show homes at" });
     const second = group.querySelectorAll("button")[1] as HTMLButtonElement;
     await userEvent.setup().click(second);
-    expect(replace).toHaveBeenCalledWith(expect.stringMatching(/^\/board\/money\/collections\?stage=/), { scroll: false });
+    expect(replace).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/board\/money\/collections\?stage=/),
+      { scroll: false },
+    );
   });
 });
 
@@ -117,9 +125,13 @@ describe("Transactions filters", () => {
     const user = userEvent.setup();
     open(<TransactionsScreen />);
     await user.click(screen.getByRole("button", { name: /^Last 30 days/ }));
-    expect(screen.getByRole("button", { name: /^This month.*Aug 1 to Aug 31, 2026/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^This month.*Aug 1 to Aug 31, 2026/ }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^Last month/ }));
-    expect(replace).toHaveBeenCalledWith("/board/money/transactions?period=last-month", { scroll: false });
+    expect(replace).toHaveBeenCalledWith("/board/money/transactions?period=last-month", {
+      scroll: false,
+    });
   });
 
   it("applies custom dates when the menu closes, and keeps them in the URL", async () => {
@@ -144,7 +156,9 @@ describe("Transactions filters", () => {
     expect(screen.getByRole("button", { name: "Next period" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Previous period" }));
     // This month back one is Last month, which is a preset, so the link stays short.
-    expect(replace).toHaveBeenLastCalledWith("/board/money/transactions?period=last-month", { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith("/board/money/transactions?period=last-month", {
+      scroll: false,
+    });
   });
 
   it("steps past the presets as a custom month, named in words", async () => {
@@ -205,7 +219,9 @@ describe("Transactions filters", () => {
       .querySelector('button[aria-pressed="true"]') as HTMLElement;
     expect(pressed).toHaveTextContent(name);
     await user.click(pressed);
-    expect(replace).toHaveBeenLastCalledWith("/board/money/transactions?period=this-year", { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith("/board/money/transactions?period=this-year", {
+      scroll: false,
+    });
   });
 
   it("makes Money in and Money out the direction filter, with no separate switch", async () => {
@@ -219,8 +235,13 @@ describe("Transactions filters", () => {
     await user.click(moneyIn);
     expect(moneyIn).toHaveAttribute("aria-pressed", "true");
     // Money out keeps reading the whole period while Money in is the filter.
-    expect(screen.getByRole("button", { name: /^Money out/ })).toHaveAttribute("aria-pressed", "false");
-    expect(Number(screen.getByText("Lines").nextSibling!.textContent)).toBeLessThan(Number(linesBefore));
+    expect(screen.getByRole("button", { name: /^Money out/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(Number(screen.getByText("Lines").nextSibling!.textContent)).toBeLessThan(
+      Number(linesBefore),
+    );
     await user.click(moneyIn);
     expect(moneyIn).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("Lines").nextSibling!.textContent).toBe(linesBefore);

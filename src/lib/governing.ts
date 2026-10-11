@@ -55,10 +55,7 @@ export function documentsPresent(articles: GoverningArticle[]): GoverningDoc[] {
   return DOC_ORDER.filter((doc) => articles.some((a) => a.document === doc));
 }
 
-export function articlesIn(
-  articles: GoverningArticle[],
-  doc: GoverningDoc,
-): GoverningArticle[] {
+export function articlesIn(articles: GoverningArticle[], doc: GoverningDoc): GoverningArticle[] {
   return articles.filter((a) => a.document === doc);
 }
 
@@ -71,10 +68,7 @@ export function articlesIn(
  * assumed. The rules layer has no such provision because a board adopts a rule
  * by resolution, and saying so plainly is the point.
  */
-export function amendmentThreshold(
-  articles: GoverningArticle[],
-  doc: GoverningDoc,
-): string {
+export function amendmentThreshold(articles: GoverningArticle[], doc: GoverningDoc): string {
   if (doc === "rules") return "a vote of the board at a meeting";
 
   const provision = articlesIn(articles, doc).find(
@@ -171,10 +165,7 @@ export interface CitationMatch {
  * Article IX and letting the reader find subsection 2(b) in the text, which is
  * honest, rather than by extracting a subsection we never stored.
  */
-export function resolveCitation(
-  citation: string,
-  articles: GoverningArticle[],
-): CitationMatch {
+export function resolveCitation(citation: string, articles: GoverningArticle[]): CitationMatch {
   const parsed = parseCitation(citation);
   if (!parsed.document) return { citation, parsed, problem: "no-document" };
 
@@ -231,7 +222,15 @@ export const DISCLOSURE_TOPICS: DisclosureTopicMeta[] = [
     topic: "lien",
     question: "What happens if I fall behind on dues?",
     why: "The consequence is a lien on the home and, eventually, a forced sale. Every state researched requires a buyer be told this before closing.",
-    hints: ["lien", "foreclose", "foreclosure", "foreclosing", "delinquent", "delinquency", "collection"],
+    hints: [
+      "lien",
+      "foreclose",
+      "foreclosure",
+      "foreclosing",
+      "delinquent",
+      "delinquency",
+      "collection",
+    ],
   },
   {
     topic: "parking",

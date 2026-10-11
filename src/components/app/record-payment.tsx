@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { Receipt, X } from "lucide-react";
-import { Button, Card, CardHeader, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Button,
+  Card,
+  CardHeader,
+  Select,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { LedgerCategory, Vendor } from "@/lib/types";
@@ -56,8 +63,7 @@ export function RecordPayment({
   const [category, setCategory] = useState<LedgerCategory | "">(usualCategory(vendors[0]));
   const [note, setNote] = useState("");
 
-  const field =
-    fieldClass;
+  const field = fieldClass;
   const cents = Math.round((Number(amount) || 0) * 100);
   const vendor = vendors.find((v) => v.id === vendorId);
   const ready = Boolean(vendor) && cents > 0 && Boolean(paidOn) && category !== "";
@@ -210,7 +216,9 @@ export function RecordPayment({
               notes: note.trim() || undefined,
               category: category || undefined,
             });
-            notify(`Recorded ${money(cents)} to ${vendor.name} on ${formatDate(paidOn, "medium")}.`);
+            notify(
+              `Recorded ${money(cents)} to ${vendor.name} on ${formatDate(paidOn, "medium")}.`,
+            );
             onClose();
           }}
         >

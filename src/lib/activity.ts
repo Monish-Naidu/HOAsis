@@ -14,7 +14,10 @@ import { formatDate, money } from "@/lib/utils";
  */
 
 /** The raw home label in a row ("1"), from its details or the home it points at. */
-function rawHome(row: Activity, unitLabelById: (id: string) => string | undefined): string | undefined {
+function rawHome(
+  row: Activity,
+  unitLabelById: (id: string) => string | undefined,
+): string | undefined {
   const named = row.details.home;
   if (typeof named === "string" && named) return named;
   const id = row.details.unit_id;
@@ -54,7 +57,8 @@ export function activityText(
   const seen = (row.details.can_see as { to?: unknown } | undefined)?.to;
   if (row.subjectKind === "seat" && to !== undefined && seen !== undefined) {
     const at = text.indexOf(" can change ");
-    if (at > 0) text = `${text.slice(0, at)} can change ${areaWords(to)} and see ${areaWords(seen)}`;
+    if (at > 0)
+      text = `${text.slice(0, at)} can change ${areaWords(to)} and see ${areaWords(seen)}`;
   }
 
   // "... for 1" becomes "... for Lot 1".
@@ -77,7 +81,8 @@ export const activityWords = {
     cents === null
       ? `Dues for ${home} set back to the standard amount`
       : `Dues for ${home} set to ${money(cents)}`,
-  email: (home: string, from: string, to: string) => `Email for ${home} changed from ${from} to ${to}`,
+  email: (home: string, from: string, to: string) =>
+    `Email for ${home} changed from ${from} to ${to}`,
   vendor: (name: string) => `Vendor ${name} added`,
   // The date goes in as stored; activityText reads it with formatDate.
   meeting: (title: string, date: string) => `Meeting "${title}" scheduled for ${date}`,

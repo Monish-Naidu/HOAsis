@@ -1,11 +1,28 @@
 "use client";
 
 import { ArrowDownLeft, ArrowUpRight, Inbox, MailCheck, Send } from "lucide-react";
-import { Avatar, Badge, Button, Callout, Card, CardHeader, EmptyState, PageHeader, textareaClass } from "@/components/ui/primitives";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  EmptyState,
+  PageHeader,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useUnreadThreadCount } from "@/lib/app-state";
-import { addressLabel, boardSignature, isMine, officeOf, unansweredByAddress, toLabel } from "@/lib/board-offices";
+import {
+  addressLabel,
+  boardSignature,
+  isMine,
+  officeOf,
+  unansweredByAddress,
+  toLabel,
+} from "@/lib/board-offices";
 import { OFFICES } from "@/lib/board-offices";
 import type { MessageEvent } from "@/lib/types";
 import { DeliveryPanel } from "@/components/app/delivery-panel";
@@ -47,7 +64,8 @@ function CommunicationsScreen() {
   // to the office this seat holds, plus the ones for the board as a whole.
   const [filter, setFilter] = useState<"all" | "mine">("all");
   const myOffice = officeOf(account?.role);
-  const threads = filter === "mine" ? allThreads.filter((t) => isMine(t, account?.role)) : allThreads;
+  const threads =
+    filter === "mine" ? allThreads.filter((t) => isMine(t, account?.role)) : allThreads;
   const waiting = unansweredByAddress(allThreads);
   const [activeId, setActiveId] = useState(params.get("thread") ?? allThreads[0]?.id);
   const [draft, setDraft] = useState("");
@@ -55,7 +73,8 @@ function CommunicationsScreen() {
   // opens on the newest and unfolds on request; the open one always shows.
   const [showAll, setShowAll] = useState(false);
   const active = threads.find((t) => t.id === activeId) ?? threads[0];
-  const senderName = (m: MessageEvent) => (m.fromOffice ? boardSignature(m.from, m.fromOffice) : m.from);
+  const senderName = (m: MessageEvent) =>
+    m.fromOffice ? boardSignature(m.from, m.fromOffice) : m.from;
   // Every board seat is copied on a reply, so the count is the roster's.
   const boardSeats = community.accounts.filter((a) => a.role !== "resident").length;
 
@@ -66,7 +85,8 @@ function CommunicationsScreen() {
     const email = await replyToThread(active.id, text);
     // Said once the email has answered: "sent" over a send that then failed
     // is what the log contradicted.
-    if (email) notify(replyToast(email, active.participants[0]), email === "failed" ? "warn" : "ok");
+    if (email)
+      notify(replyToast(email, active.participants[0]), email === "failed" ? "warn" : "ok");
   }
 
   return (
@@ -98,178 +118,195 @@ function CommunicationsScreen() {
           />
         </Card>
       ) : (
-      // One column until lg, and each column may shrink: without both, the
-      // longest subject set the grid's width and the page scrolled sideways
-      // at 320 to 390.
-      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
-        {/* Thread list */}
-        <Card className="min-w-0 lg:col-span-2">
-          <CardHeader title="Inbox" subtitle={pluralize(threads.length, "conversation")} />
-          {/* Who a thread is addressed to is a filter, not a wall: "All" is
+        // One column until lg, and each column may shrink: without both, the
+        // longest subject set the grid's width and the page scrolled sideways
+        // at 320 to 390.
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
+          {/* Thread list */}
+          <Card className="min-w-0 lg:col-span-2">
+            <CardHeader title="Inbox" subtitle={pluralize(threads.length, "conversation")} />
+            {/* Who a thread is addressed to is a filter, not a wall: "All" is
               what the board has always seen. */}
-          <div className="border-b border-border px-5 py-3">
-            <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
-              {(["all", "mine"] as const).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  aria-pressed={filter === f}
-                  onClick={() => setFilter(f)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-footnote font-medium transition-colors",
-                    filter === f
-                      ? "border-brand bg-primary-soft text-fg"
-                      : "border-border text-fg-muted hover:bg-surface-2",
-                  )}
-                >
-                  {f === "all" ? "All" : "Mine"}
-                </button>
-              ))}
-            </div>
-            {filter === "mine" ? (
-              <p className="mt-2 text-footnote text-fg-muted">
-                {myOffice ? `Written to the ${addressLabel(myOffice)} and to the board.` : "Written to the board."}
-              </p>
-            ) : null}
-            <p className="mt-2 text-footnote text-fg-muted">
-              Waiting on a reply:{" "}
-              {(["board", ...OFFICES] as const)
-                .map((a) => `${addressLabel(a)} ${waiting[a]}`)
-                .join(", ")}
-            </p>
-          </div>
-          {threads.length === 0 ? (
-            <p className="px-5 py-6 text-body text-fg-muted">Nothing addressed to you yet.</p>
-          ) : null}
-          {(showAll
-            ? threads
-            : threads.filter((t, i) => i < RECENT_THREADS || t.id === active?.id)
-          ).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveId(t.id)}
-              className={cn(
-                "flex w-full items-start gap-3 border-b border-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface-2",
-                t.id === active?.id && "bg-primary-soft/50",
-              )}
-            >
-              <Avatar name={t.participants[0]} tone={t.unread ? "brand" : "neutral"} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p
-                    className={`min-w-0 flex-1 truncate text-body ${
-                      t.unread ? "font-semibold text-fg" : "font-medium text-fg-muted"
-                    }`}
-                  >
-                    {t.subject}
-                  </p>
-                  {t.unread ? <span className="size-1.5 shrink-0 rounded-full bg-accent" /> : null}
-                </div>
-                <p className="mt-0.5 truncate text-footnote text-fg-muted">
-                  {t.participants.join(", ")}
-                  {t.unit ? ` · ${placeLabel(t.unit)}` : ""}
-                </p>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <Badge tone="neutral">{t.tag}</Badge>
-                  <Badge tone={t.toRole === "board" ? "neutral" : "info"}>{toLabel(t.toRole)}</Badge>
-                  <span className="text-footnote text-fg-subtle">{formatDate(t.updatedDate)}</span>
-                </div>
-              </div>
-            </button>
-          ))}
-          {!showAll && threads.length > RECENT_THREADS ? (
-            <div className="border-t border-border px-5 py-3">
-              <Button variant="secondary" size="sm" onClick={() => setShowAll(true)}>
-                Show all {threads.length} conversations
-              </Button>
-            </div>
-          ) : null}
-        </Card>
-
-        {/* Reading pane, as tall as the inbox beside it */}
-        {active ? (
-        <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
-          <Card className="flex flex-1 flex-col">
-            <CardHeader
-              title={active.subject}
-              subtitle={`${active.participants.join(", ")}${active.unit ? ` · ${placeLabel(active.unit)}` : ""}`}
-              action={
-                <span className="flex items-center gap-2">
-                  <Badge tone="neutral">{active.tag}</Badge>
-                  <Badge tone={active.toRole === "board" ? "neutral" : "info"}>{toLabel(active.toRole)}</Badge>
-                </span>
-              }
-            />
-            <div className="space-y-4 px-5 py-4">
-              {active.messages.map((m) => (
-                <div key={m.id} className="flex gap-3">
-                  <span
-                    className={`mt-1 flex size-6 shrink-0 items-center justify-center rounded-full ${
-                      m.direction === "inbound"
-                        ? "bg-info-soft text-info"
-                        : "bg-surface-3 text-fg-muted"
-                    }`}
-                  >
-                    {m.direction === "inbound" ? (
-                      <ArrowDownLeft className="size-3" />
-                    ) : (
-                      <ArrowUpRight className="size-3" />
+            <div className="border-b border-border px-5 py-3">
+              <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
+                {(["all", "mine"] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={filter === f}
+                    onClick={() => setFilter(f)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-footnote font-medium transition-colors",
+                      filter === f
+                        ? "border-brand bg-primary-soft text-fg"
+                        : "border-border text-fg-muted hover:bg-surface-2",
                     )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-body font-semibold text-fg">{senderName(m)}</span>
-                      <span className="text-footnote text-fg-subtle">
-                        {formatDate(m.at, "long")} · {m.channel === "portal" ? "in the app" : m.channel}
-                      </span>
-                    </div>
-                    <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg-muted">{m.body}</p>
+                  >
+                    {f === "all" ? "All" : "Mine"}
+                  </button>
+                ))}
+              </div>
+              {filter === "mine" ? (
+                <p className="mt-2 text-footnote text-fg-muted">
+                  {myOffice
+                    ? `Written to the ${addressLabel(myOffice)} and to the board.`
+                    : "Written to the board."}
+                </p>
+              ) : null}
+              <p className="mt-2 text-footnote text-fg-muted">
+                Waiting on a reply:{" "}
+                {(["board", ...OFFICES] as const)
+                  .map((a) => `${addressLabel(a)} ${waiting[a]}`)
+                  .join(", ")}
+              </p>
+            </div>
+            {threads.length === 0 ? (
+              <p className="px-5 py-6 text-body text-fg-muted">Nothing addressed to you yet.</p>
+            ) : null}
+            {(showAll
+              ? threads
+              : threads.filter((t, i) => i < RECENT_THREADS || t.id === active?.id)
+            ).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveId(t.id)}
+                className={cn(
+                  "flex w-full items-start gap-3 border-b border-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface-2",
+                  t.id === active?.id && "bg-primary-soft/50",
+                )}
+              >
+                <Avatar name={t.participants[0]} tone={t.unread ? "brand" : "neutral"} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p
+                      className={`min-w-0 flex-1 truncate text-body ${
+                        t.unread ? "font-semibold text-fg" : "font-medium text-fg-muted"
+                      }`}
+                    >
+                      {t.subject}
+                    </p>
+                    {t.unread ? (
+                      <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 truncate text-footnote text-fg-muted">
+                    {t.participants.join(", ")}
+                    {t.unit ? ` · ${placeLabel(t.unit)}` : ""}
+                  </p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <Badge tone="neutral">{t.tag}</Badge>
+                    <Badge tone={t.toRole === "board" ? "neutral" : "info"}>
+                      {toLabel(t.toRole)}
+                    </Badge>
+                    <span className="text-footnote text-fg-subtle">
+                      {formatDate(t.updatedDate)}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Composer. The card stretches to the inbox beside it, so the
-                composer sits at the foot and the spare height reads as the
-                message area. */}
-            <div className="mt-auto border-t border-border p-4">
-              <div className="mb-2.5 flex flex-wrap items-center gap-2 text-footnote">
-                <span className="text-fg-subtle">To</span>
-                <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
-                  {active.participants[0]}
-                </span>
-                <span className="text-fg-subtle">Cc</span>
-                <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
-                  Board ({boardSeats})
-                </span>
-              </div>
-              <textarea
-                rows={3}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Write a reply"
-                aria-label="Reply"
-                className={cn(textareaClass, "resize-none")}
-              />
-              <div className="mt-2 flex justify-end">
-                <Button variant="primary" size="sm" disabled={!draft.trim()} onClick={send}>
-                  <Send className="size-3.5" />
-                  Send
+              </button>
+            ))}
+            {!showAll && threads.length > RECENT_THREADS ? (
+              <div className="border-t border-border px-5 py-3">
+                <Button variant="secondary" size="sm" onClick={() => setShowAll(true)}>
+                  Show all {threads.length} conversations
                 </Button>
               </div>
-            </div>
+            ) : null}
           </Card>
 
-          {moduleOn("delivery-panel") ? (
-            <Callout tone="brand" icon={<MailCheck className="size-4" />} title="Delivery is evidence">
-              Every send records who got it, who opened it, and what bounced. That log is your proof
-              that owners were notified.
-            </Callout>
+          {/* Reading pane, as tall as the inbox beside it */}
+          {active ? (
+            <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
+              <Card className="flex flex-1 flex-col">
+                <CardHeader
+                  title={active.subject}
+                  subtitle={`${active.participants.join(", ")}${active.unit ? ` · ${placeLabel(active.unit)}` : ""}`}
+                  action={
+                    <span className="flex items-center gap-2">
+                      <Badge tone="neutral">{active.tag}</Badge>
+                      <Badge tone={active.toRole === "board" ? "neutral" : "info"}>
+                        {toLabel(active.toRole)}
+                      </Badge>
+                    </span>
+                  }
+                />
+                <div className="space-y-4 px-5 py-4">
+                  {active.messages.map((m) => (
+                    <div key={m.id} className="flex gap-3">
+                      <span
+                        className={`mt-1 flex size-6 shrink-0 items-center justify-center rounded-full ${
+                          m.direction === "inbound"
+                            ? "bg-info-soft text-info"
+                            : "bg-surface-3 text-fg-muted"
+                        }`}
+                      >
+                        {m.direction === "inbound" ? (
+                          <ArrowDownLeft className="size-3" />
+                        ) : (
+                          <ArrowUpRight className="size-3" />
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="text-body font-semibold text-fg">{senderName(m)}</span>
+                          <span className="text-footnote text-fg-subtle">
+                            {formatDate(m.at, "long")} ·{" "}
+                            {m.channel === "portal" ? "in the app" : m.channel}
+                          </span>
+                        </div>
+                        <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg-muted">
+                          {m.body}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Composer. The card stretches to the inbox beside it, so the
+                composer sits at the foot and the spare height reads as the
+                message area. */}
+                <div className="mt-auto border-t border-border p-4">
+                  <div className="mb-2.5 flex flex-wrap items-center gap-2 text-footnote">
+                    <span className="text-fg-subtle">To</span>
+                    <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
+                      {active.participants[0]}
+                    </span>
+                    <span className="text-fg-subtle">Cc</span>
+                    <span className="rounded-md bg-surface-3 px-2 py-0.5 font-medium text-fg">
+                      Board ({boardSeats})
+                    </span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="Write a reply"
+                    aria-label="Reply"
+                    className={cn(textareaClass, "resize-none")}
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <Button variant="primary" size="sm" disabled={!draft.trim()} onClick={send}>
+                      <Send className="size-3.5" />
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              {moduleOn("delivery-panel") ? (
+                <Callout
+                  tone="brand"
+                  icon={<MailCheck className="size-4" />}
+                  title="Delivery is evidence"
+                >
+                  Every send records who got it, who opened it, and what bounced. That log is your
+                  proof that owners were notified.
+                </Callout>
+              ) : null}
+            </div>
           ) : null}
         </div>
-        ) : null}
-      </div>
       )}
     </>
   );

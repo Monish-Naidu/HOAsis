@@ -127,7 +127,13 @@ describe("decideAutopay", () => {
   });
 
   it("still says nothing is due when nothing is, whatever is processing", () => {
-    const d = decideAutopay({ plan, today: "2026-10-05", balanceCents: 0, pendingCents: 30000, duesCents: 28500 });
+    const d = decideAutopay({
+      plan,
+      today: "2026-10-05",
+      balanceCents: 0,
+      pendingCents: 30000,
+      duesCents: 28500,
+    });
     expect(d).toEqual({ action: "wait", reason: "Nothing due" });
   });
 });
@@ -154,40 +160,64 @@ describe("isChargeable", () => {
  * again every morning.
  */
 describe("mayRetryAutopay", () => {
-  const declined = { state: "failed", attempts: 1, lastAttemptOn: "2026-10-05", reason: "Your card was declined." };
+  const declined = {
+    state: "failed",
+    attempts: 1,
+    lastAttemptOn: "2026-10-05",
+    reason: "Your card was declined.",
+  };
 
   it("tries again the day after the owner adds a new method", () => {
-    expect(mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: ["2026-10-05"] })).toBe(true);
-    expect(mayRetryAutopay({ run: declined, today: "2026-10-07", chargeableAddedOn: ["2026-10-06"] })).toBe(true);
+    expect(
+      mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: ["2026-10-05"] }),
+    ).toBe(true);
+    expect(
+      mayRetryAutopay({ run: declined, today: "2026-10-07", chargeableAddedOn: ["2026-10-06"] }),
+    ).toBe(true);
   });
 
   it("leaves a declined card alone when nothing has changed", () => {
-    expect(mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: ["2026-03-01"] })).toBe(false);
-    expect(mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: [] })).toBe(false);
+    expect(
+      mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: ["2026-03-01"] }),
+    ).toBe(false);
+    expect(mayRetryAutopay({ run: declined, today: "2026-10-06", chargeableAddedOn: [] })).toBe(
+      false,
+    );
   });
 
   it("never tries twice in one day", () => {
-    expect(mayRetryAutopay({ run: declined, today: "2026-10-05", chargeableAddedOn: ["2026-10-05"] })).toBe(false);
+    expect(
+      mayRetryAutopay({ run: declined, today: "2026-10-05", chargeableAddedOn: ["2026-10-05"] }),
+    ).toBe(false);
   });
 
   it("stops at the cap", () => {
     const spent = { ...declined, attempts: AUTOPAY_MAX_ATTEMPTS };
-    expect(mayRetryAutopay({ run: spent, today: "2026-10-09", chargeableAddedOn: ["2026-10-08"] })).toBe(false);
+    expect(
+      mayRetryAutopay({ run: spent, today: "2026-10-09", chargeableAddedOn: ["2026-10-08"] }),
+    ).toBe(false);
   });
 
   it("tries a month that had nothing to charge once anything can be charged", () => {
     const nothing = { ...declined, reason: NO_CHARGEABLE_METHOD };
     // A bank account that finished verifying was added before the failure.
-    expect(mayRetryAutopay({ run: nothing, today: "2026-10-08", chargeableAddedOn: ["2026-10-01"] })).toBe(true);
-    expect(mayRetryAutopay({ run: nothing, today: "2026-10-08", chargeableAddedOn: [] })).toBe(false);
+    expect(
+      mayRetryAutopay({ run: nothing, today: "2026-10-08", chargeableAddedOn: ["2026-10-01"] }),
+    ).toBe(true);
+    expect(mayRetryAutopay({ run: nothing, today: "2026-10-08", chargeableAddedOn: [] })).toBe(
+      false,
+    );
   });
 
   it("never reopens a month that was charged or skipped", () => {
     for (const state of ["charged", "skipped"]) {
       expect(
-        mayRetryAutopay({ run: { ...declined, state }, today: "2026-10-06", chargeableAddedOn: ["2026-10-05"] }),
+        mayRetryAutopay({
+          run: { ...declined, state },
+          today: "2026-10-06",
+          chargeableAddedOn: ["2026-10-05"],
+        }),
       ).toBe(false);
     }
   });
 });
-

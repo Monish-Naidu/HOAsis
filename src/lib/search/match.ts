@@ -23,7 +23,7 @@
  * of work per token, which is why nothing here builds a trie.
  */
 
-export type Tier = "exact" | "prefix" | "word" | "inside" | "fuzzy";
+type Tier = "exact" | "prefix" | "word" | "inside" | "fuzzy";
 
 export interface Range {
   start: number;
@@ -36,7 +36,7 @@ export interface TokenMatch {
   ranges: Range[];
 }
 
-export const TIER_SCORE: Record<Tier, number> = {
+const TIER_SCORE: Record<Tier, number> = {
   exact: 100,
   prefix: 80,
   word: 60,
@@ -61,10 +61,7 @@ export function fold(s: string): string {
 
 /** The words a person typed, folded, with money punctuation dropped. */
 export function tokenize(query: string): string[] {
-  return fold(query)
-    .split(/\s+/)
-    .map(cleanToken)
-    .filter(Boolean);
+  return fold(query).split(/\s+/).map(cleanToken).filter(Boolean);
 }
 
 /** "$1,250.00" → "1250.00"; "#42" → "42"; other tokens untouched. */
@@ -78,7 +75,7 @@ const WORD = /[a-z0-9]+(?:\.[0-9]+)?/g;
 const NUMERIC = /^\d+(\.\d+)?$/;
 
 /** Every word in a folded string, with where it starts. */
-export function words(folded: string): { word: string; start: number }[] {
+function words(folded: string): { word: string; start: number }[] {
   const out: { word: string; start: number }[] = [];
   WORD.lastIndex = 0;
   let m: RegExpExecArray | null;
@@ -138,14 +135,17 @@ export function matchToken(folded: string, token: string): TokenMatch | null {
 
   const ws = words(folded);
   for (const w of ws) {
-    if (w.word === token) return { tier: "exact", ranges: [{ start: w.start, end: w.start + token.length }] };
+    if (w.word === token)
+      return { tier: "exact", ranges: [{ start: w.start, end: w.start + token.length }] };
   }
   // A number is the whole number or nothing: "285" is not a way to type
   // "$28,500.00", and "14" is not the start of 1428 Meadow Lane.
   if (NUMERIC.test(token)) return null;
-  if (folded.startsWith(token)) return { tier: "prefix", ranges: [{ start: 0, end: token.length }] };
+  if (folded.startsWith(token))
+    return { tier: "prefix", ranges: [{ start: 0, end: token.length }] };
   for (const w of ws) {
-    if (w.word.startsWith(token)) return { tier: "word", ranges: [{ start: w.start, end: w.start + token.length }] };
+    if (w.word.startsWith(token))
+      return { tier: "word", ranges: [{ start: w.start, end: w.start + token.length }] };
   }
   const at = folded.indexOf(token);
   if (at >= 0) return { tier: "inside", ranges: [{ start: at, end: at + token.length }] };
@@ -236,7 +236,11 @@ export interface Scored<T extends Searchable> {
 const FIELD_WEIGHT = { title: 1, subtitle: 0.6, keywords: 0.4 } as const;
 
 /** One item against every token; null when any token misses. */
-export function scoreItem<T extends Searchable>(p: Prepared<T>, tokens: string[], query: string): Scored<T> | null {
+function scoreItem<T extends Searchable>(
+  p: Prepared<T>,
+  tokens: string[],
+  query: string,
+): Scored<T> | null {
   let score = 0;
   const titleRanges: Range[] = [];
   const subtitleRanges: Range[] = [];
@@ -261,11 +265,20 @@ export function scoreItem<T extends Searchable>(p: Prepared<T>, tokens: string[]
     else if (p.title.includes(query)) score += 25;
   }
   score += p.item.boost ?? 0;
-  return { item: p.item, score, titleRanges: mergeRanges(titleRanges), subtitleRanges: mergeRanges(subtitleRanges) };
+  return {
+    item: p.item,
+    score,
+    titleRanges: mergeRanges(titleRanges),
+    subtitleRanges: mergeRanges(subtitleRanges),
+  };
 }
 
 /** The best `limit` items for a query, best first, newest first on a tie. */
-export function search<T extends Searchable>(index: Prepared<T>[], query: string, limit = 40): Scored<T>[] {
+export function search<T extends Searchable>(
+  index: Prepared<T>[],
+  query: string,
+  limit = 40,
+): Scored<T>[] {
   const tokens = tokenize(query);
   if (tokens.length === 0) return [];
   const folded = tokens.join(" ");

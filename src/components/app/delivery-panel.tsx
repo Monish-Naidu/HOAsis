@@ -160,8 +160,8 @@ export function DeliveryPanel() {
 
       {audience.unreachable > 0 ? (
         <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-warn">
-          {pluralize(audience.unreachable, "home")} cannot be reached any way at all.
-          Those are the ones who later say they were never told.
+          {pluralize(audience.unreachable, "home")} cannot be reached any way at all. Those are the
+          ones who later say they were never told.
         </p>
       ) : null}
     </Card>

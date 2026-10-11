@@ -19,7 +19,14 @@ export const REQUEST_STEP_LABEL: Record<RequestStep, string> = {
   done: "Done",
 };
 
-export const REQUEST_TYPES = ["all", "architectural", "maintenance", "records", "amenity", "violation-appeal"] as const;
+export const REQUEST_TYPES = [
+  "all",
+  "architectural",
+  "maintenance",
+  "records",
+  "amenity",
+  "violation-appeal",
+] as const;
 export type RequestType = (typeof REQUEST_TYPES)[number];
 
 export const REQUEST_TYPE_LABEL: Record<RequestType, string> = { all: "All types", ...kindLabel };

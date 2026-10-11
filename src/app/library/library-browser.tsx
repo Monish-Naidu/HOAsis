@@ -24,7 +24,9 @@ export function LibraryBrowser({ articles }: { articles: LibraryArticle[] }) {
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return articles
-      .filter((article) => (state === "all" ? true : !article.states || article.states.includes(state)))
+      .filter((article) =>
+        state === "all" ? true : !article.states || article.states.includes(state),
+      )
       .filter((article) => (topic === "all" ? true : article.topic === topic))
       .filter(
         (article) =>

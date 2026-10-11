@@ -51,9 +51,15 @@ describe("a maintenance request", () => {
   });
 
   it("counts an open work order as in progress", () => {
-    expect(requestGroup(req("maintenance", "submitted", { workOrder: { openedOn: "2026-08-12" } }))).toBe("progress");
     expect(
-      requestGroup(req("maintenance", "submitted", { workOrder: { openedOn: "2026-08-12", completedOn: "2026-08-15" } })),
+      requestGroup(req("maintenance", "submitted", { workOrder: { openedOn: "2026-08-12" } })),
+    ).toBe("progress");
+    expect(
+      requestGroup(
+        req("maintenance", "submitted", {
+          workOrder: { openedOn: "2026-08-12", completedOn: "2026-08-15" },
+        }),
+      ),
     ).toBe("scheduling");
   });
 
@@ -62,7 +68,12 @@ describe("a maintenance request", () => {
     const thread = [{ at: "2026-08-11", actorRole: "board", kind: "note" }];
     expect(repliedOn({ status: "submitted", thread })).toBe("2026-08-11");
     expect(repliedOn({ status: "in-review", thread })).toBeUndefined();
-    expect(repliedOn({ status: "submitted", thread: [{ at: "2026-08-10", actorRole: "resident", kind: "note" }] })).toBeUndefined();
+    expect(
+      repliedOn({
+        status: "submitted",
+        thread: [{ at: "2026-08-10", actorRole: "resident", kind: "note" }],
+      }),
+    ).toBeUndefined();
   });
 });
 
@@ -106,10 +117,12 @@ describe("a vendor's name", () => {
   });
 
   it("labels a vendor with no service by its category", () => {
-    expect(vendorService({ service: "Services", defaultCategory: "Landscaping" })).toBe("Landscaping");
-    expect(vendorService({ service: "Grounds and irrigation", defaultCategory: "Landscaping" })).toBe(
-      "Grounds and irrigation",
+    expect(vendorService({ service: "Services", defaultCategory: "Landscaping" })).toBe(
+      "Landscaping",
     );
+    expect(
+      vendorService({ service: "Grounds and irrigation", defaultCategory: "Landscaping" }),
+    ).toBe("Grounds and irrigation");
   });
 });
 
@@ -129,8 +142,17 @@ describe("the pill and the group come from one place", () => {
 
   it("reads Scheduled with the date from the work order or from the note", () => {
     expect(requestStatusLabel(maint("in-review"))).toBe("Scheduled");
-    expect(requestStatusLabel(maint("in-review", { workOrder: { scheduledOn: "2026-10-03" } }))).toBe("Scheduled Oct 3");
-    const thread = [{ at: "2026-10-01", actorRole: "board", kind: "status", body: "Scheduled for October 9, 2026." }];
+    expect(
+      requestStatusLabel(maint("in-review", { workOrder: { scheduledOn: "2026-10-03" } })),
+    ).toBe("Scheduled Oct 3");
+    const thread = [
+      {
+        at: "2026-10-01",
+        actorRole: "board",
+        kind: "status",
+        body: "Scheduled for October 9, 2026.",
+      },
+    ];
     expect(scheduledFor({ thread })).toBe("2026-10-09");
     expect(requestStatusLabel(maint("in-review", { thread }))).toBe("Scheduled Oct 9");
   });

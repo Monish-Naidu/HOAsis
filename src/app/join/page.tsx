@@ -11,7 +11,10 @@ export default function JoinPage() {
   // the top of an empty page, it read as something that had failed to load.
   return (
     <div className="relative isolate grid min-h-dvh grid-rows-[auto_1fr] bg-bg">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-60" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-60"
+        aria-hidden
+      />
       <header className="flex items-center justify-between px-5 py-5 sm:px-8">
         <Link href="/">
           <Wordmark size={34} />

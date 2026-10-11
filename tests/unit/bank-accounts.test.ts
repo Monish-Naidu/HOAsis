@@ -46,7 +46,12 @@ describe("connecting an account from typed details", () => {
   it("refuses a bank with no name", () => {
     expect(() =>
       connectManualAccount(
-        { institution: "   ", routingNumber: "325081403", accountNumber: "1234567890", kind: "operating" },
+        {
+          institution: "   ",
+          routingNumber: "325081403",
+          accountNumber: "1234567890",
+          kind: "operating",
+        },
         TODAY,
       ),
     ).toThrow(ValidationError);
@@ -54,7 +59,12 @@ describe("connecting an account from typed details", () => {
 
   it("ignores the punctuation people paste in", () => {
     const account = connectManualAccount(
-      { institution: "BECU", routingNumber: "325-081-403", accountNumber: "1234 5678 90", kind: "operating" },
+      {
+        institution: "BECU",
+        routingNumber: "325-081-403",
+        accountNumber: "1234 5678 90",
+        kind: "operating",
+      },
       TODAY,
     );
     expect(account.mask).toBe("7890");

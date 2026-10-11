@@ -7,7 +7,7 @@ import { formatDate, money } from "@/lib/utils";
  * database rules these mirror are reverse_manual_payment (0088) and
  * record_manual_payment (0083).
  */
-export const MIN_REVERSAL_REASON = 3;
+const MIN_REVERSAL_REASON = 3;
 export const MAX_REVERSAL_REASON = 120;
 
 export type HandMethod = "check" | "cash";
@@ -55,7 +55,10 @@ export function duplicatePaymentWarning(homeLabel: string, row: ManualPaymentRow
 }
 
 /** Newest received first, then newest recorded first, ten at most. */
-export function recentManualPayments(rows: readonly ManualPaymentRow[], limit = 10): ManualPaymentRow[] {
+export function recentManualPayments(
+  rows: readonly ManualPaymentRow[],
+  limit = 10,
+): ManualPaymentRow[] {
   return [...rows].sort((a, b) => b.receivedOn.localeCompare(a.receivedOn)).slice(0, limit);
 }
 

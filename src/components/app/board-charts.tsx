@@ -19,8 +19,18 @@ import { cn, money, shortMoney } from "@/lib/utils";
  */
 
 const MONTH_NAMES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 function monthLabel(key: string) {
@@ -175,13 +185,7 @@ const SLICE_STROKE = [
   "stroke-chart-4",
   "stroke-chart-5",
 ] as const;
-const SLICE_CHIP = [
-  "bg-chart-1",
-  "bg-chart-2",
-  "bg-chart-3",
-  "bg-chart-4",
-  "bg-chart-5",
-] as const;
+const SLICE_CHIP = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"] as const;
 
 function sliceClass(row: SpendingRow, i: number, kind: "stroke" | "chip") {
   if (row.category === "Other") return kind === "stroke" ? "stroke-chart-other" : "bg-chart-other";
@@ -341,7 +345,11 @@ export function YearCompareChart({
       <div className="px-5 pb-4 pt-3" aria-hidden>
         <div className="relative h-48">
           {[0, 1 / 3, 2 / 3, 1].map((t) => (
-            <div key={t} className="absolute inset-x-0 flex items-end" style={{ bottom: `${t * 100}%` }}>
+            <div
+              key={t}
+              className="absolute inset-x-0 flex items-end"
+              style={{ bottom: `${t * 100}%` }}
+            >
               <span className="tnum w-10 shrink-0 translate-y-[0.4em] pr-2 text-right text-caption text-fg-subtle">
                 {t === 0 ? "$0" : shortMoney(peak * t)}
               </span>
@@ -354,19 +362,29 @@ export function YearCompareChart({
                 key={m.label}
                 className="group relative flex h-full flex-1 items-end justify-center gap-[2px]"
               >
-                <div className="w-2 rounded-t-[3px] bg-chart-other sm:w-2.5" style={{ height: `${h(m.a)}%` }} />
-                <div className="w-2 rounded-t-[3px] bg-chart-1 sm:w-2.5" style={{ height: `${h(m.b)}%` }} />
+                <div
+                  className="w-2 rounded-t-[3px] bg-chart-other sm:w-2.5"
+                  style={{ height: `${h(m.a)}%` }}
+                />
+                <div
+                  className="w-2 rounded-t-[3px] bg-chart-1 sm:w-2.5"
+                  style={{ height: `${h(m.b)}%` }}
+                />
                 <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-surface px-3 py-2 text-left shadow-float group-hover:block">
                   <p className="text-caption font-semibold text-fg">{m.label}</p>
                   <p className="mt-1 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-other" />
                     {aLabel}
-                    <span className="tnum ml-auto pl-3 font-semibold text-fg">{money(m.a, { cents: false })}</span>
+                    <span className="tnum ml-auto pl-3 font-semibold text-fg">
+                      {money(m.a, { cents: false })}
+                    </span>
                   </p>
                   <p className="mt-0.5 flex items-center gap-1.5 text-caption text-fg-muted">
                     <span className="size-2 rounded-full bg-chart-1" />
                     {bLabel}
-                    <span className="tnum ml-auto pl-3 font-semibold text-fg">{money(m.b, { cents: false })}</span>
+                    <span className="tnum ml-auto pl-3 font-semibold text-fg">
+                      {money(m.b, { cents: false })}
+                    </span>
                   </p>
                   <p className="tnum mt-1 border-t border-border pt-1 text-right text-caption font-medium text-fg-muted">
                     {money(m.b - m.a, { sign: true, cents: false })}
@@ -442,7 +460,11 @@ export function NetTrendChart({ years }: { years: YearNet[] }) {
     <div className="px-5 pb-4 pt-4">
       <div className="relative h-40" aria-hidden>
         {[1, zero / 100, ...(hasNegative ? [0] : [])].map((t) => (
-          <div key={t} className="absolute inset-x-0 flex items-end" style={{ bottom: `${t * 100}%` }}>
+          <div
+            key={t}
+            className="absolute inset-x-0 flex items-end"
+            style={{ bottom: `${t * 100}%` }}
+          >
             <span className="tnum w-12 shrink-0 translate-y-[0.4em] pr-2 text-right text-caption text-fg-subtle">
               {t === zero / 100 ? "$0" : t === 1 ? shortMoney(peak) : `-${shortMoney(peak)}`}
             </span>
@@ -481,7 +503,9 @@ export function NetTrendChart({ years }: { years: YearNet[] }) {
         {years.map((y) => (
           <span key={y.year} className="flex-1 text-center text-caption text-fg-subtle">
             {y.year}
-            {y.partial ? <span className="block text-caption">to {MONTH_NAMES[y.throughMonth - 1]}</span> : null}
+            {y.partial ? (
+              <span className="block text-caption">to {MONTH_NAMES[y.throughMonth - 1]}</span>
+            ) : null}
           </span>
         ))}
       </div>
@@ -548,7 +572,10 @@ export function AgingBar({ buckets }: { buckets: AgingSegment[] }) {
         {buckets.map((b) => (
           <div key={b.key}>
             <dt className="flex items-center gap-1.5 text-footnote font-medium text-fg-muted">
-              <span className={cn("size-2.5 rounded-sm", AGING_CHIP[b.key] ?? "bg-chart-other")} aria-hidden />
+              <span
+                className={cn("size-2.5 rounded-sm", AGING_CHIP[b.key] ?? "bg-chart-other")}
+                aria-hidden
+              />
               {b.label}
             </dt>
             <dd className="tnum mt-1 text-headline font-semibold tracking-[-0.02em] text-fg">

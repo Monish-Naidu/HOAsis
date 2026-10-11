@@ -47,7 +47,14 @@ describe("statementDescriptor", () => {
 
 describe("accountPrefill", () => {
   const full = accountPrefill(
-    { name: "Mehr Meadows", ein: "12-3456789", city: "Bothell", state: "wa", phone: "425 555 0100", slug: "mehr-meadows" },
+    {
+      name: "Mehr Meadows",
+      ein: "12-3456789",
+      city: "Bothell",
+      state: "wa",
+      phone: "425 555 0100",
+      slug: "mehr-meadows",
+    },
     "https://yourhoasis.com/",
   );
 
@@ -73,7 +80,10 @@ describe("accountPrefill", () => {
       doing_business_as: "Mehr Meadows",
       product_description: "Homeowners association dues",
     });
-    expect(full.defaults.responsibilities).toEqual({ fees_collector: "stripe", losses_collector: "stripe" });
+    expect(full.defaults.responsibilities).toEqual({
+      fees_collector: "stripe",
+      losses_collector: "stripe",
+    });
   });
 
   it("leaves out what it does not know instead of sending blanks", () => {
@@ -81,8 +91,14 @@ describe("accountPrefill", () => {
     expect(bare.identity.business_details.id_numbers).toBeUndefined();
     expect(bare.identity.business_details.address).toBeUndefined();
     expect(bare.identity.business_details.phone).toBeUndefined();
-    expect(bare.configuration.merchant.statement_descriptor).toEqual({ descriptor: "ZZ HOA", prefix: "ZZ HOA" });
-    expect(bare.configuration.merchant.support).toEqual({ url: "https://yourhoasis.com", phone: undefined });
+    expect(bare.configuration.merchant.statement_descriptor).toEqual({
+      descriptor: "ZZ HOA",
+      prefix: "ZZ HOA",
+    });
+    expect(bare.configuration.merchant.support).toEqual({
+      url: "https://yourhoasis.com",
+      phone: undefined,
+    });
   });
 
   it("ignores an EIN that is not nine digits", () => {

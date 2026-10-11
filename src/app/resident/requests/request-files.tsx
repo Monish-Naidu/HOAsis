@@ -28,7 +28,13 @@ function isThumbnail(a: HomeRequest["attachments"][number]): boolean {
 }
 
 /** Files picked on a form: name, size, why one cannot go, and a way to take it out. */
-export function ChosenFiles({ files, onRemove }: { files: File[]; onRemove: (index: number) => void }) {
+export function ChosenFiles({
+  files,
+  onRemove,
+}: {
+  files: File[];
+  onRemove: (index: number) => void;
+}) {
   if (!files.length) return null;
   return (
     <ul className="divide-y divide-border border-t border-border">
@@ -102,7 +108,13 @@ export function AttachmentList({ attachments }: { attachments: HomeRequest["atta
         );
         const cls = `flex items-center gap-3 px-4 py-2.5 ${i > 0 || photos.length ? "border-t border-border" : ""}`;
         return a.url ? (
-          <a key={a.path ?? a.name} href={a.url} target="_blank" rel="noreferrer" className={`${cls} hover:bg-surface-2`}>
+          <a
+            key={a.path ?? a.name}
+            href={a.url}
+            target="_blank"
+            rel="noreferrer"
+            className={`${cls} hover:bg-surface-2`}
+          >
             {inner}
           </a>
         ) : (

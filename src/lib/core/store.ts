@@ -183,9 +183,13 @@ export class PersistedStore<T> extends Store<T> {
         // Corrupt entries are dropped rather than retried forever. This is a
         // data problem, not a storage problem, so it must not trip the circuit.
         this.report(
-          new SerializationError("stored value is not valid JSON", { key: this.key }, {
-            cause: thrown,
-          }),
+          new SerializationError(
+            "stored value is not valid JSON",
+            { key: this.key },
+            {
+              cause: thrown,
+            },
+          ),
         );
         this.clear();
         return this.seed;
@@ -213,9 +217,13 @@ export class PersistedStore<T> extends Store<T> {
       try {
         storage.setItem(this.key, JSON.stringify(value));
       } catch (thrown) {
-        const error = new StorageError("could not write to storage", { key: this.key }, {
-          cause: thrown,
-        });
+        const error = new StorageError(
+          "could not write to storage",
+          { key: this.key },
+          {
+            cause: thrown,
+          },
+        );
         this.report(error);
         throw error;
       }

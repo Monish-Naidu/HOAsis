@@ -23,7 +23,9 @@ export default function PrivacyPage() {
       <MarketingHeader />
       <main id="main" className="mx-auto w-full max-w-3xl px-5 py-12 sm:py-16">
         <header>
-          <p className="text-footnote font-semibold uppercase tracking-wide text-fg-subtle">Legal</p>
+          <p className="text-footnote font-semibold uppercase tracking-wide text-fg-subtle">
+            Legal
+          </p>
           <h1 className="mt-2 text-[36px] font-semibold leading-[1.05] tracking-[-0.035em] text-fg sm:text-[44px]">
             Privacy policy
           </h1>
@@ -82,9 +84,9 @@ export default function PrivacyPage() {
             <p>
               We email residents on the association&apos;s behalf: invitations, bills, receipts,
               reminders, notices of meetings and votes, and messages from the board. Notices the law
-              requires an association to send (assessments, delinquency, meetings, ballots) cannot be
-              unsubscribed from; everything else carries a one click unsubscribe link. Every email
-              sent is logged, and the board can see whether it was delivered.
+              requires an association to send (assessments, delinquency, meetings, ballots) cannot
+              be unsubscribed from; everything else carries a one click unsubscribe link. Every
+              email sent is logged, and the board can see whether it was delivered.
             </p>
           </Section>
 
@@ -98,23 +100,29 @@ export default function PrivacyPage() {
           <Section title="6. Getting your data back, and deleting it">
             <p>
               The board can export the register and the transactions as CSV from the product at any
-              time, and can ask us for everything the association has stored. A person can ask to see
-              or correct what we hold about them by writing to us. When an association cancels, its
-              records are kept for thirty days so they can be exported or restored, then deleted.
-              A resident who leaves an association keeps their account; the home&apos;s history stays
-              with the association, because it is the association&apos;s record.
+              time, and can ask us for everything the association has stored. A person can ask to
+              see or correct what we hold about them by writing to us. When an association cancels,
+              its records are kept for thirty days so they can be exported or restored, then
+              deleted. A resident who leaves an association keeps their account; the home&apos;s
+              history stays with the association, because it is the association&apos;s record.
             </p>
           </Section>
 
           <Section title="7. Children">
-            <p>The service is for adults who own or live in a home in an association. We do not knowingly collect information about children.</p>
+            <p>
+              The service is for adults who own or live in a home in an association. We do not
+              knowingly collect information about children.
+            </p>
           </Section>
 
           <Section title="8. Changes and contact">
             <p>
               If this changes we will email the president of every association and show the date at
               the top. Questions, requests and complaints go to{" "}
-              <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-accent underline underline-offset-2">
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className="font-medium text-accent underline underline-offset-2"
+              >
                 {SUPPORT_EMAIL}
               </a>
               . The{" "}

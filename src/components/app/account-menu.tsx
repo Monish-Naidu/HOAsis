@@ -39,12 +39,10 @@ export function ViewSwitcher({ className }: { className?: string }) {
       role="radiogroup"
       aria-label="View"
     >
-      {(
-        [
-          { v: "resident" as const, label: "Resident", Icon: User },
-          { v: "board" as const, label: "Board", Icon: Building2 },
-        ]
-      ).map(({ v, label, Icon }) => (
+      {[
+        { v: "resident" as const, label: "Resident", Icon: User },
+        { v: "board" as const, label: "Board", Icon: Building2 },
+      ].map(({ v, label, Icon }) => (
         <button
           key={v}
           type="button"
@@ -222,8 +220,8 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
           Your association did not load
         </h1>
         <p className="mt-2 text-body leading-relaxed text-fg-muted">
-          {remote.message ?? "Could not load your association"}. You are still signed in. Check
-          your connection and try again.
+          {remote.message ?? "Could not load your association"}. You are still signed in. Check your
+          connection and try again.
         </p>
         <button
           type="button"

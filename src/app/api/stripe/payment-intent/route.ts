@@ -43,7 +43,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unknown rail" }, { status: 400 });
   }
   if (!Number.isInteger(amountCents) || amountCents <= 0) {
-    return NextResponse.json({ error: "The amount has to be a positive whole number of cents" }, { status: 400 });
+    return NextResponse.json(
+      { error: "The amount has to be a positive whole number of cents" },
+      { status: 400 },
+    );
   }
 
   const supabase = await supabaseServer();
@@ -96,7 +99,10 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   if (!home || home.association_id !== associationId) {
     log.warn("unit is not in the named association", { associationId, unitId });
-    return NextResponse.json({ error: "That home is not part of this association" }, { status: 400 });
+    return NextResponse.json(
+      { error: "That home is not part of this association" },
+      { status: 400 },
+    );
   }
   // A fat-fingered amount should fail here, not become a refund conversation.
   // Two years of dues covers any realistic catch-up payment.
@@ -142,12 +148,18 @@ export async function POST(request: NextRequest) {
       members = await currentMemberIds(supabaseAdmin(), unitId);
     } catch (problem) {
       log.error("could not read the home's members", { err: problem, unitId, instrumentId });
-      return NextResponse.json({ error: "Could not check that payment method. Try again." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Could not check that payment method. Try again." },
+        { status: 500 },
+      );
     }
     if (!savedByCurrentMember(instrument.profile_id, members)) {
       log.warn("saved method belongs to nobody on the home", { unitId, instrumentId });
       return NextResponse.json(
-        { error: "That payment method belongs to someone no longer at this home. Remove it and add your own." },
+        {
+          error:
+            "That payment method belongs to someone no longer at this home. Remove it and add your own.",
+        },
         { status: 409 },
       );
     }
@@ -208,7 +220,14 @@ export async function POST(request: NextRequest) {
     },
     { stripeAccount: association.stripe_account_id },
   );
-  log.info("payment intent created", { intentId: intent.id, associationId, unitId, rail, amountCents: cost.residentPaysCents, saved: Boolean(instrumentId) });
+  log.info("payment intent created", {
+    intentId: intent.id,
+    associationId,
+    unitId,
+    rail,
+    amountCents: cost.residentPaysCents,
+    saved: Boolean(instrumentId),
+  });
 
   return NextResponse.json({
     clientSecret: intent.client_secret,

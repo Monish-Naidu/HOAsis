@@ -25,8 +25,7 @@ import { cn, todayIsoDate } from "@/lib/utils";
  * a form that handles bank credentials, not two that can drift apart.
  */
 
-const inputClass =
-  fieldClass;
+const inputClass = fieldClass;
 
 type Route = "link" | "manual";
 
@@ -55,8 +54,9 @@ export function BankConnect({
     const institution = supportedInstitutions.find((i) => i.id === id);
     if (!institution) return;
     const preferred =
-      institution.accounts.find((a) => (kind === "reserve" ? a.type === "savings" : a.type === "checking")) ??
-      institution.accounts[0];
+      institution.accounts.find((a) =>
+        kind === "reserve" ? a.type === "savings" : a.type === "checking",
+      ) ?? institution.accounts[0];
     onConnect(
       connectLinkedAccount(
         { institution: institution.name, mask: preferred.mask, kind },
@@ -70,7 +70,11 @@ export function BankConnect({
       setError(null);
       onConnect(connectManualAccount({ ...manual, kind }, todayIsoDate()));
     } catch (caught) {
-      setError(isHoasisError(caught) ? caught.message : "That account was not connected. Check the details and try again.");
+      setError(
+        isHoasisError(caught)
+          ? caught.message
+          : "That account was not connected. Check the details and try again.",
+      );
     }
   }
 
@@ -80,29 +84,29 @@ export function BankConnect({
   return (
     <div className="flex flex-col gap-4">
       {linked ? (
-      <div className="grid grid-cols-2 gap-2">
-        {(
-          [
-            { id: "link", label: "Find your bank", icon: Building2 },
-            { id: "manual", label: "Enter details", icon: Landmark },
-          ] as const
-        ).map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setRoute(id)}
-            className={cn(
-              "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-body font-medium transition-colors",
-              route === id
-                ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
-                : "border-border text-fg-muted hover:bg-surface-2",
-            )}
-          >
-            <Icon className="size-4" />
-            {label}
-          </button>
-        ))}
-      </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              { id: "link", label: "Find your bank", icon: Building2 },
+              { id: "manual", label: "Enter details", icon: Landmark },
+            ] as const
+          ).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setRoute(id)}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-body font-medium transition-colors",
+                route === id
+                  ? "border-navy-700 bg-brand-soft text-brand-soft-fg dark:border-navy-300"
+                  : "border-border text-fg-muted hover:bg-surface-2",
+              )}
+            >
+              <Icon className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
       ) : null}
 
       {route === "link" && linked ? (

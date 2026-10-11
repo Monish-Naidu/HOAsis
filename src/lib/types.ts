@@ -12,7 +12,7 @@ export type ID = string;
 export type ISODate = string;
 export type Cents = number;
 
-export type Role = "resident" | "board";
+type Role = "resident" | "board";
 
 /** The kind of home. Same values as the onboarding answer. */
 export type HomeType = "single-family" | "townhomes" | "condos";
@@ -131,14 +131,7 @@ export interface ActionItem {
 }
 
 export type EmailDeliveryStatus =
-  | "sent"
-  | "delivered"
-  | "delayed"
-  | "opened"
-  | "clicked"
-  | "bounced"
-  | "complained"
-  | "failed";
+  "sent" | "delivered" | "delayed" | "opened" | "clicked" | "bounced" | "complained" | "failed";
 
 /** One email the association sent, and what the provider said became of it. */
 export interface EmailLogEntry {
@@ -226,7 +219,7 @@ export interface Home {
 }
 
 /** One past holder of a home. */
-export interface OwnerTenure {
+interface OwnerTenure {
   name: string;
   from: ISODate;
   to: ISODate;
@@ -457,7 +450,7 @@ export interface Vendor {
   defaultCategory: LedgerCategory;
 }
 
-export type InvoiceStatus = "new" | "approved" | "paid" | "rejected";
+type InvoiceStatus = "new" | "approved" | "paid" | "rejected";
 
 /**
  * A bill a vendor sent the association.
@@ -489,22 +482,12 @@ export interface VendorInvoice {
 /* -------------------------------------------------------------------------- */
 
 export type RequestKind =
-  | "architectural"
-  | "maintenance"
-  | "records"
-  | "amenity"
-  | "violation-appeal";
+  "architectural" | "maintenance" | "records" | "amenity" | "violation-appeal";
 
 export type RequestStatus =
-  | "draft"
-  | "submitted"
-  | "in-review"
-  | "info-needed"
-  | "approved"
-  | "denied"
-  | "closed";
+  "draft" | "submitted" | "in-review" | "info-needed" | "approved" | "denied" | "closed";
 
-export interface RequestThreadEvent {
+interface RequestThreadEvent {
   id: ID;
   at: ISODate;
   actor: string;
@@ -575,12 +558,7 @@ export interface WorkOrder {
  * rather than discoverable afterwards.
  */
 export type PhotoVantage =
-  | "street"
-  | "common-area"
-  | "reporter-property"
-  | "over-boundary"
-  | "aerial"
-  | "unknown";
+  "street" | "common-area" | "reporter-property" | "over-boundary" | "aerial" | "unknown";
 
 export interface ViolationPhoto {
   id: ID;
@@ -650,7 +628,7 @@ export interface Violation {
 /* Reports from residents                                                      */
 /* -------------------------------------------------------------------------- */
 
-export type ReportStatus = "new" | "verifying" | "verified" | "dismissed";
+type ReportStatus = "new" | "verifying" | "verified" | "dismissed";
 
 /**
  * One neighbour telling the board about another.
@@ -711,14 +689,7 @@ export interface DocumentRecord {
   id: ID;
   name: string;
   category:
-    | "Governing"
-    | "Plans"
-    | "Financial"
-    | "Meetings"
-    | "Insurance"
-    | "Notices"
-    | "Forms"
-    | "Other";
+    "Governing" | "Plans" | "Financial" | "Meetings" | "Insurance" | "Notices" | "Forms" | "Other";
   updatedDate: ISODate;
   size: string;
   /** Public = reachable with no login, which is what FL 720/718 actually requires. */
@@ -829,11 +800,11 @@ export interface ReserveComponent {
 /* Voting + meetings                                                           */
 /* -------------------------------------------------------------------------- */
 
-export type BallotAudience = "owners" | "board";
+type BallotAudience = "owners" | "board";
 
 export type BallotStatus = "scheduled" | "open" | "closed" | "certified";
 
-export interface BallotOption {
+interface BallotOption {
   id: ID;
   label: string;
   detail?: string;
@@ -924,7 +895,7 @@ export interface Meeting {
   attended?: MeetingAttendee[];
 }
 
-export interface MeetingRsvp {
+interface MeetingRsvp {
   profileId?: ID;
   name: string;
   unit: string;
@@ -943,12 +914,7 @@ export interface MeetingRsvp {
 export type BoardRole = "president" | "vice-president" | "treasurer" | "secretary";
 export type AccountRole = "resident" | BoardRole;
 
-export const ADMIN_ROLES: BoardRole[] = [
-  "president",
-  "vice-president",
-  "treasurer",
-  "secretary",
-];
+export const ADMIN_ROLES: BoardRole[] = ["president", "vice-president", "treasurer", "secretary"];
 
 export const ROLE_LABEL: Record<AccountRole, string> = {
   resident: "Resident",
@@ -1158,7 +1124,7 @@ export interface ArchitecturalForm {
  * agreed to something at a moment in time, and a canvas by itself does not
  * establish that.
  */
-export interface FormSignature {
+interface FormSignature {
   /** Data URL of the drawn mark, when the signer drew one. */
   drawn?: string;
   /** The typed legal name, which is what makes it enforceable in most states. */
@@ -1176,7 +1142,7 @@ export interface FormSubmission {
   signature: FormSignature;
 }
 
-export interface CommunityBanner {
+interface CommunityBanner {
   enabled: boolean;
   title: string;
   detail: string;
@@ -1222,7 +1188,7 @@ export interface CommunitySettings {
   reserveStudy?: ReserveStudyFile;
 }
 
-export interface ReserveStudyFile {
+interface ReserveStudyFile {
   documentId: ID;
   name: string;
   /** The date on the study, not the day it was uploaded. */
@@ -1234,12 +1200,7 @@ export interface ReserveStudyFile {
 /* -------------------------------------------------------------------------- */
 
 export type ForumCategory =
-  | "General"
-  | "Recommendations"
-  | "For sale"
-  | "Lost and found"
-  | "Safety"
-  | "Events";
+  "General" | "Recommendations" | "For sale" | "Lost and found" | "Safety" | "Events";
 
 export interface ForumReply {
   id: ID;
@@ -1250,7 +1211,7 @@ export interface ForumReply {
   body: string;
 }
 
-export type PostStatus = "pending" | "published" | "rejected";
+type PostStatus = "pending" | "published" | "rejected";
 
 export interface ForumPost {
   id: ID;
@@ -1287,13 +1248,7 @@ export interface ForumPost {
 export type AllocationMethod = "equal" | "square_feet" | "bedrooms" | "occupants" | "submeter";
 
 export type SharedCostKind =
-  | "water"
-  | "sewer"
-  | "trash"
-  | "gas"
-  | "electric"
-  | "internet"
-  | "other";
+  "water" | "sewer" | "trash" | "gas" | "electric" | "internet" | "other";
 
 /**
  * A bill the association receives and passes on.
@@ -1362,12 +1317,7 @@ export interface SpecialAssessment {
 /* -------------------------------------------------------------------------- */
 
 export type GoverningTopic =
-  | "governance"
-  | "money"
-  | "meetings"
-  | "property"
-  | "enforcement"
-  | "records";
+  "governance" | "money" | "meetings" | "property" | "enforcement" | "records";
 
 /**
  * Which of the three documents an article belongs to.
@@ -1485,17 +1435,10 @@ export interface GoverningArticle {
  * be told, not what we think is interesting.
  */
 export type DisclosureTopic =
-  | "flags"
-  | "solar"
-  | "signs"
-  | "parking"
-  | "home-business"
-  | "rentals"
-  | "architectural"
-  | "lien";
+  "flags" | "solar" | "signs" | "parking" | "home-business" | "rentals" | "architectural" | "lien";
 
 export type AmendmentKind = "amend" | "add" | "remove";
-export type AmendmentStage = "draft" | "open" | "passed" | "failed" | "withdrawn";
+type AmendmentStage = "draft" | "open" | "passed" | "failed" | "withdrawn";
 
 /**
  * A proposed change to one article.

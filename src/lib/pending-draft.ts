@@ -26,10 +26,7 @@ export const pendingDraftStore = new PersistedStore<PendingDraft | null>(
   {
     validate: (value): value is PendingDraft | null =>
       value === null ||
-      (typeof value === "object" &&
-        value !== null &&
-        "draft" in value &&
-        "email" in value),
+      (typeof value === "object" && value !== null && "draft" in value && "email" in value),
   },
 );
 

@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { ArrowLeft, Copy, FileText, Scale } from "lucide-react";
-import { Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader } from "@/components/ui/primitives";
+import {
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  CardHeader,
+  EmptyState,
+  PageHeader,
+} from "@/components/ui/primitives";
 import { DisclosureSummary } from "@/components/app/disclosure-summary";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -49,9 +57,7 @@ export function NewOwnerScreen() {
       if (finding.status === "answered") {
         return [
           `${finding.meta.question}`,
-          ...finding.confirmed.map(
-            (a) => `  ${a.number}. ${a.plain ?? a.text[0] ?? ""}`,
-          ),
+          ...finding.confirmed.map((a) => `  ${a.number}. ${a.plain ?? a.text[0] ?? ""}`),
           "",
         ];
       }
@@ -89,11 +95,10 @@ export function NewOwnerScreen() {
       />
 
       <Callout tone="info" icon={<Scale className="size-4" />} title="Where the eight came from">
-        Virginia, Colorado and Washington wrote buyer disclosure requirements separately and
-        landed on the same short list. It is what statute says a buyer must be told, rather
-        than what we found interesting, which is what makes it worth building a screen on.
-        Florida is the one state that puts the duty on the association rather than the
-        seller.
+        Virginia, Colorado and Washington wrote buyer disclosure requirements separately and landed
+        on the same short list. It is what statute says a buyer must be told, rather than what we
+        found interesting, which is what makes it worth building a screen on. Florida is the one
+        state that puts the duty on the association rather than the seller.
       </Callout>
 
       {articles.length === 0 ? (
@@ -103,11 +108,7 @@ export function NewOwnerScreen() {
             title="Your documents are files, not text"
             description="Import the text of your declaration and rules to answer these."
             action={
-              <ButtonLink
-                href="/board/documents/import"
-                variant="primary"
-                size="md"
-              >
+              <ButtonLink href="/board/documents/import" variant="primary" size="md">
                 Import the text
               </ButtonLink>
             }

@@ -42,7 +42,9 @@ export function rowsForImport(rows: RosterRow[], existingUnits: string[] = []): 
     if (!bySpelling.has(key)) bySpelling.set(key, label);
   }
   return rows.map((r) => {
-    const unit = exact.has(r.unit) ? r.unit : (bySpelling.get(r.unit.trim().toLowerCase()) ?? r.unit);
+    const unit = exact.has(r.unit)
+      ? r.unit
+      : (bySpelling.get(r.unit.trim().toLowerCase()) ?? r.unit);
     const row: Record<string, string | number> = {
       unit,
       address: r.address,
@@ -191,6 +193,9 @@ export async function setBooksStart(
   if (books.fiscalYearStart) row.fiscal_year_start = books.fiscalYearStart;
   if (books.billingStartsOn !== undefined) row.billing_starts_on = books.billingStartsOn;
   if (!Object.keys(row).length) return;
-  const { error } = await supabaseBrowser().from("associations").update(row).eq("id", associationId);
+  const { error } = await supabaseBrowser()
+    .from("associations")
+    .update(row)
+    .eq("id", associationId);
   if (error) throw new Error(error.message);
 }

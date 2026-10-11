@@ -13,15 +13,17 @@ import {
   Vote,
   Wrench,
 } from "lucide-react";
-import { Card, CardHeader, EmptyState, IconTile, TINT_FIELD, type TintName } from "@/components/ui/primitives";
+import {
+  Card,
+  CardHeader,
+  EmptyState,
+  IconTile,
+  TINT_FIELD,
+  type TintName,
+} from "@/components/ui/primitives";
 import { calendarEntries } from "@/lib/metrics";
 import { ballotPhase } from "@/lib/phases";
-import {
-  useAppState,
-  useCurrentHome,
-  useMyRequests,
-  useHomeCharges,
-} from "@/lib/app-state";
+import { useAppState, useCurrentHome, useMyRequests, useHomeCharges } from "@/lib/app-state";
 import { HomeSchedule } from "@/components/app/home-schedule";
 import { cn, formatDate, money, pastDueLabel, relativeDays, todayIsoDate } from "@/lib/utils";
 import { balanceSplit } from "@/lib/statement";
@@ -73,7 +75,9 @@ export default function ResidentHome() {
             >
               <IconTile icon={Radio} tint="teal" size="sm" />
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 block text-body font-semibold text-fg">{live.title}</span>
+                <span className="line-clamp-2 block text-body font-semibold text-fg">
+                  {live.title}
+                </span>
                 <span className="block text-footnote text-ok">
                   {liveMeetingLine(live.attendees.length)}
                 </span>
@@ -89,7 +93,9 @@ export default function ResidentHome() {
               <IconTile icon={Gavel} tint="amber" size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block text-body font-semibold text-fg">{notice.title}</span>
-                <span className="line-clamp-2 block text-footnote text-fg-muted">{notice.detail}</span>
+                <span className="line-clamp-2 block text-footnote text-fg-muted">
+                  {notice.detail}
+                </span>
               </span>
               <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
             </Link>
@@ -102,7 +108,9 @@ export default function ResidentHome() {
               <IconTile icon={Vote} tint="violet" size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block text-body font-semibold text-fg">
-                  {toVote.length === 1 ? "A ballot needs your vote" : `${toVote.length} ballots need your vote`}
+                  {toVote.length === 1
+                    ? "A ballot needs your vote"
+                    : `${toVote.length} ballots need your vote`}
                 </span>
                 <span className="line-clamp-2 block text-footnote text-fg-muted">
                   {toVote[0].title} · closes {relativeDays(toVote[0].closesDate)}
@@ -127,8 +135,6 @@ export default function ResidentHome() {
     </div>
   );
 }
-
-
 
 /**
  * The number an owner opens the app for, and the button that settles it.

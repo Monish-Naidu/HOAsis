@@ -91,7 +91,9 @@ export async function sendDisputeNotice(input: {
     ]);
     if (!association) return result;
 
-    const profileIds = (seats ?? []).map((s) => s.profile_id).filter((id): id is string => Boolean(id));
+    const profileIds = (seats ?? [])
+      .map((s) => s.profile_id)
+      .filter((id): id is string => Boolean(id));
     const { data: profiles } = profileIds.length
       ? await admin.from("profiles").select("id, email").in("id", profileIds)
       : { data: [] as { id: string; email: string | null }[] };
@@ -128,7 +130,9 @@ export async function sendDisputeNotice(input: {
               html: built.html,
               text: built.text,
             },
-            { idempotencyKey: `dispute-${input.kind}/${input.disputeId}/${person.email.toLowerCase()}` },
+            {
+              idempotencyKey: `dispute-${input.kind}/${input.disputeId}/${person.email.toLowerCase()}`,
+            },
           );
           providerId = sent.data?.id ?? null;
           error = sent.error?.message ?? null;

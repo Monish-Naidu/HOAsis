@@ -5,7 +5,16 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, Copy, Download, FileText, History, Paperclip, Search } from "lucide-react";
-import { Badge, Button, ButtonLink, Callout, Card, EmptyState, PageHeader, fieldClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  EmptyState,
+  PageHeader,
+  fieldClass,
+} from "@/components/ui/primitives";
 import { InlineBar, PeriodControl, SelectField } from "@/components/app/finance-ui";
 import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
@@ -50,7 +59,15 @@ const STATUS_LABEL: Record<StatusFilter, string> = {
  */
 const DIRECTIONS: readonly ("all" | "in" | "out")[] = ["all", "in", "out"];
 
-const PERIODS: readonly PeriodPreset[] = ["last-30-days", "this-month", "last-month", "this-year", "last-year", "last-12-months", "custom"];
+const PERIODS: readonly PeriodPreset[] = [
+  "last-30-days",
+  "this-month",
+  "last-month",
+  "this-year",
+  "last-year",
+  "last-12-months",
+  "custom",
+];
 const DEFAULT_PERIOD: PeriodPreset = "last-30-days";
 
 /**
@@ -63,7 +80,7 @@ export function TransactionsScreen() {
   const { community, ledger, confirmLedgerEntry } = useAppState();
   const { notify } = useToast();
   const params = useSearchParams();
-  
+
   // Period, dates, status, category, direction and the search text are in the
   // URL, so a view can be bookmarked or sent to another officer. Account is
   // quick narrowing and stays on the page.
@@ -76,7 +93,11 @@ export function TransactionsScreen() {
   const [categoryRaw, setCategory] = useUrlFilter<string>("category", null, "all");
   const [search, setSearch] = useUrlFilter<string>("q", null, "");
   const [accountId, setAccountId] = useState("all");
-  const [direction, setDirection] = useUrlFilter<"all" | "in" | "out">("direction", DIRECTIONS, "all");
+  const [direction, setDirection] = useUrlFilter<"all" | "in" | "out">(
+    "direction",
+    DIRECTIONS,
+    "all",
+  );
   const [open, setOpen] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
 
@@ -102,7 +123,9 @@ export function TransactionsScreen() {
     </Button>
   );
   const categories = ledgerCategories(ledger);
-  const category = categories.includes(categoryRaw as (typeof categories)[number]) ? categoryRaw : "all";
+  const category = categories.includes(categoryRaw as (typeof categories)[number])
+    ? categoryRaw
+    : "all";
   const baseFilter = useMemo<LedgerFilter>(
     () => ({
       from: range.from,
@@ -127,7 +150,9 @@ export function TransactionsScreen() {
     [inCategory, direction],
   );
   const totals = ledgerTotals(inCategory);
-  const byCategory = totalsByCategory(direction === "all" ? pool : filterLedger(pool, { direction }));
+  const byCategory = totalsByCategory(
+    direction === "all" ? pool : filterLedger(pool, { direction }),
+  );
   const byCategoryMax = Math.max(1, ...byCategory.map((r) => Math.abs(r.inCents - r.outCents)));
   // A dropdown only earns its place when it can change the list: lines
   // waiting on a decision to filter to. One already chosen stays, so it can
@@ -135,9 +160,16 @@ export function TransactionsScreen() {
   const showStatus = counts.status["needs-review"] > 0 || status !== "any";
   // Whether something besides the period is cutting the list down, which
   // decides if the empty state offers a wider period or clearing the filters.
-  const narrowed = status !== "any" || category !== "all" || accountId !== "all" || direction !== "all" || search.trim() !== "";
+  const narrowed =
+    status !== "any" ||
+    category !== "all" ||
+    accountId !== "all" ||
+    direction !== "all" ||
+    search.trim() !== "";
   const wider = widerPeriod(preset);
-  const widerHref = wider ? `${pathname}?${withFilter(params.toString(), "period", wider, DEFAULT_PERIOD)}` : pathname;
+  const widerHref = wider
+    ? `${pathname}?${withFilter(params.toString(), "period", wider, DEFAULT_PERIOD)}`
+    : pathname;
   const accounts = community.bankAccounts;
   const accountName = (id: string) => {
     const a = accounts.find((x) => x.id === id);
@@ -203,7 +235,10 @@ export function TransactionsScreen() {
               label="Status"
               value={status}
               onChange={setStatus}
-              options={STATUSES.map((value) => ({ value, label: `${STATUS_LABEL[value]} (${counts.status[value]})` }))}
+              options={STATUSES.map((value) => ({
+                value,
+                label: `${STATUS_LABEL[value]} (${counts.status[value]})`,
+              }))}
             />
           ) : null}
           <label className="relative ml-auto min-w-[12rem] flex-1 sm:max-w-xs">
@@ -224,8 +259,18 @@ export function TransactionsScreen() {
         <dl className="grid grid-cols-2 gap-px border-b border-border bg-border sm:grid-cols-4">
           {(
             [
-              { label: "Money in", value: money(totals.inCents, { cents: false }), tone: "text-ok", dir: "in" },
-              { label: "Money out", value: money(totals.outCents, { cents: false }), tone: "text-fg", dir: "out" },
+              {
+                label: "Money in",
+                value: money(totals.inCents, { cents: false }),
+                tone: "text-ok",
+                dir: "in",
+              },
+              {
+                label: "Money out",
+                value: money(totals.outCents, { cents: false }),
+                tone: "text-fg",
+                dir: "out",
+              },
               {
                 label: "Net",
                 value: money(totals.netCents, { sign: totals.netCents > 0, cents: false }),
@@ -237,7 +282,14 @@ export function TransactionsScreen() {
             const body = (
               <>
                 <dt className="text-footnote font-medium text-fg-muted">{f.label}</dt>
-                <dd className={cn("tnum mt-0.5 text-headline font-semibold tracking-[-0.02em]", f.tone)}>{f.value}</dd>
+                <dd
+                  className={cn(
+                    "tnum mt-0.5 text-headline font-semibold tracking-[-0.02em]",
+                    f.tone,
+                  )}
+                >
+                  {f.value}
+                </dd>
               </>
             );
             const dir = f.dir;
@@ -292,7 +344,12 @@ export function TransactionsScreen() {
                         <span className="min-w-0 text-fg">
                           {r.category} <span className="tnum text-fg-subtle">· {r.count}</span>
                         </span>
-                        <span className={cn("tnum shrink-0 font-semibold", net > 0 ? "text-ok" : "text-fg")}>
+                        <span
+                          className={cn(
+                            "tnum shrink-0 font-semibold",
+                            net > 0 ? "text-ok" : "text-fg",
+                          )}
+                        >
                           {money(net, { sign: net > 0, cents: false })}
                         </span>
                       </span>
@@ -319,8 +376,8 @@ export function TransactionsScreen() {
               title={`Transactions before ${formatDate(history.from, "long")} are not loaded yet`}
               action={earlierButton}
             >
-              The books go back to {formatDate(history.ledgerFrom ?? history.from, "long")}. The totals
-              above count what is on screen.
+              The books go back to {formatDate(history.ledgerFrom ?? history.from, "long")}. The
+              totals above count what is on screen.
             </Callout>
           </div>
         ) : null}
@@ -369,7 +426,9 @@ export function TransactionsScreen() {
                   <li key={e.id} className={cn(e.status === "needs-review" && "bg-warn-soft/40")}>
                     <div className="px-4 py-2.5">
                       <div className="flex items-baseline justify-between gap-3">
-                        <p className="min-w-0 truncate text-callout font-medium text-fg">{e.description}</p>
+                        <p className="min-w-0 truncate text-callout font-medium text-fg">
+                          {e.description}
+                        </p>
                         <p
                           className={cn(
                             "tnum shrink-0 text-callout font-semibold",
@@ -385,11 +444,18 @@ export function TransactionsScreen() {
                           ? `${e.suggestedCategory}?`
                           : e.category}
                       </p>
-                      {e.status !== "cleared" || e.duplicateOfId || e.reversedById || e.reversedEntryId || attachment ? (
+                      {e.status !== "cleared" ||
+                      e.duplicateOfId ||
+                      e.reversedById ||
+                      e.reversedEntryId ||
+                      attachment ? (
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
                           <StatusCell entry={e} onConfirm={() => confirm(e)} />
                           {attachment ? (
-                            <AttachmentToggle expanded={expanded} onToggle={() => setOpen(expanded ? null : e.id)} />
+                            <AttachmentToggle
+                              expanded={expanded}
+                              onToggle={() => setOpen(expanded ? null : e.id)}
+                            />
                           ) : null}
                         </div>
                       ) : null}
@@ -411,7 +477,9 @@ export function TransactionsScreen() {
                     <th className="px-5 py-2 font-semibold">Date</th>
                     <th className="px-3 py-2 font-semibold">Description</th>
                     <th className="px-3 py-2 font-semibold">Category</th>
-                    {accounts.length > 1 ? <th className="px-3 py-2 font-semibold">Account</th> : null}
+                    {accounts.length > 1 ? (
+                      <th className="px-3 py-2 font-semibold">Account</th>
+                    ) : null}
                     <th className="px-3 py-2 text-right font-semibold">Amount</th>
                     <th className="px-5 py-2 font-semibold">
                       <span className="sr-only">Status</span>
@@ -444,7 +512,9 @@ export function TransactionsScreen() {
                                 />
                               ) : null}
                             </div>
-                            <span className="block text-caption text-fg-subtle">{e.counterparty}</span>
+                            <span className="block text-caption text-fg-subtle">
+                              {e.counterparty}
+                            </span>
                           </td>
                           <td className="px-3 py-2.5 text-caption text-fg-muted">
                             {e.status === "needs-review" && e.suggestedCategory ? (
@@ -454,7 +524,9 @@ export function TransactionsScreen() {
                             )}
                           </td>
                           {accounts.length > 1 ? (
-                            <td className="px-3 py-2.5 text-caption text-fg-muted">{accountName(e.accountId)}</td>
+                            <td className="px-3 py-2.5 text-caption text-fg-muted">
+                              {accountName(e.accountId)}
+                            </td>
                           ) : null}
                           <td
                             className={cn(
@@ -496,8 +568,8 @@ export function TransactionsScreen() {
           </span>
           {totals.needsReview ? (
             <span className="font-medium text-warn">
-              {pluralize(totals.needsReview, "line")} {totals.needsReview === 1 ? "needs" : "need"} review,
-              held out of the totals
+              {pluralize(totals.needsReview, "line")} {totals.needsReview === 1 ? "needs" : "need"}{" "}
+              review, held out of the totals
             </span>
           ) : (
             <span>Everything here is confirmed</span>

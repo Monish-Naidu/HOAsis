@@ -14,9 +14,9 @@ process.env.RESEND_API_KEY = "re_test_unit";
 // Announcements carry a signed unsubscribe link.
 process.env.EMAIL_TOKEN_SECRET = "unit-test-secret";
 
-const send = vi.fn<(message: { to: string; subject: string }) => Promise<{ data: { id: string }; error: null }>>(
-  async () => ({ data: { id: "email-1" }, error: null }),
-);
+const send = vi.fn<
+  (message: { to: string; subject: string }) => Promise<{ data: { id: string }; error: null }>
+>(async () => ({ data: { id: "email-1" }, error: null }));
 vi.mock("resend", () => ({
   Resend: class {
     emails = { send };
@@ -27,11 +27,23 @@ vi.mock("@/lib/email/sign-in-link", () => ({
   signInUrl: async () => "https://yourhoasis.com/auth/callback?token_hash=x",
 }));
 
-type Person = { email: string; full_name: string; profile_id: string | null; unit_id: string; unit_label: string; balance_cents: number };
+type Person = {
+  email: string;
+  full_name: string;
+  profile_id: string | null;
+  unit_id: string;
+  unit_label: string;
+  balance_cents: number;
+};
 let recipients: Person[] = [];
 /** What email_log already holds for the last hour. */
 let logged: { to_email: string; subject: string; unit_id: string | null }[] = [];
-const inserted: { to_email: string; subject: string; unit_id: string | null; error: string | null }[] = [];
+const inserted: {
+  to_email: string;
+  subject: string;
+  unit_id: string | null;
+  error: string | null;
+}[] = [];
 let announcement: { title: string; body: string } | null = null;
 /** Why email_log refuses a write, when it does. `throws` is the network giving out instead. */
 let logFails: { message: string; throws?: boolean } | null = null;
@@ -51,7 +63,8 @@ const fake = createFakeSupabase({
     if (logFails) return { error: { message: logFails.message } };
     inserted.push(row);
     // A send that went is what the next call's repeat guard reads back.
-    if (!row.error) logged.push({ to_email: row.to_email, subject: row.subject, unit_id: row.unit_id });
+    if (!row.error)
+      logged.push({ to_email: row.to_email, subject: row.subject, unit_id: row.unit_id });
     return { error: null };
   },
 });
@@ -124,16 +137,23 @@ describe("a dues run over a roster", () => {
     expect(result.remaining).toBe(2);
     // Counted as not sent, so the screen that only shows `failed` shows them.
     expect(result.failed).toBe(2);
-    expect(result.errors[0]).toMatch(/^Stopped at the time limit\. 2 people were not reached\. Send again/);
+    expect(result.errors[0]).toMatch(
+      /^Stopped at the time limit\. 2 people were not reached\. Send again/,
+    );
   });
 
   it("passes over whoever already has the notice when it is sent again", async () => {
     // The first three went out before the stop. Same amount, same date.
     const subject = "$285.00 due November 1, 2026 · Maple Court HOA";
-    logged = recipients.slice(0, 3).map((p) => ({ to_email: p.email, subject, unit_id: p.unit_id }));
+    logged = recipients
+      .slice(0, 3)
+      .map((p) => ({ to_email: p.email, subject, unit_id: p.unit_id }));
     const { pacer } = pacerFor();
     const result = await sendDuesEmails({ ...run, pacer });
-    expect(send.mock.calls.map(([message]) => message.to)).toEqual(["owner4@example.com", "owner5@example.com"]);
+    expect(send.mock.calls.map(([message]) => message.to)).toEqual([
+      "owner4@example.com",
+      "owner5@example.com",
+    ]);
     // Counted on their own. Folded into `skipped`, they read as homes with
     // no address.
     expect(result).toMatchObject({ sent: 2, skipped: 0, already: 3, failed: 0 });
@@ -142,7 +162,9 @@ describe("a dues run over a roster", () => {
   it("says in a preview who already has it, apart from who has no address", async () => {
     const subject = "$285.00 due November 1, 2026 · Maple Court HOA";
     recipients = [...owners(4), { ...owners(5)[4], email: "" }];
-    logged = recipients.slice(0, 3).map((p) => ({ to_email: p.email, subject, unit_id: p.unit_id }));
+    logged = recipients
+      .slice(0, 3)
+      .map((p) => ({ to_email: p.email, subject, unit_id: p.unit_id }));
     const { pacer } = pacerFor();
     const preview = await sendDuesEmails({ ...run, pacer, dryRun: true });
     expect(preview).toMatchObject({ sent: 1, skipped: 1, already: 3, failed: 0, remaining: 0 });
@@ -153,7 +175,13 @@ describe("a dues run over a roster", () => {
   });
 
   it("still writes to somebody whose balance changed since the last notice", async () => {
-    logged = [{ to_email: "owner1@example.com", subject: "$250.00 due November 1, 2026 · Maple Court HOA", unit_id: "unit-1" }];
+    logged = [
+      {
+        to_email: "owner1@example.com",
+        subject: "$250.00 due November 1, 2026 · Maple Court HOA",
+        unit_id: "unit-1",
+      },
+    ];
     const { pacer } = pacerFor();
     const result = await sendDuesEmails({ ...run, pacer });
     expect(result.sent).toBe(5);
@@ -192,7 +220,12 @@ describe("a dues run over a roster", () => {
       const result = await sendDuesEmails({ ...run, pacer: pacerFor().pacer });
       // One went before anything was known to be wrong. Nobody after it.
       expect(send).toHaveBeenCalledTimes(1);
-      expect(result).toMatchObject({ sent: 1, failed: 4, remaining: 0, unrecorded: "permission denied for table email_log" });
+      expect(result).toMatchObject({
+        sent: 1,
+        failed: 4,
+        remaining: 0,
+        unrecorded: "permission denied for table email_log",
+      });
       expect(result.errors[0]).toBe(
         "Stopped. The log of this send could not be saved. 4 people were not reached. Sending again could write to people who already have it.",
       );
@@ -203,7 +236,12 @@ describe("a dues run over a roster", () => {
       const result = await sendDuesEmails({ ...run, pacer: pacerFor().pacer });
       expect(send).toHaveBeenCalledTimes(1);
       // The mail did go. It used to be counted as failed and logged again.
-      expect(result).toMatchObject({ sent: 1, failed: 4, remaining: 0, unrecorded: "fetch failed" });
+      expect(result).toMatchObject({
+        sent: 1,
+        failed: 4,
+        remaining: 0,
+        unrecorded: "fetch failed",
+      });
     });
 
     it("says nothing of it when every record is written", async () => {
@@ -222,7 +260,12 @@ describe("a dues run over a roster", () => {
 });
 
 describe("a board notice over a roster", () => {
-  const notice = { associationId: "assoc-1", kind: "announcement" as const, id: "ann-1", origin: "https://yourhoasis.com" };
+  const notice = {
+    associationId: "assoc-1",
+    kind: "announcement" as const,
+    id: "ann-1",
+    origin: "https://yourhoasis.com",
+  };
 
   it("takes a turn from the pacer before every send", async () => {
     const { pacer, turns } = pacerFor();
@@ -236,7 +279,9 @@ describe("a board notice over a roster", () => {
     const result = await sendNotification({ ...notice, pacer });
     expect(send).toHaveBeenCalledTimes(2);
     expect(result).toMatchObject({ sent: 2, already: 0, remaining: 3, failed: 3 });
-    expect(result.errors[0]).toMatch(/^Stopped at the time limit\. 3 people were not reached\. Send again/);
+    expect(result.errors[0]).toMatch(
+      /^Stopped at the time limit\. 3 people were not reached\. Send again/,
+    );
     expect(inserted).toHaveLength(2);
   });
 
@@ -281,7 +326,12 @@ describe("a board notice over a roster", () => {
       expect(answers).toHaveLength(1);
       // One went before anything was known to be wrong. Nobody twice.
       expect(send.mock.calls.map(([message]) => message.to)).toEqual(["owner1@example.com"]);
-      expect(answers[0]).toMatchObject({ sent: 1, failed: 4, remaining: 0, unrecorded: "permission denied for table email_log" });
+      expect(answers[0]).toMatchObject({
+        sent: 1,
+        failed: 4,
+        remaining: 0,
+        unrecorded: "permission denied for table email_log",
+      });
       expect(answers[0].errors[0]).toBe(
         "Stopped. The log of this send could not be saved. 4 people were not reached. Sending again could write to people who already have it.",
       );
@@ -291,7 +341,12 @@ describe("a board notice over a roster", () => {
       logFails = { message: "fetch failed", throws: true };
       const result = await sendNotification({ ...notice, pacer: pacerFor().pacer });
       expect(send).toHaveBeenCalledTimes(1);
-      expect(result).toMatchObject({ sent: 1, failed: 4, remaining: 0, unrecorded: "fetch failed" });
+      expect(result).toMatchObject({
+        sent: 1,
+        failed: 4,
+        remaining: 0,
+        unrecorded: "fetch failed",
+      });
     });
 
     it("does not count whoever already has it among the people not reached", async () => {
@@ -306,7 +361,10 @@ describe("a board notice over a roster", () => {
     it("still writes to everybody in one home, and says the record was not kept", async () => {
       // One home is never asked for again by the browser, and a send cut
       // short there could not be finished without writing to the first twice.
-      recipients = [...owners(1), { ...owners(1)[0], email: "co-owner@example.com", profile_id: "profile-co" }];
+      recipients = [
+        ...owners(1),
+        { ...owners(1)[0], email: "co-owner@example.com", profile_id: "profile-co" },
+      ];
       logFails = { message: "permission denied for table email_log" };
       const result = await sendNotification({
         associationId: "assoc-1",
@@ -317,7 +375,12 @@ describe("a board notice over a roster", () => {
         origin: "https://yourhoasis.com",
         pacer: pacerFor().pacer,
       });
-      expect(result).toMatchObject({ sent: 2, failed: 0, remaining: 0, unrecorded: "permission denied for table email_log" });
+      expect(result).toMatchObject({
+        sent: 2,
+        failed: 0,
+        remaining: 0,
+        unrecorded: "permission denied for table email_log",
+      });
       expect(result.errors).toEqual(["The log of this send could not be saved."]);
     });
 
@@ -347,15 +410,25 @@ describe("a board notice over a roster", () => {
     it("always goes, even under the subject of a message sent minutes ago", async () => {
       // A second reply in a thread carries the thread's subject on purpose.
       const first = await sendNotification({ ...reply, pacer: pacerFor().pacer });
-      const second = await sendNotification({ ...reply, body: "One more thing: bring the survey.", pacer: pacerFor().pacer });
+      const second = await sendNotification({
+        ...reply,
+        body: "One more thing: bring the survey.",
+        pacer: pacerFor().pacer,
+      });
       expect(first).toMatchObject({ sent: 1, already: 0 });
       expect(second).toMatchObject({ sent: 1, already: 0 });
-      expect(send.mock.calls.map(([message]) => message.to)).toEqual(["owner1@example.com", "owner1@example.com"]);
+      expect(send.mock.calls.map(([message]) => message.to)).toEqual([
+        "owner1@example.com",
+        "owner1@example.com",
+      ]);
     });
 
     it("is never stopped at the time limit, because calling again could not tell a repeat", async () => {
       // Two owners of one home, and a pacer that is out of time after one.
-      recipients = [...owners(1), { ...owners(1)[0], email: "co-owner@example.com", profile_id: "profile-co" }];
+      recipients = [
+        ...owners(1),
+        { ...owners(1)[0], email: "co-owner@example.com", profile_id: "profile-co" },
+      ];
       const result = await sendNotification({ ...reply, pacer: pacerFor(1).pacer });
       expect(result).toMatchObject({ sent: 2, remaining: 0, failed: 0 });
     });
@@ -370,9 +443,18 @@ describe("a board notice over a roster", () => {
       body: "Move cars by 8.",
       origin: "https://yourhoasis.com",
     };
-    logged = [{ to_email: "owner1@example.com", subject: "Street sweeping Thursday · Maple Court HOA", unit_id: "unit-1" }];
+    logged = [
+      {
+        to_email: "owner1@example.com",
+        subject: "Street sweeping Thursday · Maple Court HOA",
+        unit_id: "unit-1",
+      },
+    ];
     const result = await sendNotification({ ...several, pacer: pacerFor().pacer });
     expect(result).toMatchObject({ sent: 2, already: 1, skipped: 0 });
-    expect(send.mock.calls.map(([message]) => message.to)).toEqual(["owner2@example.com", "owner3@example.com"]);
+    expect(send.mock.calls.map(([message]) => message.to)).toEqual([
+      "owner2@example.com",
+      "owner3@example.com",
+    ]);
   });
 });

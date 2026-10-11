@@ -15,8 +15,8 @@ import type { SearchHit, SearchKind } from "./records";
  * every browser out (see CLAUDE.md).
  */
 
-export const RECENT_STORAGE_KEY = "hoasis-search-recent";
-export const RECENT_LIMIT = 5;
+const RECENT_STORAGE_KEY = "hoasis-search-recent";
+const RECENT_LIMIT = 5;
 
 export interface RecentEntry {
   id: string;
@@ -47,7 +47,9 @@ const EMPTY: readonly RecentEntry[] = [];
 function isEntry(v: unknown): v is RecentEntry {
   if (!v || typeof v !== "object") return false;
   const e = v as Record<string, unknown>;
-  return ["id", "kind", "section", "title", "subtitle", "href", "tint"].every((k) => typeof e[k] === "string");
+  return ["id", "kind", "section", "title", "subtitle", "href", "tint"].every(
+    (k) => typeof e[k] === "string",
+  );
 }
 
 function load(storage: KeyValueStorage | null): readonly RecentEntry[] {
@@ -73,7 +75,7 @@ function save(storage: KeyValueStorage | null, entries: readonly RecentEntry[]) 
 }
 
 /** What a hit is remembered as: what it showed and where it went, nothing live. */
-export function toEntry(hit: SearchHit): RecentEntry {
+function toEntry(hit: SearchHit): RecentEntry {
   return {
     id: hit.id,
     kind: hit.kind,

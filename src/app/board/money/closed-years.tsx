@@ -29,7 +29,12 @@ export function ClosedYears() {
       />
       <ul className="divide-y divide-border">
         {years.map((year) => (
-          <ClosedYearRow key={year.startsOn} year={year} onReopen={reopenFiscalYear} onClose={closeFiscalYear} />
+          <ClosedYearRow
+            key={year.startsOn}
+            year={year}
+            onReopen={reopenFiscalYear}
+            onClose={closeFiscalYear}
+          />
         ))}
       </ul>
     </Card>
@@ -68,8 +73,9 @@ function ClosedYearRow({
             </span>
           </p>
           <p className="tnum text-footnote text-fg-muted">
-            {money(year.inCents, { cents: false })} in, {money(year.outCents, { cents: false })} out ·{" "}
-            {money(year.billedCents, { cents: false })} billed, {money(year.collectedCents, { cents: false })} collected
+            {money(year.inCents, { cents: false })} in, {money(year.outCents, { cents: false })} out
+            · {money(year.billedCents, { cents: false })} billed,{" "}
+            {money(year.collectedCents, { cents: false })} collected
           </p>
           <p className="text-caption text-fg-subtle">
             {open
@@ -107,14 +113,18 @@ function ClosedYearRow({
             const ok = await onReopen(year.startsOn, reason);
             setBusy(false);
             if (ok) {
-              notify(`${yearName(year)} is open for corrections. Close it again when they are posted.`);
+              notify(
+                `${yearName(year)} is open for corrections. Close it again when they are posted.`,
+              );
               setAsking(false);
               setReason("");
             }
           }}
         >
           <label className="block min-w-0 flex-1">
-            <span className="mb-1 block text-footnote font-semibold text-fg-muted">Why it is being reopened</span>
+            <span className="mb-1 block text-footnote font-semibold text-fg-muted">
+              Why it is being reopened
+            </span>
             <input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -122,7 +132,12 @@ function ClosedYearRow({
               className="h-9 w-full rounded-md border border-border bg-surface px-3 text-body text-fg"
             />
           </label>
-          <Button type="submit" variant="primary" size="sm" disabled={busy || reason.trim().length < 3}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            disabled={busy || reason.trim().length < 3}
+          >
             Reopen the year
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setAsking(false)}>

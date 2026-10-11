@@ -59,7 +59,9 @@ describe("duplicatePaymentWarning", () => {
     expect(duplicatePaymentWarning("Unit 4", row())).toMatch(
       /^Unit 4 already has a \$285\.00 check recorded for Aug 20(, 2026)?\.$/,
     );
-    expect(duplicatePaymentWarning("Unit 4", row({ method: "cash" }))).toMatch(/\$285\.00 cash payment recorded/);
+    expect(duplicatePaymentWarning("Unit 4", row({ method: "cash" }))).toMatch(
+      /\$285\.00 cash payment recorded/,
+    );
   });
 });
 

@@ -51,7 +51,11 @@ vi.mock("@/lib/app-state", async (original) => ({
     account: null,
     accounts: [],
     communities: [],
-    community: { id: "demo", settings: { displayName: "Willow Creek Estates" }, association: { unitCount: 14 } },
+    community: {
+      id: "demo",
+      settings: { displayName: "Willow Creek Estates" },
+      association: { unitCount: 14 },
+    },
     setCommunity: vi.fn(),
   }),
 }));
@@ -85,7 +89,9 @@ describe("signing in after a failed load", () => {
   it("does not ask when the sign in itself was refused", async () => {
     signInAnswer = { ok: false, message: "That email and password do not match." };
     await signIn();
-    expect(await screen.findByRole("alert")).toHaveTextContent("That email and password do not match.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That email and password do not match.",
+    );
     expect(retryRemote).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });

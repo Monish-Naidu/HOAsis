@@ -43,12 +43,18 @@ describe("resident pay, other amount", () => {
   it("accepts an amount up to the balance with no extra", () => {
     expect(checkPayAmount("100", balance)).toEqual({ ok: true, cents: 10_000, extraCents: 0 });
     expect(checkPayAmount("$285.00", balance)).toEqual({ ok: true, cents: 28_500, extraCents: 0 });
-    expect(checkPayAmount("1,000.50", 200_000)).toEqual({ ok: true, cents: 100_050, extraCents: 0 });
+    expect(checkPayAmount("1,000.50", 200_000)).toEqual({
+      ok: true,
+      cents: 100_050,
+      extraCents: 0,
+    });
   });
   it("allows more than the balance as credit, and says so", () => {
     const r = checkPayAmount("300", balance);
     expect(r).toEqual({ ok: true, cents: 30_000, extraCents: 1_500 });
-    expect(overpayNote(1_500)).toBe("That is $15.00 more than you owe. The extra stays on your account as credit.");
+    expect(overpayNote(1_500)).toBe(
+      "That is $15.00 more than you owe. The extra stays on your account as credit.",
+    );
     expect(overpayNote(0)).toBeNull();
   });
   it("refuses 99999 on a $285 balance: the ceiling is the balance plus $10,000", () => {
@@ -67,7 +73,14 @@ describe("resident phone", () => {
     expect(checkPhone("   ")).toEqual({ ok: true, phone: "" });
   });
   it("accepts ordinary numbers and extensions", () => {
-    for (const raw of ["(425) 555-0142", "425.555.0142", "+1 425 555 0142", "555-0142", "(425) 555-0142 x12", "425-555-0142 ext. 7"]) {
+    for (const raw of [
+      "(425) 555-0142",
+      "425.555.0142",
+      "+1 425 555 0142",
+      "555-0142",
+      "(425) 555-0142 x12",
+      "425-555-0142 ext. 7",
+    ]) {
       expect(checkPhone(raw).ok, raw).toBe(true);
     }
   });
@@ -227,20 +240,33 @@ describe("a payment recorded by hand", () => {
   const balance = 28_500;
   it("may exceed the balance by $10,000 and no more, the owner's own ceiling", () => {
     expect(checkManualPayment("285", balance)).toEqual({ ok: true, cents: 28_500, extraCents: 0 });
-    expect(checkManualPayment("10285", balance)).toEqual({ ok: true, cents: 1_028_500, extraCents: 1_000_000 });
+    expect(checkManualPayment("10285", balance)).toEqual({
+      ok: true,
+      cents: 1_028_500,
+      extraCents: 1_000_000,
+    });
     const over = checkManualPayment("10285.01", balance);
-    expect(over).toEqual({ ok: false, message: "The most you can record for this home is $10,285.00." });
+    expect(over).toEqual({
+      ok: false,
+      message: "The most you can record for this home is $10,285.00.",
+    });
     expect(checkManualPayment("999999999", balance).ok).toBe(false);
   });
 
   it("counts a credit balance as owing nothing", () => {
-    expect(checkManualPayment("10000", -5_000)).toEqual({ ok: true, cents: 1_000_000, extraCents: 1_000_000 });
+    expect(checkManualPayment("10000", -5_000)).toEqual({
+      ok: true,
+      cents: 1_000_000,
+      extraCents: 1_000_000,
+    });
     expect(checkManualPayment("10000.01", -5_000).ok).toBe(false);
   });
 
   it("says how far past the balance it is, and refuses odd formats", () => {
     const ok = checkManualPayment("300", balance);
-    expect(ok.ok && homeOverpayNote(ok.extraCents)).toBe("That is $15.00 more than the home owes. The extra stays as credit.");
+    expect(ok.ok && homeOverpayNote(ok.extraCents)).toBe(
+      "That is $15.00 more than the home owes. The extra stays as credit.",
+    );
     expect(homeOverpayNote(0)).toBeNull();
     expect(checkManualPayment("285.555", balance).ok).toBe(false);
     expect(checkManualPayment("12e3", balance).ok).toBe(false);
@@ -251,14 +277,23 @@ describe("a payment recorded by hand", () => {
 
 describe("the pay screen's other amount", () => {
   it("says whole cents for more than two decimals and keeps the old words for the rest", () => {
-    expect(checkPayAmount("1.999", 10_000)).toEqual({ ok: false, message: "Use whole cents, like 12.50" });
+    expect(checkPayAmount("1.999", 10_000)).toEqual({
+      ok: false,
+      message: "Use whole cents, like 12.50",
+    });
     expect(checkPayAmount("$12.505", 10_000).ok).toBe(false);
     for (const bad of ["0", "-5", "abc", "", "12e3"]) {
-      expect(checkPayAmount(bad, 10_000)).toEqual({ ok: false, message: "Enter an amount above $0" });
+      expect(checkPayAmount(bad, 10_000)).toEqual({
+        ok: false,
+        message: "Enter an amount above $0",
+      });
     }
     expect(checkPayAmount("12.50", 10_000)).toEqual({ ok: true, cents: 1250, extraCents: 0 });
   });
   it("is the same line on a hand payment", () => {
-    expect(checkManualPayment("1.999", 10_000)).toEqual({ ok: false, message: "Use whole cents, like 12.50" });
+    expect(checkManualPayment("1.999", 10_000)).toEqual({
+      ok: false,
+      message: "Use whole cents, like 12.50",
+    });
   });
 });

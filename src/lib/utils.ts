@@ -161,7 +161,7 @@ export function nextDueOnOrAfter(
     const total = y * 12 + (m - 1) + i;
     const yy = Math.floor(total / 12);
     const mm = (total % 12) + 1;
-    const onCadence = ((mm - fyMonth) % step + step) % step === 0;
+    const onCadence = (((mm - fyMonth) % step) + step) % step === 0;
     if (!onCadence) continue;
     const candidate = `${yy}-${String(mm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     if (candidate >= from) return candidate;
@@ -211,16 +211,6 @@ export function relativeDays(iso: string) {
   if (d === -1) return "yesterday";
   if (d > 0) return `in ${d} days`;
   return `${Math.abs(d)} days ago`;
-}
-
-/** Up to two capital letters from the first two words of a name. */
-export function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]!.toUpperCase())
-    .join("");
 }
 
 /** 1st, 2nd, 3rd, 4th. Used wherever a day of the month is shown. */

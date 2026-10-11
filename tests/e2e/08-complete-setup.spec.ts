@@ -98,11 +98,14 @@ async function uploadDoc(page: Page, fileName: string) {
   await page.waitForLoadState("networkidle");
   // Two file inputs live on this page. Target the labelled upload rather
   // than whichever one happens to be first in the document.
-  await page.locator('input[accept*=".pdf"]').first().setInputFiles({
-    name: fileName,
-    mimeType: "application/pdf",
-    buffer: Buffer.from("pdf"),
-  });
+  await page
+    .locator('input[accept*=".pdf"]')
+    .first()
+    .setInputFiles({
+      name: fileName,
+      mimeType: "application/pdf",
+      buffer: Buffer.from("pdf"),
+    });
   await expect(page.getByText(fileName).first()).toBeVisible();
 }
 
@@ -163,11 +166,14 @@ async function completeEverything(page: Page, property: Kind) {
   await page.getByRole("button", { name: /^Add$/ }).click();
   await expect(page.getByText("Clubhouse", { exact: true }).first()).toBeVisible();
 
-  await page.locator('input[accept*="image"]').first().setInputFiles({
-    name: "cover.jpg",
-    mimeType: "image/jpeg",
-    buffer: Buffer.from("jpg"),
-  });
+  await page
+    .locator('input[accept*="image"]')
+    .first()
+    .setInputFiles({
+      name: "cover.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.from("jpg"),
+    });
   await expect(page.getByRole("img", { name: "Current community photo" })).toBeVisible();
 
   // Insurance last, so nothing else on this page re-renders over it.
@@ -239,8 +245,7 @@ test("the return bar carries a board back, and disappears when done", async ({ p
   await page.goto("/board/documents?from=setup");
   await page.waitForLoadState("networkidle");
   const after = await inspect(page);
-  expect(
-    after.text,
-    "the bar still nags after everything is finished",
-  ).not.toContain("Back to setting up");
+  expect(after.text, "the bar still nags after everything is finished").not.toContain(
+    "Back to setting up",
+  );
 });

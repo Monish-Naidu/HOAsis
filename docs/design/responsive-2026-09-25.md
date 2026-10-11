@@ -19,21 +19,21 @@ the bezel.
 Viewport x shell x theme. "pass" means nothing found; "fixed" links to
 the list below.
 
-| Viewport | Board | Resident | Dark (board, resident) |
-| --- | --- | --- | --- |
-| 360x780 Android | fixed 3, 5, 6, 7, 9 | fixed 5, 8, 9 | pass |
-| 390x844 iPhone | fixed 3, 5, 6, 7, 9 | fixed 5, 8, 9 | pass |
-| 430x932 iPhone Max | fixed 3, 5, 6, 7, 9 | fixed 5, 8, 9 | pass |
-| 768x1024 iPad portrait | fixed 2, 4, 6, 7 | fixed 8 | pass |
-| 1024x768 iPad landscape | fixed 4 (rail shows, as intended) | pass | pass |
-| 1280x800 laptop | fixed 10 | pass | pass |
-| 1920x1080 | fixed 10 | pass | pass |
-| 1920 at 150% zoom | fixed 10 | pass | pass |
-| 1920 at 200% zoom | fixed 4, 10 | pass | pass |
-| 2560x1440 | fixed 10 | pass | pass |
-| 3840x2160 TV | fixed 1, 10 | fixed 1 | pass |
-| Text size Largest, 390 and 1280 | pass | pass | n/a |
-| prefers-reduced-motion, 1280 | pass | pass | n/a |
+| Viewport                        | Board                             | Resident      | Dark (board, resident) |
+| ------------------------------- | --------------------------------- | ------------- | ---------------------- |
+| 360x780 Android                 | fixed 3, 5, 6, 7, 9               | fixed 5, 8, 9 | pass                   |
+| 390x844 iPhone                  | fixed 3, 5, 6, 7, 9               | fixed 5, 8, 9 | pass                   |
+| 430x932 iPhone Max              | fixed 3, 5, 6, 7, 9               | fixed 5, 8, 9 | pass                   |
+| 768x1024 iPad portrait          | fixed 2, 4, 6, 7                  | fixed 8       | pass                   |
+| 1024x768 iPad landscape         | fixed 4 (rail shows, as intended) | pass          | pass                   |
+| 1280x800 laptop                 | fixed 10                          | pass          | pass                   |
+| 1920x1080                       | fixed 10                          | pass          | pass                   |
+| 1920 at 150% zoom               | fixed 10                          | pass          | pass                   |
+| 1920 at 200% zoom               | fixed 4, 10                       | pass          | pass                   |
+| 2560x1440                       | fixed 10                          | pass          | pass                   |
+| 3840x2160 TV                    | fixed 1, 10                       | fixed 1       | pass                   |
+| Text size Largest, 390 and 1280 | pass                              | pass          | n/a                    |
+| prefers-reduced-motion, 1280    | pass                              | pass          | n/a                    |
 
 No route overflowed sideways at any width, none crashed, none showed NaN.
 Every table already sits in an `overflow-x-auto` wrapper with a minimum

@@ -16,9 +16,7 @@
  */
 import { createHarness } from "./lib/harness.mjs";
 
-const {
-  admin, stamp, check, makeUser, cleanup, cleanupAll, report,
-} = createHarness({
+const { admin, stamp, check, makeUser, cleanup, cleanupAll, report } = createHarness({
   passwordPrefix: "three-",
   strictSignIn: false,
   demotePresident: true,
@@ -78,25 +76,32 @@ const DUES_YEAR_1 = 22_500;
    most utility arguments. */
 const HOMES = [
   { unit: "101", name: "Priya President", sqft: 1_450, beds: 3, people: 4 },
-  { unit: "102", name: "Tom Treasurer",   sqft: 1_450, beds: 3, people: 2 },
-  { unit: "103", name: "Sam Steady",      sqft: 980,   beds: 2, people: 1 },
-  { unit: "104", name: "Sofia Seller",    sqft: 980,   beds: 2, people: 2 },
-  { unit: "105", name: "Leo Laggard",     sqft: 2_100, beds: 4, people: 5 },
-  { unit: "106", name: "Nina North",      sqft: 1_450, beds: 3, people: 3 },
+  { unit: "102", name: "Tom Treasurer", sqft: 1_450, beds: 3, people: 2 },
+  { unit: "103", name: "Sam Steady", sqft: 980, beds: 2, people: 1 },
+  { unit: "104", name: "Sofia Seller", sqft: 980, beds: 2, people: 2 },
+  { unit: "105", name: "Leo Laggard", sqft: 2_100, beds: 4, people: 5 },
+  { unit: "106", name: "Nina North", sqft: 1_450, beds: 3, people: 3 },
 ];
 
 try {
   /* ------------------------------------------------------------ year one */
 
-  const emails = Object.fromEntries(
-    HOMES.map((h) => [h.unit, `${h.unit}-${stamp}@example.com`]),
-  );
+  const emails = Object.fromEntries(HOMES.map((h) => [h.unit, `${h.unit}-${stamp}@example.com`]));
   const president = await makeUser(HOMES[0].name, emails["101"]);
   const { data: hoa, error: foundError } = await president.client.rpc("create_association", {
-    p_name: "Alder Court Townhomes", p_city: "Kirkland", p_state: "WA",
-    p_dues_cents: DUES_YEAR_1, p_dues_cadence: "monthly", p_due_day: 1,
-    p_founder_name: HOMES[0].name, p_founder_unit: "101",
-    p_households: HOMES.slice(1).map((h) => ({ name: h.name, email: emails[h.unit], unit: h.unit })),
+    p_name: "Alder Court Townhomes",
+    p_city: "Kirkland",
+    p_state: "WA",
+    p_dues_cents: DUES_YEAR_1,
+    p_dues_cadence: "monthly",
+    p_due_day: 1,
+    p_founder_name: HOMES[0].name,
+    p_founder_unit: "101",
+    p_households: HOMES.slice(1).map((h) => ({
+      name: h.name,
+      email: emails[h.unit],
+      unit: h.unit,
+    })),
   });
   if (foundError) throw new Error(foundError.message);
   cleanup.associations.push(hoa);
@@ -105,30 +110,43 @@ try {
   // bills periods that fell due before today.
   await admin.from("associations").update({ billing_starts_on: "2000-01-01" }).eq("id", hoa);
 
-  const people = { "101": president };
+  const people = { 101: president };
   for (const h of HOMES.slice(1)) people[h.unit] = await makeUser(h.name, emails[h.unit]);
 
   // Three years old, so tenures start three years back.
-  await admin.from("memberships").update({ starts_on: monthsAgo(MONTHS) }).eq("association_id", hoa);
+  await admin
+    .from("memberships")
+    .update({ starts_on: monthsAgo(MONTHS) })
+    .eq("association_id", hoa);
 
   const { data: unitRows } = await admin
-    .from("units").select("id, label").eq("association_id", hoa);
+    .from("units")
+    .select("id, label")
+    .eq("association_id", hoa);
   const unitOf = Object.fromEntries(unitRows.map((u) => [u.label, u.id]));
 
   // The board records what each home is, which is what any split other than
   // equal has to be based on.
   for (const h of HOMES) {
-    await admin.from("units")
+    await admin
+      .from("units")
       .update({ square_feet: h.sqft, bedrooms: h.beds, occupants: h.people })
       .eq("id", unitOf[h.unit]);
   }
 
   const { data: treasurerRow } = await admin
-    .from("memberships").select("id").eq("association_id", hoa)
-    .eq("profile_id", people["102"].id).single();
-  await admin.from("memberships").update({
-    role: "treasurer", capabilities: ["finances", "vendors", "documents"],
-  }).eq("id", treasurerRow.id);
+    .from("memberships")
+    .select("id")
+    .eq("association_id", hoa)
+    .eq("profile_id", people["102"].id)
+    .single();
+  await admin
+    .from("memberships")
+    .update({
+      role: "treasurer",
+      capabilities: ["finances", "vendors", "documents"],
+    })
+    .eq("id", treasurerRow.id);
   const treasurer = people["102"];
 
   await president.client.from("bank_accounts").insert([
@@ -141,25 +159,54 @@ try {
   // A simple association never creates any of these and never sees them. This
   // one is a townhome development on a single master water meter, which is the
   // case that has no good answer in any competing product.
-  const { data: water } = await treasurer.client.from("shared_costs").insert({
-    association_id: hoa, name: "Water and sewer", provider: "Kirkland Public Utilities",
-    account_ref: "KPU-4471-0", allocation: "occupants", markup_percent: 0,
-  }).select().single();
-  const { data: trash } = await treasurer.client.from("shared_costs").insert({
-    association_id: hoa, name: "Trash and recycling", provider: "Waste Management",
-    account_ref: "WM-88213", allocation: "equal", markup_percent: 0,
-  }).select().single();
-  const { data: gas } = await treasurer.client.from("shared_costs").insert({
-    association_id: hoa, name: "Common area gas", provider: "Puget Sound Energy",
-    account_ref: "PSE-3390", allocation: "square_feet", markup_percent: 0,
-  }).select().single();
+  const { data: water } = await treasurer.client
+    .from("shared_costs")
+    .insert({
+      association_id: hoa,
+      name: "Water and sewer",
+      provider: "Kirkland Public Utilities",
+      account_ref: "KPU-4471-0",
+      allocation: "occupants",
+      markup_percent: 0,
+    })
+    .select()
+    .single();
+  const { data: trash } = await treasurer.client
+    .from("shared_costs")
+    .insert({
+      association_id: hoa,
+      name: "Trash and recycling",
+      provider: "Waste Management",
+      account_ref: "WM-88213",
+      allocation: "equal",
+      markup_percent: 0,
+    })
+    .select()
+    .single();
+  const { data: gas } = await treasurer.client
+    .from("shared_costs")
+    .insert({
+      association_id: hoa,
+      name: "Common area gas",
+      provider: "Puget Sound Energy",
+      account_ref: "PSE-3390",
+      allocation: "square_feet",
+      markup_percent: 0,
+    })
+    .select()
+    .single();
   check("shared costs can be defined", Boolean(water && trash && gas), "");
 
   const { error: residentDefines } = await people["103"].client.from("shared_costs").insert({
-    association_id: hoa, name: "Sneaky", provider: "Nobody",
+    association_id: hoa,
+    name: "Sneaky",
+    provider: "Nobody",
   });
-  check("a resident cannot invent a shared cost", Boolean(residentDefines),
-    residentDefines?.message?.slice(0, 45) ?? "no error");
+  check(
+    "a resident cannot invent a shared cost",
+    Boolean(residentDefines),
+    residentDefines?.message?.slice(0, 45) ?? "no error",
+  );
 
   /* -------------------------------------------- thirty-six months of billing */
 
@@ -177,36 +224,59 @@ try {
       await admin.from("associations").update({ dues_cents: dues }).eq("id", hoa);
     }
     await president.client.rpc("issue_assessment", {
-      p_association_id: hoa, p_label: `Dues ${due.slice(0, 7)}`, p_due_on: due,
+      p_association_id: hoa,
+      p_label: `Dues ${due.slice(0, 7)}`,
+      p_due_on: due,
     });
     duesBilled += dues * HOMES.length;
 
     // The water bill is seasonal and creeps up year on year, the way real
     // utility bills do.
-    const season = 1 + 0.25 * Math.sin(((MONTHS - m) % 12) / 12 * 2 * Math.PI);
+    const season = 1 + 0.25 * Math.sin((((MONTHS - m) % 12) / 12) * 2 * Math.PI);
     const waterTotal = Math.round(41_000 * season * Math.pow(1.07, yearIndex));
-    const { data: billId, error: billError } = await withRetry(() => treasurer.client.rpc("post_shared_cost_bill", {
-      p_shared_cost_id: water.id,
-      p_period_start: due,
-      p_period_end: monthsAgo(m - 1),
-      p_total_cents: waterTotal,
-      p_due_on: monthsAgo(m - 1),
-      p_usage_amount: Math.round(waterTotal / 84),
-      p_usage_unit: "hundred cubic feet",
-    }));
-    if (billError) { check(`water bill for ${due} posts`, false, billError.message); break; }
+    const { data: billId, error: billError } = await withRetry(() =>
+      treasurer.client.rpc("post_shared_cost_bill", {
+        p_shared_cost_id: water.id,
+        p_period_start: due,
+        p_period_end: monthsAgo(m - 1),
+        p_total_cents: waterTotal,
+        p_due_on: monthsAgo(m - 1),
+        p_usage_amount: Math.round(waterTotal / 84),
+        p_usage_unit: "hundred cubic feet",
+      }),
+    );
+    if (billError) {
+      check(`water bill for ${due} posts`, false, billError.message);
+      break;
+    }
     waterBills.push({ id: billId, total: waterTotal, due });
 
-    const { error: trashError } = await withRetry(() => treasurer.client.rpc("post_shared_cost_bill", {
-      p_shared_cost_id: trash.id, p_period_start: due, p_period_end: monthsAgo(m - 1),
-      p_total_cents: 18_900 + yearIndex * 900, p_due_on: monthsAgo(m - 1),
-    }));
-    if (trashError) { check(`trash bill for ${due} posts`, false, trashError.message); break; }
-    const { error: gasError } = await withRetry(() => treasurer.client.rpc("post_shared_cost_bill", {
-      p_shared_cost_id: gas.id, p_period_start: due, p_period_end: monthsAgo(m - 1),
-      p_total_cents: Math.round(12_500 * season), p_due_on: monthsAgo(m - 1),
-    }));
-    if (gasError) { check(`gas bill for ${due} posts`, false, gasError.message); break; }
+    const { error: trashError } = await withRetry(() =>
+      treasurer.client.rpc("post_shared_cost_bill", {
+        p_shared_cost_id: trash.id,
+        p_period_start: due,
+        p_period_end: monthsAgo(m - 1),
+        p_total_cents: 18_900 + yearIndex * 900,
+        p_due_on: monthsAgo(m - 1),
+      }),
+    );
+    if (trashError) {
+      check(`trash bill for ${due} posts`, false, trashError.message);
+      break;
+    }
+    const { error: gasError } = await withRetry(() =>
+      treasurer.client.rpc("post_shared_cost_bill", {
+        p_shared_cost_id: gas.id,
+        p_period_start: due,
+        p_period_end: monthsAgo(m - 1),
+        p_total_cents: Math.round(12_500 * season),
+        p_due_on: monthsAgo(m - 1),
+      }),
+    );
+    if (gasError) {
+      check(`gas bill for ${due} posts`, false, gasError.message);
+      break;
+    }
   }
 
   check("thirty-six water bills were posted", waterBills.length === MONTHS, `${waterBills.length}`);
@@ -214,7 +284,8 @@ try {
   /* ---------------------------------------- the invariant the whole thing rests on */
 
   const allShares = await all(() =>
-    admin.from("shared_cost_shares").select("bill_id, unit_id, share_cents, basis"));
+    admin.from("shared_cost_shares").select("bill_id, unit_id, share_cents, basis"),
+  );
   const byBill = new Map();
   for (const s of allShares ?? []) {
     byBill.set(s.bill_id, (byBill.get(s.bill_id) ?? 0) + s.share_cents);
@@ -227,12 +298,16 @@ try {
   );
 
   const { data: allBills } = await admin
-    .from("shared_cost_bills").select("id, total_cents").eq("association_id", hoa);
+    .from("shared_cost_bills")
+    .select("id, total_cents")
+    .eq("association_id", hoa);
   const anyDrift = (allBills ?? []).filter((b) => (byBill.get(b.id) ?? 0) !== b.total_cents);
   check(
     "and so does every trash and gas split",
     anyDrift.length === 0,
-    anyDrift.length ? `${anyDrift.length} of ${allBills.length} drifted` : `${allBills.length} bills exact`,
+    anyDrift.length
+      ? `${anyDrift.length} of ${allBills.length} drifted`
+      : `${allBills.length} bills exact`,
   );
 
   /* -------------------------------------------------- the split is actually fair */
@@ -249,7 +324,10 @@ try {
   );
 
   const { data: gasBills } = await admin
-    .from("shared_cost_bills").select("id").eq("shared_cost_id", gas.id).order("period_start");
+    .from("shared_cost_bills")
+    .select("id")
+    .eq("shared_cost_id", gas.id)
+    .order("period_start");
   const lastGasShares = allShares.filter((s) => s.bill_id === gasBills.at(-1).id);
   const gasFor = (unit) => lastGasShares.find((s) => s.unit_id === unitOf[unit])?.share_cents ?? 0;
   check(
@@ -259,7 +337,10 @@ try {
   );
 
   const { data: trashBills } = await admin
-    .from("shared_cost_bills").select("id").eq("shared_cost_id", trash.id).order("period_start");
+    .from("shared_cost_bills")
+    .select("id")
+    .eq("shared_cost_id", trash.id)
+    .order("period_start");
   const lastTrashShares = allShares.filter((s) => s.bill_id === trashBills.at(-1).id);
   const trashAmounts = new Set(lastTrashShares.map((s) => s.share_cents));
   check(
@@ -272,7 +353,8 @@ try {
 
   const owner = people["103"];
   const myShares = await all(() =>
-    owner.client.from("shared_cost_shares").select("unit_id, share_cents"));
+    owner.client.from("shared_cost_shares").select("unit_id, share_cents"),
+  );
   check(
     "an owner sees their own share of every bill",
     myShares.length > 0 && myShares.every((s) => s.unit_id === unitOf["103"]),
@@ -280,7 +362,8 @@ try {
   );
 
   const { data: providers } = await owner.client
-    .from("shared_costs").select("name, provider, markup_percent");
+    .from("shared_costs")
+    .select("name, provider, markup_percent");
   check(
     "and can see who the association actually pays",
     (providers ?? []).length === 3 &&
@@ -289,8 +372,10 @@ try {
   );
 
   const { data: ownerHistory } = await owner.client
-    .from("shared_cost_history").select("name, period_start, total_cents, homes, average_share_cents")
-    .eq("shared_cost_id", water.id).order("period_start");
+    .from("shared_cost_history")
+    .select("name, period_start, total_cents, homes, average_share_cents")
+    .eq("shared_cost_id", water.id)
+    .order("period_start");
   check(
     "an owner can see three years of what water has cost the community",
     (ownerHistory ?? []).length === MONTHS,
@@ -303,59 +388,86 @@ try {
   );
 
   const { error: ownerPosts } = await owner.client.rpc("post_shared_cost_bill", {
-    p_shared_cost_id: water.id, p_period_start: monthsAgo(0), p_period_end: monthsAgo(0),
-    p_total_cents: 1, p_due_on: monthsAgo(0),
+    p_shared_cost_id: water.id,
+    p_period_start: monthsAgo(0),
+    p_period_end: monthsAgo(0),
+    p_total_cents: 1,
+    p_due_on: monthsAgo(0),
   });
-  check("an owner cannot post a bill to the community", Boolean(ownerPosts),
-    ownerPosts?.message?.slice(0, 45) ?? "no error");
+  check(
+    "an owner cannot post a bill to the community",
+    Boolean(ownerPosts),
+    ownerPosts?.message?.slice(0, 45) ?? "no error",
+  );
 
   /* ----------------------------------------- year two: the roof, and the vote */
 
   const ROOF = 21_000_00;
   // Ballots belong to whoever holds the voting capability, which the treasurer
   // deliberately does not. Money and elections are separate jobs.
-  const { data: roofBallot, error: ballotError } = await president.client.from("ballots").insert({
-    association_id: hoa,
-    title: "Special assessment for roof replacement",
-    body: [
-      "The 2027 reserve study found the roofs at the end of their service life.",
-      `Replacement is quoted at ${money(ROOF)}, and reserves cover less than half.`,
-      "This would levy the balance across the six homes over twelve months.",
-    ],
-    kind: "amendment", status: "open",
-    // Held with a closing date still ahead while the homes vote: a vote is
-    // refused once the date is more than a day gone (0076). The real date,
-    // eighteen months back, is set once the votes are in.
-    opens_on: monthsAgo(19), closes_on: monthsAgo(-1),
-    quorum_required: 4, threshold_label: "Two thirds of votes cast",
-  }).select().single();
-  check("only an officer with the voting capability can open a ballot", !ballotError,
-    ballotError?.message ?? "");
-  const { data: roofOptions } = await president.client.from("ballot_options").insert([
-    { ballot_id: roofBallot.id, label: "Approve the assessment", position: 0 },
-    { ballot_id: roofBallot.id, label: "Reject", position: 1 },
-  ]).select();
+  const { data: roofBallot, error: ballotError } = await president.client
+    .from("ballots")
+    .insert({
+      association_id: hoa,
+      title: "Special assessment for roof replacement",
+      body: [
+        "The 2027 reserve study found the roofs at the end of their service life.",
+        `Replacement is quoted at ${money(ROOF)}, and reserves cover less than half.`,
+        "This would levy the balance across the six homes over twelve months.",
+      ],
+      kind: "amendment",
+      status: "open",
+      // Held with a closing date still ahead while the homes vote: a vote is
+      // refused once the date is more than a day gone (0076). The real date,
+      // eighteen months back, is set once the votes are in.
+      opens_on: monthsAgo(19),
+      closes_on: monthsAgo(-1),
+      quorum_required: 4,
+      threshold_label: "Two thirds of votes cast",
+    })
+    .select()
+    .single();
+  check(
+    "only an officer with the voting capability can open a ballot",
+    !ballotError,
+    ballotError?.message ?? "",
+  );
+  const { data: roofOptions } = await president.client
+    .from("ballot_options")
+    .insert([
+      { ballot_id: roofBallot.id, label: "Approve the assessment", position: 0 },
+      { ballot_id: roofBallot.id, label: "Reject", position: 1 },
+    ])
+    .select();
 
   for (const unit of ["101", "102", "103", "104", "106"]) {
     await people[unit].client.rpc("cast_vote", {
-      p_ballot_id: roofBallot.id, p_option_id: roofOptions[0].id,
+      p_ballot_id: roofBallot.id,
+      p_option_id: roofOptions[0].id,
     });
   }
   await people["105"].client.rpc("cast_vote", {
-    p_ballot_id: roofBallot.id, p_option_id: roofOptions[1].id,
+    p_ballot_id: roofBallot.id,
+    p_option_id: roofOptions[1].id,
   });
-  await president.client.from("ballots").update({ closes_on: monthsAgo(18) }).eq("id", roofBallot.id);
+  await president.client
+    .from("ballots")
+    .update({ closes_on: monthsAgo(18) })
+    .eq("id", roofBallot.id);
 
   const { data: roofTally } = await president.client
-    .from("ballot_tallies").select("*").eq("ballot_id", roofBallot.id);
+    .from("ballot_tallies")
+    .select("*")
+    .eq("ballot_id", roofBallot.id);
   check(
     "the assessment carries five to one",
     roofTally.find((t) => t.option_id === roofOptions[0].id)?.votes === 5,
     JSON.stringify(roofTally.map((t) => t.votes)),
   );
 
-  const { data: assessmentId, error: levyError } = await treasurer.client
-    .rpc("levy_special_assessment", {
+  const { data: assessmentId, error: levyError } = await treasurer.client.rpc(
+    "levy_special_assessment",
+    {
       p_association_id: hoa,
       p_title: "Roof replacement",
       p_reason: "2027 reserve study, roofs at end of service life",
@@ -364,12 +476,17 @@ try {
       p_installments: 12,
       p_first_due_on: monthsAgo(17),
       p_ballot_id: roofBallot.id,
-    });
+    },
+  );
   check("the board levies what the owners approved", !levyError, levyError?.message ?? "");
 
   const assessmentCharges = await all(() =>
-    admin.from("charges").select("unit_id, amount_cents, label")
-      .eq("association_id", hoa).eq("category", "special_assessment"));
+    admin
+      .from("charges")
+      .select("unit_id, amount_cents, label")
+      .eq("association_id", hoa)
+      .eq("category", "special_assessment"),
+  );
   const levied = assessmentCharges.reduce((t, c) => t + c.amount_cents, 0);
   check(
     "the twelve instalments across six homes add up to the assessment exactly",
@@ -394,7 +511,10 @@ try {
   );
 
   const { data: assessmentRow } = await owner.client
-    .from("special_assessments").select("title, reason, ballot_id, total_cents").eq("id", assessmentId).single();
+    .from("special_assessments")
+    .select("title, reason, ballot_id, total_cents")
+    .eq("id", assessmentId)
+    .single();
   check(
     "an owner can see the assessment, why it was levied, and the vote that authorised it",
     assessmentRow?.ballot_id === roofBallot.id && assessmentRow.reason.length > 10,
@@ -402,26 +522,46 @@ try {
   );
 
   const { error: ownerLevies } = await owner.client.rpc("levy_special_assessment", {
-    p_association_id: hoa, p_title: "Pay for my fence", p_reason: "",
-    p_total_cents: 100_00, p_allocation: "equal", p_installments: 1,
-    p_first_due_on: monthsAgo(0), p_ballot_id: null,
+    p_association_id: hoa,
+    p_title: "Pay for my fence",
+    p_reason: "",
+    p_total_cents: 100_00,
+    p_allocation: "equal",
+    p_installments: 1,
+    p_first_due_on: monthsAgo(0),
+    p_ballot_id: null,
   });
-  check("an owner cannot levy an assessment on their neighbours", Boolean(ownerLevies),
-    ownerLevies?.message?.slice(0, 45) ?? "no error");
+  check(
+    "an owner cannot levy an assessment on their neighbours",
+    Boolean(ownerLevies),
+    ownerLevies?.message?.slice(0, 45) ?? "no error",
+  );
 
   const { error: zeroLevy } = await treasurer.client.rpc("levy_special_assessment", {
-    p_association_id: hoa, p_title: "Nothing", p_reason: "",
-    p_total_cents: 0, p_allocation: "equal", p_installments: 1,
-    p_first_due_on: monthsAgo(0), p_ballot_id: null,
+    p_association_id: hoa,
+    p_title: "Nothing",
+    p_reason: "",
+    p_total_cents: 0,
+    p_allocation: "equal",
+    p_installments: 1,
+    p_first_due_on: monthsAgo(0),
+    p_ballot_id: null,
   });
-  check("an assessment for nothing is refused", Boolean(zeroLevy),
-    zeroLevy?.message?.slice(0, 45) ?? "no error");
+  check(
+    "an assessment for nothing is refused",
+    Boolean(zeroLevy),
+    zeroLevy?.message?.slice(0, 45) ?? "no error",
+  );
 
   /* -------------------------------------------------- everybody pays, mostly */
 
   const openCharges = await all(() =>
-    admin.from("charges").select("unit_id, amount_cents")
-      .eq("association_id", hoa).eq("kind", "charge"));
+    admin
+      .from("charges")
+      .select("unit_id, amount_cents")
+      .eq("association_id", hoa)
+      .eq("kind", "charge"),
+  );
   const owedByUnit = new Map();
   for (const c of openCharges ?? []) {
     owedByUnit.set(c.unit_id, (owedByUnit.get(c.unit_id) ?? 0) + c.amount_cents);
@@ -443,19 +583,31 @@ try {
       // Settled the way the webhook settles it; an owner cannot write their
       // own payment (0062).
       const { error } = await admin.rpc("record_payment", {
-        p_unit_id: unitOf[h.unit], p_amount_cents: amount,
-        p_rail: "ach", p_processor_fee_cents: 35, p_paid_by: people[h.unit].id,
+        p_unit_id: unitOf[h.unit],
+        p_amount_cents: amount,
+        p_rail: "ach",
+        p_processor_fee_cents: 35,
+        p_paid_by: people[h.unit].id,
       });
-      if (error) { check(`unit ${h.unit} could pay`, false, error.message); break; }
+      if (error) {
+        check(`unit ${h.unit} could pay`, false, error.message);
+        break;
+      }
       paymentsMade++;
     }
   }
-  check("payments were recorded across the three years", paymentsMade > 60, `${paymentsMade} payments`);
+  check(
+    "payments were recorded across the three years",
+    paymentsMade > 60,
+    `${paymentsMade} payments`,
+  );
 
   /* ------------------------------------------------------------ the trend view */
 
   const { data: activity } = await treasurer.client
-    .from("monthly_activity").select("month, category, billed_cents").eq("association_id", hoa);
+    .from("monthly_activity")
+    .select("month, category, billed_cents")
+    .eq("association_id", hoa);
   const categories = new Set((activity ?? []).map((a) => a.category));
   check(
     "the trend view separates dues from shared costs from the assessment",
@@ -496,14 +648,17 @@ try {
 
   const buyerEmail = `buyer-${stamp}@example.com`;
   const { error: saleError } = await president.client.rpc("transfer_home", {
-    p_unit_id: unitOf["104"], p_new_name: "Bea Buyer", p_new_email: buyerEmail,
+    p_unit_id: unitOf["104"],
+    p_new_name: "Bea Buyer",
+    p_new_email: buyerEmail,
     p_closing_date: monthsAgo(5),
   });
   check("a home sells in year three", !saleError, saleError?.message ?? "");
 
   const buyer = await makeUser("Bea Buyer", buyerEmail);
   const buyerShares = await all(() =>
-    buyer.client.from("shared_cost_shares").select("share_cents"));
+    buyer.client.from("shared_cost_shares").select("share_cents"),
+  );
   check(
     "and the new owner inherits the home's whole utility history, not a blank page",
     buyerShares.length >= MONTHS,
@@ -511,7 +666,8 @@ try {
   );
 
   const seller104 = await all(() =>
-    people["104"].client.from("shared_cost_shares").select("share_cents"));
+    people["104"].client.from("shared_cost_shares").select("share_cents"),
+  );
   check(
     "while the seller can no longer read the home's bills",
     seller104.length === 0,
@@ -521,12 +677,19 @@ try {
   /* ------------------------------------------------ the books, after three years */
 
   const charges = await all(() =>
-    admin.from("charges").select("kind, amount_cents").eq("association_id", hoa));
-  const billedAll = charges.filter((c) => c.kind === "charge").reduce((t, c) => t + c.amount_cents, 0);
-  const paidAll = charges.filter((c) => c.kind !== "charge").reduce((t, c) => t + c.amount_cents, 0);
+    admin.from("charges").select("kind, amount_cents").eq("association_id", hoa),
+  );
+  const billedAll = charges
+    .filter((c) => c.kind === "charge")
+    .reduce((t, c) => t + c.amount_cents, 0);
+  const paidAll = charges
+    .filter((c) => c.kind !== "charge")
+    .reduce((t, c) => t + c.amount_cents, 0);
 
   const { data: balances } = await treasurer.client
-    .from("unit_balances").select("balance_cents").eq("association_id", hoa);
+    .from("unit_balances")
+    .select("balance_cents")
+    .eq("association_id", hoa);
   const outstanding = balances.reduce((t, b) => t + b.balance_cents, 0);
   check(
     "what is still owed is exactly what was billed less what was paid",
@@ -535,10 +698,15 @@ try {
   );
 
   const ledger = await all(() =>
-    treasurer.client.from("ledger_entries").select("amount_cents, category")
-      .eq("association_id", hoa));
+    treasurer.client
+      .from("ledger_entries")
+      .select("amount_cents, category")
+      .eq("association_id", hoa),
+  );
   // The payment whole plus the fee line (0101) is what the bank received.
-  const banked = ledger.filter((e) => e.category === "Assessments" || e.category === "Processing fees").reduce((t, e) => t + e.amount_cents, 0);
+  const banked = ledger
+    .filter((e) => e.category === "Assessments" || e.category === "Processing fees")
+    .reduce((t, e) => t + e.amount_cents, 0);
   check(
     "and the bank shows every payment, net of the processor's cut",
     banked === -paidAll - paymentsMade * 35,
@@ -552,7 +720,9 @@ try {
   );
 
   const { data: tenures } = await admin
-    .from("memberships").select("full_name, starts_on, ends_on").eq("association_id", hoa);
+    .from("memberships")
+    .select("full_name, starts_on, ends_on")
+    .eq("association_id", hoa);
   check(
     "three years on, the association can still say who lived where and when",
     (tenures ?? []).length === HOMES.length + 1,

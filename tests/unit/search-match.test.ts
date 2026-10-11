@@ -72,7 +72,13 @@ describe("edit distance", () => {
 
 describe("ranges and segments", () => {
   it("merges overlapping ranges and cuts the text into pieces", () => {
-    expect(mergeRanges([{ start: 5, end: 9 }, { start: 7, end: 12 }, { start: 0, end: 2 }])).toEqual([
+    expect(
+      mergeRanges([
+        { start: 5, end: 9 },
+        { start: 7, end: 12 },
+        { start: 0, end: 2 },
+      ]),
+    ).toEqual([
       { start: 0, end: 2 },
       { start: 5, end: 12 },
     ]);
@@ -88,8 +94,16 @@ describe("searching a list", () => {
   const index = prepare([
     item("Rosa Delgado", "Unit 12 · 1400 Elm Street", "r.delgado@example.com (425) 555-0100"),
     item("Delgado Roofing", "Roofing · $4,200.00 paid this year", "repairs"),
-    item("Assessment payments, batch (14 owners)", "Batch · $28,500.00 · 2026-10-03", "dues assessment october oct 2026 28500 28500.00"),
-    item("October dues", "Charged · $285.00 · 2026-10-01", "charge dues assessment october oct 2026 285 285.00"),
+    item(
+      "Assessment payments, batch (14 owners)",
+      "Batch · $28,500.00 · 2026-10-03",
+      "dues assessment october oct 2026 28500 28500.00",
+    ),
+    item(
+      "October dues",
+      "Charged · $285.00 · 2026-10-01",
+      "charge dues assessment october oct 2026 285 285.00",
+    ),
     item("Northsound Pool Service", "Pool maintenance", "", "2024-01-01"),
     item("Pool heater replacement", "Meeting agenda", "", "2026-03-01"),
     item("Finances", "Board", "money bank accounts", ""),
@@ -113,7 +127,9 @@ describe("searching a list", () => {
   it("finds an amount typed either way", () => {
     expect(search(index, "285").map((s) => s.item.title)).toEqual(["October dues"]);
     expect(search(index, "$285.00").map((s) => s.item.title)).toEqual(["October dues"]);
-    expect(search(index, "$28,500").map((s) => s.item.title)).toEqual(["Assessment payments, batch (14 owners)"]);
+    expect(search(index, "$28,500").map((s) => s.item.title)).toEqual([
+      "Assessment payments, batch (14 owners)",
+    ]);
   });
 
   it("survives a typo and an email address", () => {
@@ -137,11 +153,16 @@ describe("searching a list", () => {
   it("stays fast on a few thousand items", () => {
     const big = prepare(
       Array.from({ length: 4000 }, (_, i) =>
-        item(`Household ${i} Callaway`, `Unit ${i} · ${1000 + i} Meadow Lane · $${(i * 7) % 900}.00 owed`, `owner${i}@example.com 425555${String(i).padStart(4, "0")} august aug 2026`),
+        item(
+          `Household ${i} Callaway`,
+          `Unit ${i} · ${1000 + i} Meadow Lane · $${(i * 7) % 900}.00 owed`,
+          `owner${i}@example.com 425555${String(i).padStart(4, "0")} august aug 2026`,
+        ),
       ),
     );
     const started = performance.now();
-    for (const q of ["callaway", "unit 2999", "meadow lane 1500", "calaway aug", "$63.00"]) search(big, q);
+    for (const q of ["callaway", "unit 2999", "meadow lane 1500", "calaway aug", "$63.00"])
+      search(big, q);
     const elapsed = performance.now() - started;
     expect(elapsed, `five searches took ${elapsed.toFixed(0)}ms`).toBeLessThan(500);
     expect(search(big, "unit 2999")[0].item.title).toBe("Household 2999 Callaway");

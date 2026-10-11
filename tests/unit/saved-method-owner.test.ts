@@ -58,7 +58,12 @@ function pay(body: object) {
 }
 
 describe("paying with a saved method", () => {
-  const body = { associationId: "assoc-a", unitId: "unit-7", amountCents: 32500, instrumentId: "inst-1" };
+  const body = {
+    associationId: "assoc-a",
+    unitId: "unit-7",
+    amountCents: 32500,
+    instrumentId: "inst-1",
+  };
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -68,7 +73,12 @@ describe("paying with a saved method", () => {
     user.on("associations", { data: { stripe_account_id: "acct_a", dues_cents: 32500 } });
     user.on("units", { data: { association_id: "assoc-a", stripe_customer_id: "cus_7" } });
     user.on("payment_instruments", {
-      data: { unit_id: "unit-7", profile_id: "seller", kind: "ach", detail: { token: "pm_seller_bank" } },
+      data: {
+        unit_id: "unit-7",
+        profile_id: "seller",
+        kind: "ach",
+        detail: { token: "pm_seller_bank" },
+      },
     });
     // Who holds the home today, as the service role would read it.
     admin.on("memberships", { data: [{ profile_id: "buyer" }], error: null });
@@ -83,7 +93,10 @@ describe("paying with a saved method", () => {
   });
 
   it("charges a method saved by somebody who still holds the home", async () => {
-    admin.on("memberships", { data: [{ profile_id: "buyer" }, { profile_id: "seller" }], error: null });
+    admin.on("memberships", {
+      data: [{ profile_id: "buyer" }, { profile_id: "seller" }],
+      error: null,
+    });
     const create = vi
       .spyOn(stripe().paymentIntents, "create")
       .mockResolvedValue({ id: "pi_1", client_secret: "secret" } as never);

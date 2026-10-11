@@ -146,18 +146,20 @@ export function PriceCalculator() {
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[14px] font-medium text-fg-muted">
-                    A month
-                  </p>
-                  <p key={monthly} className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
+                  <p className="text-[14px] font-medium text-fg-muted">A month</p>
+                  <p
+                    key={monthly}
+                    className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg"
+                  >
                     {money(monthly, { cents: false })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[14px] font-medium text-fg-muted">
-                    A year
-                  </p>
-                  <p key={annual} className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg">
+                  <p className="text-[14px] font-medium text-fg-muted">A year</p>
+                  <p
+                    key={annual}
+                    className="tnum pop-in mt-0.5 text-[26px] font-semibold leading-none tracking-[-0.03em] text-fg"
+                  >
                     {money(annual, { cents: false })}
                   </p>
                 </div>
@@ -194,7 +196,10 @@ export function PriceCalculator() {
           {/* Computed from the same dial, so it cannot disagree with the price. */}
           <div className="rounded-2xl border border-tint-teal/25 bg-tint-teal-soft p-6 text-tint-teal-fg">
             <p className="text-[15px] font-semibold">Next to a management company</p>
-            <p key={homes} className="tnum pop-in mt-2 text-[30px] font-semibold leading-none tracking-[-0.03em]">
+            <p
+              key={homes}
+              className="tnum pop-in mt-2 text-[30px] font-semibold leading-none tracking-[-0.03em]"
+            >
               {money(managedLow - annual, { cents: false })} to{" "}
               {money(managedHigh - annual, { cents: false })}
             </p>

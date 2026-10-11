@@ -130,7 +130,13 @@ export async function POST(request: NextRequest) {
     }
     const domains = await registerPayDomains(accountId, request.nextUrl.hostname);
     for (const d of domains) {
-      log.info("pay domain", { accountId, host: d.host, applePay: d.applePay, googlePay: d.googlePay, reason: d.reason });
+      log.info("pay domain", {
+        accountId,
+        host: d.host,
+        applePay: d.applePay,
+        googlePay: d.googlePay,
+        reason: d.reason,
+      });
     }
   }
 

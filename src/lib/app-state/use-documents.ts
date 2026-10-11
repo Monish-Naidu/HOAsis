@@ -4,7 +4,15 @@ import { todayIsoDate } from "@/lib/utils";
 import { refreshRemote } from "@/lib/data/remote-store";
 import { type AppDeps, destructive, NOT_CHANGED, remoteWrite, sliceStore } from "./core";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { documentTitle, formatSize, mimeTypeOf, rejectReason, storagePathFor, toDbVisibility, toDocumentRecord } from "@/lib/documents";
+import {
+  documentTitle,
+  formatSize,
+  mimeTypeOf,
+  rejectReason,
+  storagePathFor,
+  toDbVisibility,
+  toDocumentRecord,
+} from "@/lib/documents";
 import type { DocumentRecord } from "@/lib/types";
 import type { UploadOutcome } from "./types";
 

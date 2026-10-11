@@ -43,7 +43,9 @@ function migrateCommunities(value: unknown): unknown {
     return {
       ...rest,
       ...(owners !== undefined && rest.homes === undefined ? { homes: owners } : {}),
-      ...(ownerCharges !== undefined && rest.homeCharges === undefined ? { homeCharges: ownerCharges } : {}),
+      ...(ownerCharges !== undefined && rest.homeCharges === undefined
+        ? { homeCharges: ownerCharges }
+        : {}),
     };
   });
 }

@@ -1,6 +1,20 @@
 import { useCallback } from "react";
 import type { Community } from "@/lib/data/community";
-import { type AppDeps, emailNotice, isUuid, joinLine, latest, logDemoActivity, newId, noticesInFlight, remoteWrite, sessionStore, sliceStore, ValidationError, voteReceipt } from "./core";
+import {
+  type AppDeps,
+  emailNotice,
+  isUuid,
+  joinLine,
+  latest,
+  logDemoActivity,
+  newId,
+  noticesInFlight,
+  remoteWrite,
+  sessionStore,
+  sliceStore,
+  ValidationError,
+  voteReceipt,
+} from "./core";
 import { formatDate, todayIsoDate } from "@/lib/utils";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { ActionItem, MeetingAttendee } from "@/lib/types";
@@ -13,7 +27,9 @@ import type { useCommunicationsActions } from "./use-communications";
  * Meetings and voting: scheduling, RSVPs, the notice sent for a meeting, what
  * the board agreed to do, and ballots and votes.
  */
-export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCommunicationsActions>, "addAnnouncement">) {
+export function useMeetingsActions(
+  deps: AppDeps & Pick<ReturnType<typeof useCommunicationsActions>, "addAnnouncement">,
+) {
   const { remote, communityId, associationRow, meetingList, addAnnouncement } = deps;
 
   const closeBallot = useCallback(
@@ -49,20 +65,22 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
       // Posted once. A send that failed is pressed again, and the notice
       // from the first press is already on every home screen.
       const posted =
-        remote.community &&
-        latest(remote.community).announcements.some((a) => a.title === title);
+        remote.community && latest(remote.community).announcements.some((a) => a.title === title);
       if (!posted) {
-        addAnnouncement({
-          title,
-          body: [
-            `${m.title} is on ${when}, ${m.location}.`,
-            joinLine(m, (remote.community?.association ?? associationRow).id),
-            m.agenda.length ? `Agenda: ${m.agenda.join("; ")}.` : "",
-          ]
-            .filter(Boolean)
-            .join(" "),
-          category: "Governance",
-        }, "none");
+        addAnnouncement(
+          {
+            title,
+            body: [
+              `${m.title} is on ${when}, ${m.location}.`,
+              joinLine(m, (remote.community?.association ?? associationRow).id),
+              m.agenda.length ? `Agenda: ${m.agenda.join("; ")}.` : "",
+            ]
+              .filter(Boolean)
+              .join(" "),
+            category: "Governance",
+          },
+          "none",
+        );
       }
       const today = todayIsoDate();
       if (remote.community) {
@@ -104,7 +122,9 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
           })
           .finally(() => noticesInFlight.delete(meetingId));
       }
-      logDemoActivity(communityId, "meeting", activityWords.meetingNotice(m.title), { notice_sent_on: today });
+      logDemoActivity(communityId, "meeting", activityWords.meetingNotice(m.title), {
+        notice_sent_on: today,
+      });
       sliceStore(communityId, "meetings").update((all) =>
         all.map((x) => (x.id === meetingId ? { ...x, noticeSentDate: today } : x)),
       );
@@ -150,14 +170,16 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the item", () =>
-          supabaseBrowser().from("action_items").insert({
-            association_id: rc.id,
-            title,
-            owner_name: input.ownerName.trim(),
-            due_on: input.dueOn || null,
-            meeting_id: input.meetingId && isUuid(input.meetingId) ? input.meetingId : null,
-            created_by: remote.profileId,
-          }),
+          supabaseBrowser()
+            .from("action_items")
+            .insert({
+              association_id: rc.id,
+              title,
+              owner_name: input.ownerName.trim(),
+              due_on: input.dueOn || null,
+              meeting_id: input.meetingId && isUuid(input.meetingId) ? input.meetingId : null,
+              created_by: remote.profileId,
+            }),
         );
         return;
       }
@@ -257,20 +279,22 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Scheduling the meeting", () =>
-          supabaseBrowser().from("meetings").insert({
-            id: newId(),
-            association_id: rc.id,
-            title: meeting.title,
-            held_on: meeting.date,
-            held_at: meeting.time,
-            location: meeting.location,
-            dial_in: meeting.dialIn || null,
-            passcode: meeting.passcode || null,
-            status: meeting.status,
-            kind: meeting.kind,
-            agenda: meeting.agenda,
-            notice_sent_on: meeting.noticeSentDate ?? null,
-          }),
+          supabaseBrowser()
+            .from("meetings")
+            .insert({
+              id: newId(),
+              association_id: rc.id,
+              title: meeting.title,
+              held_on: meeting.date,
+              held_at: meeting.time,
+              location: meeting.location,
+              dial_in: meeting.dialIn || null,
+              passcode: meeting.passcode || null,
+              status: meeting.status,
+              kind: meeting.kind,
+              agenda: meeting.agenda,
+              notice_sent_on: meeting.noticeSentDate ?? null,
+            }),
         );
         return;
       }
@@ -294,7 +318,8 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
       if (!m) return Promise.resolve(false);
-      if (to.date < todayIsoDate()) throw new ValidationError("Pick a date that has not passed.", { date: to.date });
+      if (to.date < todayIsoDate())
+        throw new ValidationError("Pick a date that has not passed.", { date: to.date });
       if (m.status === "cancelled" || meetingPhase(m) === "ended") {
         throw new ValidationError("That meeting is over.", { meetingId });
       }
@@ -310,7 +335,10 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
           }),
         );
       }
-      logDemoActivity(communityId, "meeting", `Moved meeting "${m.title}" to ${to.date}`, { was: m.date, now: to.date });
+      logDemoActivity(communityId, "meeting", `Moved meeting "${m.title}" to ${to.date}`, {
+        was: m.date,
+        now: to.date,
+      });
       sliceStore(communityId, "meetings").update((all) =>
         all
           .map((x) =>
@@ -339,7 +367,8 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
       const m = meetings.find((x) => x.id === meetingId);
       if (!m) return Promise.resolve(false);
       const why = reason.trim();
-      if (why.length < 3) throw new ValidationError("Say why the meeting is cancelled.", { reason });
+      if (why.length < 3)
+        throw new ValidationError("Say why the meeting is cancelled.", { reason });
       if (m.status === "cancelled" || meetingPhase(m) === "ended") {
         throw new ValidationError("That meeting is over.", { meetingId });
       }
@@ -352,7 +381,12 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
       sliceStore(communityId, "meetings").update((all) =>
         all.map((x) =>
           x.id === meetingId
-            ? { ...x, status: "cancelled" as const, cancelledDate: todayIsoDate(), cancelReason: why }
+            ? {
+                ...x,
+                status: "cancelled" as const,
+                cancelledDate: todayIsoDate(),
+                cancelReason: why,
+              }
             : x,
         ),
       );
@@ -371,23 +405,41 @@ export function useMeetingsActions(deps: AppDeps & Pick<ReturnType<typeof useCom
       const m = meetings.find((x) => x.id === meetingId);
       if (!m) return Promise.resolve(false);
       const text = minutes.trim();
-      if (m.status === "cancelled") throw new ValidationError("A cancelled meeting has no minutes.", { meetingId });
-      if (m.date > todayIsoDate()) throw new ValidationError("The meeting has not happened yet.", { meetingId });
+      if (m.status === "cancelled")
+        throw new ValidationError("A cancelled meeting has no minutes.", { meetingId });
+      if (m.date > todayIsoDate())
+        throw new ValidationError("The meeting has not happened yet.", { meetingId });
       if (text.length < 10) throw new ValidationError("Write the minutes first.", { minutes });
-      if (text.length > 20000) throw new ValidationError("Keep the minutes under 20,000 characters.", {});
+      if (text.length > 20000)
+        throw new ValidationError("Keep the minutes under 20,000 characters.", {});
       if (remote.community) {
         return remoteWrite("Saving the minutes", () =>
           supabaseBrowser().rpc("record_minutes", {
             p_meeting_id: meetingId,
             p_minutes: text,
-            p_attended: attended.map((a) => ({ name: a.name, unit: a.unit ?? null, role: a.role ?? null, channel: a.channel })),
+            p_attended: attended.map((a) => ({
+              name: a.name,
+              unit: a.unit ?? null,
+              role: a.role ?? null,
+              channel: a.channel,
+            })),
           }),
         );
       }
-      logDemoActivity(communityId, "meeting", `Minutes recorded for "${m.title}"`, { attended: attended.length });
+      logDemoActivity(communityId, "meeting", `Minutes recorded for "${m.title}"`, {
+        attended: attended.length,
+      });
       sliceStore(communityId, "meetings").update((all) =>
         all.map((x) =>
-          x.id === meetingId ? { ...x, minutes: text, minutesDate: todayIsoDate(), attended, status: "ended" as const } : x,
+          x.id === meetingId
+            ? {
+                ...x,
+                minutes: text,
+                minutesDate: todayIsoDate(),
+                attended,
+                status: "ended" as const,
+              }
+            : x,
         ),
       );
       return Promise.resolve(true);

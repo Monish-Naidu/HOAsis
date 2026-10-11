@@ -14,7 +14,13 @@ import { todayIsoDate } from "@/lib/utils";
  */
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/resident/requests/new",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -132,7 +138,10 @@ describe("a form filled in on the page", () => {
     await sign();
 
     expect(await screen.findByText("Sent to the committee")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See your requests" })).toHaveAttribute("href", "/resident/requests");
+    expect(screen.getByRole("link", { name: "See your requests" })).toHaveAttribute(
+      "href",
+      "/resident/requests",
+    );
     // Not on the card and not in the toast.
     expect(screen.queryByText(new RegExp(guess()))).not.toBeInTheDocument();
     expect(screen.getByText(/You can find its number under Requests/)).toBeInTheDocument();
@@ -154,7 +163,10 @@ describe("a form filled in on the page", () => {
 
     expect(await screen.findByText("Sent to the committee")).toBeInTheDocument();
     expect(screen.getByText("REQ-2026-201")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See your requests" })).toHaveAttribute("href", "/resident/requests");
+    expect(screen.getByRole("link", { name: "See your requests" })).toHaveAttribute(
+      "href",
+      "/resident/requests",
+    );
   });
 
   it("says it did not send when the write answers null", async () => {

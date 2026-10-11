@@ -33,25 +33,31 @@ export function useVendorsActions(deps: AppDeps) {
     (vendor: Community["vendors"][number]) => {
       // The same rule the form shows, held here too: a second call cannot
       // add "cascade grounds co." beside "Cascade Grounds Co.".
-      const known = remote.community ? remote.community.vendors : sliceStore(communityId, "vendors").getSnapshot();
+      const known = remote.community
+        ? remote.community.vendors
+        : sliceStore(communityId, "vendors").getSnapshot();
       if (vendorNameProblem(vendor.name, known)) return;
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the vendor", () =>
-          supabaseBrowser().from("vendors").insert({
-            id: newId(),
-            association_id: rc.id,
-            name: vendor.name,
-            service: vendor.service,
-            ach_enabled: vendor.achEnabled,
-            w9_on_file: vendor.w9OnFile,
-            coi_expires_on: vendor.coiExpires ?? null,
-            default_category: vendor.defaultCategory,
-          }),
+          supabaseBrowser()
+            .from("vendors")
+            .insert({
+              id: newId(),
+              association_id: rc.id,
+              name: vendor.name,
+              service: vendor.service,
+              ach_enabled: vendor.achEnabled,
+              w9_on_file: vendor.w9OnFile,
+              coi_expires_on: vendor.coiExpires ?? null,
+              default_category: vendor.defaultCategory,
+            }),
         );
         return;
       }
-      logDemoActivity(communityId, "vendor", activityWords.vendor(vendor.name), { service: vendor.service });
+      logDemoActivity(communityId, "vendor", activityWords.vendor(vendor.name), {
+        service: vendor.service,
+      });
       sliceStore(communityId, "vendors").update((all) => [vendor, ...all]);
     },
     [remote.community, communityId],
@@ -68,16 +74,18 @@ export function useVendorsActions(deps: AppDeps) {
         return () => {
           if (!vendor) return;
           void remoteWrite("Restoring the vendor", () =>
-            supabaseBrowser().from("vendors").insert({
-              id: vendor.id,
-              association_id: rc.id,
-              name: vendor.name,
-              service: vendor.service,
-              ach_enabled: vendor.achEnabled,
-              w9_on_file: vendor.w9OnFile,
-              coi_expires_on: vendor.coiExpires ?? null,
-              default_category: vendor.defaultCategory,
-            }),
+            supabaseBrowser()
+              .from("vendors")
+              .insert({
+                id: vendor.id,
+                association_id: rc.id,
+                name: vendor.name,
+                service: vendor.service,
+                ach_enabled: vendor.achEnabled,
+                w9_on_file: vendor.w9OnFile,
+                coi_expires_on: vendor.coiExpires ?? null,
+                default_category: vendor.defaultCategory,
+              }),
           );
         };
       }

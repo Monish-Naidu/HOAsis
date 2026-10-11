@@ -80,9 +80,21 @@ export async function POST(request: NextRequest) {
     if (result.unrecorded) {
       // email_log could not be written. The run stopped there and its
       // first line says so on the screen (src/lib/email/send.ts).
-      log.error("dues email record not saved", { category, sent: result.sent, err: result.unrecorded });
+      log.error("dues email record not saved", {
+        category,
+        sent: result.sent,
+        err: result.unrecorded,
+      });
     }
-    log.info("dues emails sent", { category, dryRun: Boolean(dryRun), sent: result.sent, failed: result.failed, skipped: result.skipped, already: result.already, remaining: result.remaining });
+    log.info("dues emails sent", {
+      category,
+      dryRun: Boolean(dryRun),
+      sent: result.sent,
+      failed: result.failed,
+      skipped: result.skipped,
+      already: result.already,
+      remaining: result.remaining,
+    });
     return NextResponse.json(result);
   } catch (error) {
     log.error("dues emails failed", { category, err: error });

@@ -30,7 +30,13 @@ vi.mock("@/lib/supabase/client", () => {
         if (name === "set_home_dues" && calls.refused.has(args.p_unit_id as string)) {
           return { data: null, error: { message: "You cannot change dues for that home" } };
         }
-        return { data: name === "import_households" ? { created: 2, updated: 0, balances: 0, skipped: 0 } : null, error: null };
+        return {
+          data:
+            name === "import_households"
+              ? { created: 2, updated: 0, balances: 0, skipped: 0 }
+              : null,
+          error: null,
+        };
       },
     }),
   };
@@ -42,7 +48,14 @@ vi.resetModules();
 const { importRoster, setHomeDues } = await import("@/lib/roster/apply");
 
 const row = (unit: string, duesCents?: number): RosterRow => ({
-  line: 2, name: "", email: "", unit, address: "", phone: "", problems: [], ...(duesCents ? { duesCents } : {}),
+  line: 2,
+  name: "",
+  email: "",
+  unit,
+  address: "",
+  phone: "",
+  problems: [],
+  ...(duesCents ? { duesCents } : {}),
 });
 
 beforeEach(() => {

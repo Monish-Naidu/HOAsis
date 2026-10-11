@@ -64,11 +64,7 @@ describe("projectReserves", () => {
   });
 
   it("reports no shortfall when the money is there", () => {
-    const funded = projectReserves(
-      SIMPLE,
-      { ...FLAT, openingBalanceCents: 100_000_00 },
-      START,
-    );
+    const funded = projectReserves(SIMPLE, { ...FLAT, openingBalanceCents: 100_000_00 }, START);
     expect(funded.firstShortfallYear).toBeNull();
     expect(funded.years.every((y) => !y.isShortfall)).toBe(true);
   });
@@ -130,11 +126,7 @@ describe("requiredMonthlyContribution", () => {
 
   it("finds a contribution that removes the shortfall", () => {
     const required = requiredMonthlyContribution(SIMPLE, FLAT, START);
-    const fixed = projectReserves(
-      SIMPLE,
-      { ...FLAT, monthlyContributionCents: required },
-      START,
-    );
+    const fixed = projectReserves(SIMPLE, { ...FLAT, monthlyContributionCents: required }, START);
     expect(fixed.firstShortfallYear).toBeNull();
   });
 

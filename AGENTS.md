@@ -21,11 +21,13 @@ work. `context_search` returns the most relevant code chunks with
 confidence scores instead of whole files.
 
 When to use `context_search`:
+
 - Answering questions about the codebase ("how does X work?", "where is Y?")
 - Exploring structure or architecture
 - Finding related code, functions, or patterns
 
 Other tools:
+
 - `expand_chunk` for full source of a compressed result
 - `related_context` for what calls/imports a function
 - `session_recall` to recall past decisions
@@ -35,6 +37,17 @@ Other tools:
 Call `session_recall("topic phrase")` before answering non-trivial questions.
 Call `record_decision(decision="...", reason="...")` after making choices.
 Call `record_code_area(file_path="...", description="...")` after meaningful work.
+
+## Project commands
+
+- `pnpm install` installs the locked dependencies.
+- `pnpm dev` starts the signed-out demo at `http://localhost:3000`; no secrets or services are needed.
+- `pnpm check` runs formatting, lint, types, documentation checks, tests, and a production build.
+- `pnpm e2e` exercises browser flows against an already-running server.
+- `pnpm db:verify` targets the Supabase project configured in `.env.local`; verify the target before running because checks perform writes.
+- Local Supabase setup is documented in `docs/local-development.md`.
+
+Keep money in integer cents and dates as `YYYY-MM-DD`. Screens import through `@/lib/data`, use semantic color tokens, and test pure logic in `tests/unit`.
 
 ### Output style
 

@@ -29,7 +29,9 @@ describe("the search index", () => {
     const rhea = mehrMeadows.homes.find((o) => o.displayName === "Rhea Calloway")!;
     expect(searchHits(index, "calloway")[0].title).toBe("Rhea Calloway");
     expect(searchHits(index, rhea.email).some((h) => h.title === "Rhea Calloway")).toBe(true);
-    expect(searchHits(index, `unit ${rhea.unit}`).some((h) => h.title === "Rhea Calloway")).toBe(true);
+    expect(searchHits(index, `unit ${rhea.unit}`).some((h) => h.title === "Rhea Calloway")).toBe(
+      true,
+    );
   });
 
   it("finds an ended meeting by an agenda line, and links to its row", () => {
@@ -47,9 +49,22 @@ describe("the search index", () => {
     // and open for both while their own pages said ended and closed.
     const past = {
       ...mehrMeadows,
-      meetings: [{ ...mehrMeadows.meetings[0], id: "gone", status: "scheduled" as const, date: "2020-01-01" }],
+      meetings: [
+        {
+          ...mehrMeadows.meetings[0],
+          id: "gone",
+          status: "scheduled" as const,
+          date: "2020-01-01",
+        },
+      ],
       ballots: [
-        { ...mehrMeadows.ballots[0], id: "shut", audience: "owners" as const, status: "open" as const, closesDate: "2020-01-01" },
+        {
+          ...mehrMeadows.ballots[0],
+          id: "shut",
+          audience: "owners" as const,
+          status: "open" as const,
+          closesDate: "2020-01-01",
+        },
       ],
     };
     for (const hits of [boardIndex(past), residentIndex(past, past.homes[0])]) {
@@ -82,14 +97,18 @@ describe("the search index", () => {
   });
 
   it("gives a resident only their own requests and notices", () => {
-    const mine = mehrMeadows.homes.find((o) => mehrMeadows.requests.some((r) => r.homeId === o.id))!;
+    const mine = mehrMeadows.homes.find((o) =>
+      mehrMeadows.requests.some((r) => r.homeId === o.id),
+    )!;
     const hits = residentIndex(mehrMeadows, mine);
     const requests = hits.filter((h) => h.kind === "request");
     expect(requests.length).toBeGreaterThan(0);
     const theirs = mehrMeadows.requests.filter((r) => r.homeId !== mine.id);
     for (const r of theirs) expect(hits.some((h) => h.id === `req-${r.id}`)).toBe(false);
     expect(hits.some((h) => h.kind === "household" || h.kind === "transaction")).toBe(false);
-    expect(hits.filter((h) => h.kind === "document").every((h) => !h.subtitle.includes("board"))).toBe(true);
+    expect(
+      hits.filter((h) => h.kind === "document").every((h) => !h.subtitle.includes("board")),
+    ).toBe(true);
   });
 });
 
@@ -101,7 +120,9 @@ describe("the search index, typed the way people type", () => {
     expect(searchHits(index, "caloway")[0].title).toBe("Rhea Calloway");
     expect(searchHits(index, "CALLOWAY")[0].title).toBe("Rhea Calloway");
     const rhea = mehrMeadows.homes.find((o) => o.displayName === "Rhea Calloway")!;
-    expect(searchHits(index, rhea.phone.replace(/\D/g, "")).some((h) => h.title === "Rhea Calloway")).toBe(true);
+    expect(
+      searchHits(index, rhea.phone.replace(/\D/g, "")).some((h) => h.title === "Rhea Calloway"),
+    ).toBe(true);
     expect(searchHits(index, rhea.unit).some((h) => h.id === `own-${rhea.id}`)).toBe(true);
   });
 
@@ -112,15 +133,30 @@ describe("the search index, typed the way people type", () => {
 
   it("finds a transaction by its month and a synonym for its category", () => {
     const dues = mehrMeadows.ledger.find((e) => e.category === "Assessments")!;
-    const month = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"][
-      Number(dues.date.slice(5, 7)) - 1
-    ];
+    const month = [
+      "jan",
+      "feb",
+      "mar",
+      "apr",
+      "may",
+      "jun",
+      "jul",
+      "aug",
+      "sep",
+      "oct",
+      "nov",
+      "dec",
+    ][Number(dues.date.slice(5, 7)) - 1];
     const hits = searchHits(index, `${month} dues`, 200);
-    expect(hits.some((h) => h.id === `tx-${dues.id}`), `"${month} dues" did not find the assessment`).toBe(true);
+    expect(
+      hits.some((h) => h.id === `tx-${dues.id}`),
+      `"${month} dues" did not find the assessment`,
+    ).toBe(true);
   });
 
   it("finds a transaction by its amount, typed with or without the dollars", () => {
-    const e = mehrMeadows.ledger.find((x) => Math.abs(x.amountCents) % 100 !== 0) ?? mehrMeadows.ledger[0];
+    const e =
+      mehrMeadows.ledger.find((x) => Math.abs(x.amountCents) % 100 !== 0) ?? mehrMeadows.ledger[0];
     const dollars = (Math.abs(e.amountCents) / 100).toFixed(2);
     const whole = String(Math.floor(Math.abs(e.amountCents) / 100));
     expect(searchHits(index, `$${dollars}`, 200).some((h) => h.id === `tx-${e.id}`)).toBe(true);
@@ -177,13 +213,16 @@ describe("pages and shortcuts", () => {
 
   it("turns a dollar amount into Record a payment and Find transactions for the board", () => {
     const hits = boardShortcuts("$285.00", mehrMeadows, all);
-    expect(hits.map((h) => h.title)).toEqual(["Record a payment of $285.00", "Find transactions for $285.00"]);
+    expect(hits.map((h) => h.title)).toEqual([
+      "Record a payment of $285.00",
+      "Find transactions for $285.00",
+    ]);
     expect(hits[0].href).toBe("/board/vendors?record=1&amount=285.00");
     expect(hits[1].href).toContain("/board/money/transactions?q=285.00");
     expect(boardShortcuts("285", mehrMeadows, all)[0].title).toBe("Record a payment of $285.00");
-    expect(boardShortcuts("285", mehrMeadows, (c) => c === "finances").map((h) => h.title)).toEqual([
-      "Find transactions for $285.00",
-    ]);
+    expect(boardShortcuts("285", mehrMeadows, (c) => c === "finances").map((h) => h.title)).toEqual(
+      ["Find transactions for $285.00"],
+    );
     expect(boardShortcuts("285", mehrMeadows, none)).toHaveLength(0);
     expect(boardShortcuts("calloway", mehrMeadows, all)).toHaveLength(0);
   });
@@ -196,7 +235,9 @@ describe("pages and shortcuts", () => {
     const bare = boardShortcuts(rhea.unit, mehrMeadows, all);
     expect(bare.some((h) => h.subtitle.includes("Rhea Calloway"))).toBe(true);
     expect(bare.some((h) => h.title.startsWith("Record a payment"))).toBe(false);
-    expect(boardShortcuts(`$${rhea.unit}`, mehrMeadows, all)[0].title).toBe(`Record a payment of $${rhea.unit}.00`);
+    expect(boardShortcuts(`$${rhea.unit}`, mehrMeadows, all)[0].title).toBe(
+      `Record a payment of $${rhea.unit}.00`,
+    );
     // Without the roster, the number is only ever money.
     const vendorsOnly = boardShortcuts(rhea.unit, mehrMeadows, (c) => c === "vendors");
     expect(vendorsOnly.some((h) => h.title.startsWith("Open"))).toBe(false);
@@ -209,12 +250,17 @@ describe("pages and shortcuts", () => {
     expect(residentShortcuts("120", mehrMeadows, home)[0].href).toBe("/resident/pay");
     expect(residentShortcuts(home.unit, mehrMeadows, home)[0].href).toBe("/resident/account");
     // Somebody else's unit is not theirs to open; the number is only money.
-    expect(residentShortcuts(other.unit, mehrMeadows, home).map((h) => h.href)).toEqual(["/resident/pay"]);
+    expect(residentShortcuts(other.unit, mehrMeadows, home).map((h) => h.href)).toEqual([
+      "/resident/pay",
+    ]);
   });
 
   it("lists Shortcuts before every other group", () => {
     const index = prepareIndex([...boardPages(mehrMeadows, all), ...boardIndex(mehrMeadows)]);
-    const rows: SearchHit[] = [...searchIndex(index, "285").map((s) => s.item), ...boardShortcuts("285", mehrMeadows, all)];
+    const rows: SearchHit[] = [
+      ...searchIndex(index, "285").map((s) => s.item),
+      ...boardShortcuts("285", mehrMeadows, all),
+    ];
     const groups = groupHits(rows);
     expect(groups[0].section).toBe("Shortcuts");
   });
@@ -228,7 +274,11 @@ describe("a resident's own account", () => {
     const mine = hits.filter((h) => h.kind === "charge");
     expect(mine.length).toBe(mehrMeadows.homeCharges[home.id].length);
     expect(searchHits(hits, line.label).some((h) => h.id === `chg-${line.id}`)).toBe(true);
-    expect(searchHits(hits, String(Math.abs(line.amountCents) / 100), 200).some((h) => h.id === `chg-${line.id}`)).toBe(true);
+    expect(
+      searchHits(hits, String(Math.abs(line.amountCents) / 100), 200).some(
+        (h) => h.id === `chg-${line.id}`,
+      ),
+    ).toBe(true);
     expect(residentIndex(mehrMeadows, null).some((h) => h.kind === "charge")).toBe(false);
   });
 });
@@ -236,7 +286,11 @@ describe("a resident's own account", () => {
 describe("recent choices", () => {
   const fake = () => {
     const m = new Map<string, string>();
-    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), map: m };
+    return {
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => void m.set(k, v),
+      map: m,
+    };
   };
   const hit = (id: string, title: string): SearchHit => ({
     id,

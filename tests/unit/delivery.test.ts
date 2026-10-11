@@ -123,12 +123,9 @@ describe("being allowed to text at all", () => {
 
   it("is ready only when all three are done", () => {
     expect(
-      smsReadiness({ ein: "12-3456789", brandRegistered: true, campaignApproved: true })
-        .registered,
+      smsReadiness({ ein: "12-3456789", brandRegistered: true, campaignApproved: true }).registered,
     ).toBe(true);
-    expect(
-      smsReadiness({ ein: "12-3456789", brandRegistered: true }).registered,
-    ).toBe(false);
+    expect(smsReadiness({ ein: "12-3456789", brandRegistered: true }).registered).toBe(false);
   });
 
   it("sends inside the hours the TCPA allows and not outside them", () => {
@@ -171,11 +168,7 @@ describe("reachability", () => {
 });
 
 describe("audienceFor", () => {
-  const roster = [
-    home({ id: "a" }),
-    home({ id: "b", email: "" }),
-    home({ id: "c", phone: "" }),
-  ];
+  const roster = [home({ id: "a" }), home({ id: "b", email: "" }), home({ id: "c", phone: "" })];
   const consent = { a: CONSENTED, b: CONSENTED, c: CONSENTED };
 
   it("counts each channel across the whole roster", () => {

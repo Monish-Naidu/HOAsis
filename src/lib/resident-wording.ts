@@ -13,9 +13,10 @@ import { formatDate, pastDueLabel, pluralize } from "@/lib/utils";
  * bill that is not late yet is "Not late", which is true and does not
  * contradict the amount printed above it.
  */
-export function balanceStanding(
-  home: Pick<Home, "balanceCents" | "standing" | "daysPastDue">,
-): { label: string; tone: "ok" | "neutral" | "warn" | "danger" } {
+export function balanceStanding(home: Pick<Home, "balanceCents" | "standing" | "daysPastDue">): {
+  label: string;
+  tone: "ok" | "neutral" | "warn" | "danger";
+} {
   if (home.standing === "current") {
     return home.balanceCents > 0
       ? { label: "Not late", tone: "neutral" }
@@ -45,7 +46,9 @@ export function noticeSummary(notices: Violation[]): { title: string; detail: st
   const first = [...notices].sort((a, b) => (a.nextActionDate < b.nextActionDate ? -1 : 1))[0];
   return {
     title:
-      notices.length === 1 ? "A notice about your home" : `${pluralize(notices.length, "notice")} about your home`,
+      notices.length === 1
+        ? "A notice about your home"
+        : `${pluralize(notices.length, "notice")} about your home`,
     detail: `${first.rule} · next step ${formatDate(first.nextActionDate)}`,
   };
 }

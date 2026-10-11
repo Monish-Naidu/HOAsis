@@ -63,92 +63,118 @@ export async function GET(request: NextRequest) {
   // call that started it.
   const quantityOnly = request.nextUrl.searchParams.get("walk") === "quantity";
   const report = {
-    checked: 0, sent: [] as string[], ended: [] as string[], errors: [] as string[],
-    subscriptions: 0, quantities: [] as string[], locked: [] as string[],
-    complete: true, next: null as string | null, walk: quantityOnly ? "quantity" : "trials",
+    checked: 0,
+    sent: [] as string[],
+    ended: [] as string[],
+    errors: [] as string[],
+    subscriptions: 0,
+    quantities: [] as string[],
+    locked: [] as string[],
+    complete: true,
+    next: null as string | null,
+    walk: quantityOnly ? "quantity" : "trials",
   };
 
-  const walk = quantityOnly ? { complete: true, last: null as string | null, error: undefined } : await walkPages(
-    plan,
-    (after, limit) => {
-      let query = admin
-        .from("associations")
-        .select("id, name, slug, trial_ends_at, subscription_status, billing_notices, billing_email")
-        .is("deleted_at", null)
-        .is("billing_subscription_id", null)
-        .in("subscription_status", ["trialing", "ended"])
-        .order("id")
-        .limit(limit);
-      if (after) query = query.gt("id", after);
-      return query;
-    },
-    async (row) => {
-      report.checked++;
-      const endsOn = row.trial_ends_at.slice(0, 10);
-
-      // Past the date, not yet marked. The banner already says so; this makes
-      // the row agree with it.
-      if (endsOn <= today && row.subscription_status === "trialing" && !dryRun) {
-        await admin.from("associations").update({ subscription_status: "ended" }).eq("id", row.id);
-        report.ended.push(row.name);
-      }
-
-      const due = trialNoticeDue(endsOn, today, row.billing_notices ?? []);
-      if (!due) return;
-
-      // The sitting President, who is the person the subscription belongs to.
-      const { data: president } = await admin
-        .from("memberships")
-        .select("full_name, profile_id")
-        .eq("association_id", row.id)
-        .eq("role", "president")
-        .is("ends_on", null)
-        .maybeSingle();
-      const { data: profile } = president?.profile_id
-        ? await admin.from("profiles").select("email").eq("id", president.profile_id).maybeSingle()
-        : { data: null };
-      const to = profile?.email ?? row.billing_email;
-      if (!to) {
-        report.errors.push(`${row.name}: no President email`);
-        return;
-      }
-
-      const { count } = await admin
-        .from("units")
-        .select("*", { count: "exact", head: true })
-        .eq("association_id", row.id);
-      const homes = count ?? 0;
-
-      const result = await sendTrialNotice({
-        associationId: row.id,
-        kind: due.send,
-        to,
-        profileId: president?.profile_id ?? null,
-        dryRun,
-        message: {
-          associationName: row.name,
-          presidentName: president?.full_name || "President",
-          trialEndsOn: endsOn,
-          homes,
-          monthlyCents: homes * PRICE_PER_HOME_CENTS,
-          billingUrl: `${origin}${communityPath(row.slug, "/board/settings")}`,
+  const walk = quantityOnly
+    ? { complete: true, last: null as string | null, error: undefined }
+    : await walkPages(
+        plan,
+        (after, limit) => {
+          let query = admin
+            .from("associations")
+            .select(
+              "id, name, slug, trial_ends_at, subscription_status, billing_notices, billing_email",
+            )
+            .is("deleted_at", null)
+            .is("billing_subscription_id", null)
+            .in("subscription_status", ["trialing", "ended"])
+            .order("id")
+            .limit(limit);
+          if (after) query = query.gt("id", after);
+          return query;
         },
-      });
+        async (row) => {
+          report.checked++;
+          const endsOn = row.trial_ends_at.slice(0, 10);
 
-      if (!result.ok) {
-        log.error("trial notice failed", { associationId: row.id, kind: due.send, err: result.error });
-        report.errors.push(`${row.name}: ${result.error}`);
-        return;
-      }
-      report.sent.push(`${row.name}: ${due.send}`);
-      if (!dryRun) {
-        await admin
-          .from("associations")
-          .update({ billing_notices: Array.from(new Set([...(row.billing_notices ?? []), ...due.markSent])) })
-          .eq("id", row.id);
-      }
-    },
-  );
+          // Past the date, not yet marked. The banner already says so; this makes
+          // the row agree with it.
+          if (endsOn <= today && row.subscription_status === "trialing" && !dryRun) {
+            await admin
+              .from("associations")
+              .update({ subscription_status: "ended" })
+              .eq("id", row.id);
+            report.ended.push(row.name);
+          }
+
+          const due = trialNoticeDue(endsOn, today, row.billing_notices ?? []);
+          if (!due) return;
+
+          // The sitting President, who is the person the subscription belongs to.
+          const { data: president } = await admin
+            .from("memberships")
+            .select("full_name, profile_id")
+            .eq("association_id", row.id)
+            .eq("role", "president")
+            .is("ends_on", null)
+            .maybeSingle();
+          const { data: profile } = president?.profile_id
+            ? await admin
+                .from("profiles")
+                .select("email")
+                .eq("id", president.profile_id)
+                .maybeSingle()
+            : { data: null };
+          const to = profile?.email ?? row.billing_email;
+          if (!to) {
+            report.errors.push(`${row.name}: no President email`);
+            return;
+          }
+
+          const { count } = await admin
+            .from("units")
+            .select("*", { count: "exact", head: true })
+            .eq("association_id", row.id);
+          const homes = count ?? 0;
+
+          const result = await sendTrialNotice({
+            associationId: row.id,
+            kind: due.send,
+            to,
+            profileId: president?.profile_id ?? null,
+            dryRun,
+            message: {
+              associationName: row.name,
+              presidentName: president?.full_name || "President",
+              trialEndsOn: endsOn,
+              homes,
+              monthlyCents: homes * PRICE_PER_HOME_CENTS,
+              billingUrl: `${origin}${communityPath(row.slug, "/board/settings")}`,
+            },
+          });
+
+          if (!result.ok) {
+            log.error("trial notice failed", {
+              associationId: row.id,
+              kind: due.send,
+              err: result.error,
+            });
+            report.errors.push(`${row.name}: ${result.error}`);
+            return;
+          }
+          report.sent.push(`${row.name}: ${due.send}`);
+          if (!dryRun) {
+            await admin
+              .from("associations")
+              .update({
+                billing_notices: Array.from(
+                  new Set([...(row.billing_notices ?? []), ...due.markSent]),
+                ),
+              })
+              .eq("id", row.id);
+          }
+        },
+      );
 
   // The second pass: what Stripe bills for follows the roster. Only once the
   // trials are finished, and inside whatever is left of the same budget.
@@ -188,7 +214,12 @@ export async function GET(request: NextRequest) {
                 dryRun,
               });
               if (synced.outcome === "changed") {
-                log.info("subscription quantity changed", { associationId: row.id, from: synced.from, to: synced.to, dryRun });
+                log.info("subscription quantity changed", {
+                  associationId: row.id,
+                  from: synced.from,
+                  to: synced.to,
+                  dryRun,
+                });
                 report.quantities.push(`${row.name}: ${synced.from ?? "none"} to ${synced.to}`);
               }
             } catch (caught) {
@@ -208,7 +239,9 @@ export async function GET(request: NextRequest) {
   if (!quantityOnly && !walk.error) {
     const { data: lapsed, error: lapsedError } = await admin
       .from("associations")
-      .select("id, name, slug, trial_ends_at, subscription_status, past_due_since, billing_subscription_id, billing_notices, billing_email")
+      .select(
+        "id, name, slug, trial_ends_at, subscription_status, past_due_since, billing_subscription_id, billing_notices, billing_email",
+      )
       .is("deleted_at", null)
       .in("subscription_status", ["past_due", "canceled"])
       .not("billing_notices", "cs", "{locked}")
@@ -256,7 +289,9 @@ export async function GET(request: NextRequest) {
       if (!dryRun) {
         await admin
           .from("associations")
-          .update({ billing_notices: Array.from(new Set([...(row.billing_notices ?? []), "locked"])) })
+          .update({
+            billing_notices: Array.from(new Set([...(row.billing_notices ?? []), "locked"])),
+          })
           .eq("id", row.id);
       }
     }
@@ -264,15 +299,33 @@ export async function GET(request: NextRequest) {
 
   const failure = walk.error ?? quantityWalk?.error;
   const summary = {
-    checked: report.checked, sent: report.sent.length, locked: report.locked.length, ended: report.ended.length,
-    subscriptions: report.subscriptions, quantities: report.quantities.length,
-    errors: report.errors.length, complete: walk.complete && Boolean(quantityWalk?.complete),
-    walk: report.walk, after: plan.after, dryRun,
+    checked: report.checked,
+    sent: report.sent.length,
+    locked: report.locked.length,
+    ended: report.ended.length,
+    subscriptions: report.subscriptions,
+    quantities: report.quantities.length,
+    errors: report.errors.length,
+    complete: walk.complete && Boolean(quantityWalk?.complete),
+    walk: report.walk,
+    after: plan.after,
+    dryRun,
   };
   if (failure) {
     log.error("billing sweep failed", { err: failure, ...summary });
-    if (!dryRun) await recordCronRun({ job: "billing-sweep", requestId: log.requestId, startedAt, ok: false, summary, error: failure });
-    return NextResponse.json({ error: failure, reference: log.requestId, today, dryRun, ...report }, { status: 500 });
+    if (!dryRun)
+      await recordCronRun({
+        job: "billing-sweep",
+        requestId: log.requestId,
+        startedAt,
+        ok: false,
+        summary,
+        error: failure,
+      });
+    return NextResponse.json(
+      { error: failure, reference: log.requestId, today, dryRun, ...report },
+      { status: 500 },
+    );
   }
   if (!walk.complete && walk.last) {
     report.complete = false;
@@ -282,10 +335,18 @@ export async function GET(request: NextRequest) {
     report.complete = false;
     report.walk = "quantity";
     report.next = quantityWalk.last;
-    if (!dryRun) scheduleContinuation(request, quantityWalkUrl(request.nextUrl.toString(), quantityWalk.last));
+    if (!dryRun)
+      scheduleContinuation(request, quantityWalkUrl(request.nextUrl.toString(), quantityWalk.last));
   }
   log.info("billing sweep finished", summary);
-  if (!dryRun) await recordCronRun({ job: "billing-sweep", requestId: log.requestId, startedAt, ok: report.errors.length === 0, summary });
+  if (!dryRun)
+    await recordCronRun({
+      job: "billing-sweep",
+      requestId: log.requestId,
+      startedAt,
+      ok: report.errors.length === 0,
+      summary,
+    });
 
   return NextResponse.json({ today, dryRun, ...report });
 }

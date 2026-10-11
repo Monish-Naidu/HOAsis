@@ -65,7 +65,9 @@ export function RequestDetail({
       <div className="mt-3 space-y-4 rounded-lg border border-border bg-surface-2 p-4">
         <div>
           <p className="font-semibold text-fg-muted">What they wrote</p>
-          <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg">{request.summary}</p>
+          <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg">
+            {request.summary}
+          </p>
           <p className="mt-2 text-fg-subtle">
             Sent {formatDate(request.submittedDate, "long")}
             {request.dueDate
@@ -79,7 +81,9 @@ export function RequestDetail({
 
         {sent ? (
           <div>
-            <p className="font-semibold text-fg-muted">What they sent{sent.formLabel ? `, on ${sent.formLabel}` : ""}</p>
+            <p className="font-semibold text-fg-muted">
+              What they sent{sent.formLabel ? `, on ${sent.formLabel}` : ""}
+            </p>
             <dl className="mt-1.5 space-y-2">
               {sent.answers
                 .filter((a) => a.value)
@@ -138,7 +142,9 @@ export function RequestDetail({
         <div>
           <p className="font-semibold text-fg-muted">Conversation</p>
           {request.thread.length === 0 ? (
-            <p className="mt-1.5 text-body text-fg-muted">Nothing has been said on this request yet.</p>
+            <p className="mt-1.5 text-body text-fg-muted">
+              Nothing has been said on this request yet.
+            </p>
           ) : (
             <div className="mt-2 space-y-4">
               {/* The thread is kept oldest first; this is the layout the
@@ -153,14 +159,20 @@ export function RequestDetail({
                         fromOwner ? "bg-info-soft text-info" : "bg-surface-3 text-fg-muted",
                       )}
                     >
-                      {fromOwner ? <ArrowDownLeft className="size-3" /> : <ArrowUpRight className="size-3" />}
+                      {fromOwner ? (
+                        <ArrowDownLeft className="size-3" />
+                      ) : (
+                        <ArrowUpRight className="size-3" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline gap-x-2">
                         <span className="text-body font-semibold text-fg">{e.actor}</span>
                         <span className="text-fg-subtle">{formatDate(e.at, "long")}</span>
                       </div>
-                      <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg-muted">{e.body}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-body leading-relaxed text-fg-muted">
+                        {e.body}
+                      </p>
                     </div>
                   </div>
                 );
@@ -183,8 +195,15 @@ export function RequestDetail({
               className={cn(textareaClass, "mt-1.5 resize-none")}
             />
             <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="text-fg-subtle">{request.ownerName} sees this on their request page.</span>
-              <Button variant="primary" size="sm" disabled={!draft.trim() || sending} onClick={() => void send()}>
+              <span className="text-fg-subtle">
+                {request.ownerName} sees this on their request page.
+              </span>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!draft.trim() || sending}
+                onClick={() => void send()}
+              >
                 <Send className="size-3.5" />
                 {sending ? "Sending" : "Send"}
               </Button>

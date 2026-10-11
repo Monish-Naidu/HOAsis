@@ -14,7 +14,7 @@ export interface AutopayFailure {
 }
 
 /** "2026-08-20" is month "2026-08". */
-export function monthOf(isoDate: string): string {
+function monthOf(isoDate: string): string {
   return isoDate.slice(0, 7);
 }
 

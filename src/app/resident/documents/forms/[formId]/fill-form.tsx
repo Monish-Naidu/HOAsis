@@ -4,7 +4,16 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Paperclip, ScrollText } from "lucide-react";
-import { Badge, Button, Callout, Card, EmptyState, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  EmptyState,
+  Select,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { SignaturePad } from "@/components/app/signature-pad";
 import { useAppState, useCurrentHome } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -56,7 +65,10 @@ export function FillForm({ formId }: { formId: string }) {
   if (!form) {
     return (
       <Card>
-        <EmptyState title="We could not find that form" description="It may have been removed. Go back to Documents to pick another." />
+        <EmptyState
+          title="We could not find that form"
+          description="It may have been removed. Go back to Documents to pick another."
+        />
       </Card>
     );
   }
@@ -70,8 +82,8 @@ export function FillForm({ formId }: { formId: string }) {
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{form.description}</p>
           {/* There is no file behind a form, so nothing here offers one. */}
           <Callout tone="info" className="mt-4" title="This one is still a printed form">
-            Ask the board for a copy, fill it in, and attach it to a request. Ask them to add
-            the questions here and you will be able to complete it on your phone instead.
+            Ask the board for a copy, fill it in, and attach it to a request. Ask them to add the
+            questions here and you will be able to complete it on your phone instead.
           </Callout>
         </Card>
       </div>
@@ -101,9 +113,7 @@ export function FillForm({ formId }: { formId: string }) {
         fieldId: field.id,
         label: field.label,
         value:
-          field.kind === "file"
-            ? (files[field.id] ?? []).join(", ")
-            : (answers[field.id] ?? ""),
+          field.kind === "file" ? (files[field.id] ?? []).join(", ") : (answers[field.id] ?? ""),
       })),
       signature: {
         drawn,
@@ -115,9 +125,7 @@ export function FillForm({ formId }: { formId: string }) {
 
     // The deadline comes from the association's own article, not a default, so
     // an association with a thirty day rule does not see forty-five.
-    const dueDate = form.decisionDays
-      ? addDays(todayIsoDate(), form.decisionDays)
-      : undefined;
+    const dueDate = form.decisionDays ? addDays(todayIsoDate(), form.decisionDays) : undefined;
 
     const request: HomeRequest = {
       id: `req-${seq}`,
@@ -135,9 +143,7 @@ export function FillForm({ formId }: { formId: string }) {
       status: "submitted",
       submittedDate: todayIsoDate(),
       dueDate,
-      dueReason: form.governedBy
-        ? `${form.governedBy}.`
-        : undefined,
+      dueReason: form.governedBy ? `${form.governedBy}.` : undefined,
       attachments: Object.values(files)
         .flat()
         .map((name) => ({ name, size: "attached" })),
@@ -329,8 +335,7 @@ function Field({
   onChange: (value: string) => void;
   onFiles: (names: string[]) => void;
 }) {
-  const input =
-    fieldClass;
+  const input = fieldClass;
 
   return (
     <div className="px-4 py-3.5">
@@ -373,8 +378,8 @@ function Field({
           </span>
         ) : field.kind === "file" && !uploads ? (
           <span className="mt-1.5 block text-footnote text-fg-muted">
-            Files cannot be attached here yet. Send this to the board separately and say so in
-            your answers.
+            Files cannot be attached here yet. Send this to the board separately and say so in your
+            answers.
           </span>
         ) : field.kind === "file" ? (
           <span className="mt-1.5 block">

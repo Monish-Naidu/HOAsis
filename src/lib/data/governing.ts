@@ -36,7 +36,7 @@ import type { GoverningAmendment, GoverningArticle } from "@/lib/types";
  * rather than in the bylaws, which is why the disclosure tags sit mostly on
  * these articles.
  */
-export const declarationArticles: GoverningArticle[] = [
+const declarationArticles: GoverningArticle[] = [
   {
     id: "dec-1",
     document: "declaration",
@@ -241,7 +241,7 @@ export const declarationArticles: GoverningArticle[] = [
  * layer where overreach happens: a rule that contradicts the Declaration is
  * void, and almost nobody checks.
  */
-export const rulesArticles: GoverningArticle[] = [
+const rulesArticles: GoverningArticle[] = [
   {
     id: "rul-1-2",
     document: "rules",
@@ -345,7 +345,7 @@ export const rulesArticles: GoverningArticle[] = [
 /**
  * The Bylaws, which govern how the association runs itself.
  */
-export const bylawArticles: GoverningArticle[] = [
+const bylawArticles: GoverningArticle[] = [
   {
     id: "by-1",
     document: "bylaws",

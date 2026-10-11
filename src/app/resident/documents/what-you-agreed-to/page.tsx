@@ -31,8 +31,8 @@ export default function WhatYouAgreedTo() {
             does not know a rule exists cannot ask for the approval that would
             have made their project legal. */}
         <p className="mt-1 text-body leading-relaxed text-fg-muted">
-          Eight questions that catch most people out. You signed up to these at closing,
-          whether or not anyone showed them to you.
+          Eight questions that catch most people out. You signed up to these at closing, whether or
+          not anyone showed them to you.
         </p>
       </div>
 
@@ -50,15 +50,15 @@ export default function WhatYouAgreedTo() {
 
           {coverage.gaps.length > 0 ? (
             <Callout tone="info" title="Some of these have no answer on file">
-              {coverage.answered} of {coverage.total} have a confirmed answer. The rest are
-              left blank rather than guessed at. Ask the board.
+              {coverage.answered} of {coverage.total} have a confirmed answer. The rest are left
+              blank rather than guessed at. Ask the board.
             </Callout>
           ) : null}
 
           <p className="text-footnote leading-relaxed text-fg-subtle">
             This is a reading aid, not legal advice, and it does not replace the documents
-            themselves. Every answer here links to the provision it came from so you can
-            read the words that actually bind.
+            themselves. Every answer here links to the provision it came from so you can read the
+            words that actually bind.
           </p>
         </>
       )}

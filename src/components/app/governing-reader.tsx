@@ -158,9 +158,7 @@ export function GoverningReader({
             aria-pressed={topic === t}
             className={cn(
               "shrink-0 rounded-full px-3 py-1.5 text-footnote font-medium transition-colors",
-              topic === t
-                ? "bg-brand text-brand-fg"
-                : "bg-surface-2 text-fg-muted hover:text-fg",
+              topic === t ? "bg-brand text-brand-fg" : "bg-surface-2 text-fg-muted hover:text-fg",
             )}
           >
             {t === "all" ? "Everything" : TOPIC_LABEL[t]}
@@ -226,8 +224,8 @@ export function GoverningReader({
                     </p>
                   ) : (
                     <p className="mt-1.5 text-body leading-relaxed text-fg-subtle">
-                      No plain reading has been written for this article yet. The exact
-                      wording is below.
+                      No plain reading has been written for this article yet. The exact wording is
+                      below.
                     </p>
                   )}
                   <p className="mt-2 text-footnote font-medium text-brand">
@@ -249,10 +247,7 @@ export function GoverningReader({
                     </p>
                     <div className="mt-2 space-y-2.5">
                       {article.text.map((paragraph, index) => (
-                        <p
-                          key={index}
-                          className="text-body leading-relaxed text-fg"
-                        >
+                        <p key={index} className="text-body leading-relaxed text-fg">
                           {paragraph}
                         </p>
                       ))}

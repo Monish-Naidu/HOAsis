@@ -12,7 +12,11 @@
 export function plainEmailError(raw: string | null | undefined): string {
   const text = (raw ?? "").trim();
   if (!text) return "The email did not go out.";
-  if (/only send testing emails|verify a domain|domain is not verified|domain.*not.*verified/i.test(text)) {
+  if (
+    /only send testing emails|verify a domain|domain is not verified|domain.*not.*verified/i.test(
+      text,
+    )
+  ) {
     return "Email is not set up to send to owners yet (the sending domain is not verified).";
   }
   if (/invalid.{0,12}`?to`?|invalid (email )?address|is not a valid (email )?address/i.test(text)) {

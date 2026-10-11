@@ -83,7 +83,5 @@ export async function GET(request: NextRequest) {
   }
 
   const runsSomething = rows.some((m) => m.role !== "resident");
-  return NextResponse.redirect(
-    new URL(runsSomething ? "/board" : "/resident", url.origin),
-  );
+  return NextResponse.redirect(new URL(runsSomething ? "/board" : "/resident", url.origin));
 }

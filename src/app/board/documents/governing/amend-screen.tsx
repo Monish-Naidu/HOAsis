@@ -3,18 +3,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, FilePlus2, FileText, Send, Trash2, Vote } from "lucide-react";
-import { Badge, Button, ButtonLink, Callout, Card, CardHeader, EmptyState, PageHeader, Segmented, Select, fieldClass, textareaClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  CardHeader,
+  EmptyState,
+  PageHeader,
+  Segmented,
+  Select,
+  fieldClass,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { GoverningReader } from "@/components/app/governing-reader";
 import { AmendmentDiff } from "@/components/app/amendment-diff";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { AmendmentKind, GoverningAmendment, GoverningDoc } from "@/lib/types";
-import {
-  GOVERNING_DOCS,
-  amendmentThreshold,
-  articlesIn,
-  documentsPresent,
-} from "@/lib/governing";
+import { GOVERNING_DOCS, amendmentThreshold, articlesIn, documentsPresent } from "@/lib/governing";
 import { policyTemplates } from "@/lib/data";
 import type { PolicyTemplate } from "@/lib/data/policy-templates";
 import { cn, formatDate } from "@/lib/utils";
@@ -255,8 +263,8 @@ export function AmendScreen() {
 
       {canPropose ? null : (
         <p className="mt-3 text-footnote leading-relaxed text-fg-subtle">
-          Proposing a change from here is coming. Nothing on this page is saved or sent to
-          owners yet.
+          Proposing a change from here is coming. Nothing on this page is saved or sent to owners
+          yet.
         </p>
       )}
 
@@ -289,11 +297,7 @@ export function AmendScreen() {
                       {template.basis}
                     </p>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => startFromTemplate(template)}
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => startFromTemplate(template)}>
                     Start from this
                   </Button>
                 </div>
@@ -301,10 +305,10 @@ export function AmendScreen() {
             })}
           </div>
           <p className="border-t border-border px-5 py-3 text-footnote leading-relaxed text-fg-subtle">
-            These are starting points, not legal advice, and they are offered for rules
-            only. Check each one against your declaration before adopting it: a rule that
-            goes further than the document above it is void. We do not supply covenant or
-            bylaw text, because those bind a home and the words should be your attorney&rsquo;s.
+            These are starting points, not legal advice, and they are offered for rules only. Check
+            each one against your declaration before adopting it: a rule that goes further than the
+            document above it is void. We do not supply covenant or bylaw text, because those bind a
+            home and the words should be your attorney&rsquo;s.
           </p>
         </Card>
       ) : null}
@@ -406,9 +410,7 @@ export function AmendScreen() {
 
             {/* The board sees the same diff owners will, before sending it. */}
             <div className="rounded-card border border-border bg-surface-2 p-4">
-              <p className="text-footnote font-semibold text-fg-muted">
-                What owners will see
-              </p>
+              <p className="text-footnote font-semibold text-fg-muted">What owners will see</p>
               <div className="mt-3">
                 <AmendmentDiff
                   amendment={{
@@ -439,9 +441,7 @@ export function AmendScreen() {
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => save("open")}>
                 <Send className="size-4" />
-                {boardAdopted
-                  ? "Put on the board agenda"
-                  : "Send to owners and open voting"}
+                {boardAdopted ? "Put on the board agenda" : "Send to owners and open voting"}
               </Button>
               <Button variant="secondary" onClick={() => save("draft")}>
                 Save as a draft
@@ -474,9 +474,7 @@ export function AmendScreen() {
               <p className="mt-2 text-headline font-semibold tracking-[-0.01em] text-fg">
                 {amendment.number}: {amendment.title}
               </p>
-              <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-                {amendment.plain}
-              </p>
+              <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{amendment.plain}</p>
               <details className="mt-3">
                 <summary className="cursor-pointer text-footnote font-medium text-brand">
                   See exactly what changes
@@ -520,4 +518,3 @@ export function AmendScreen() {
     </>
   );
 }
-

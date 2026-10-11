@@ -79,7 +79,9 @@ describe("complianceRegister", () => {
   });
 
   it("takes the board's word that a duty was met, for one period", () => {
-    const first = complianceRegister(mehrMeadows).items.find((i) => i.dueDate && i.cadence === "annual")!;
+    const first = complianceRegister(mehrMeadows).items.find(
+      (i) => i.dueDate && i.cadence === "annual",
+    )!;
     const marked = {
       ...mehrMeadows,
       settings: { ...mehrMeadows.settings, complianceDone: { [first.key]: mehrMeadows.asOf } },
@@ -92,7 +94,9 @@ describe("complianceRegister", () => {
       ...mehrMeadows,
       settings: { ...mehrMeadows.settings, complianceDone: { [first.key]: "2024-01-15" } },
     };
-    expect(complianceRegister(stale).items.find((i) => i.key === first.key)!.doneOn).toBeUndefined();
+    expect(
+      complianceRegister(stale).items.find((i) => i.key === first.key)!.doneOn,
+    ).toBeUndefined();
   });
 
   it("never shows a general row next to the state row that replaces it", () => {

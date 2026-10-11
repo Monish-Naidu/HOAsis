@@ -7,8 +7,7 @@ import { PriceCalculator } from "./price-calculator";
 
 export const metadata = {
   title: "Pricing",
-  description:
-    "One rate per home per month, every feature included. The first 90 days are free.",
+  description: "One rate per home per month, every feature included. The first 90 days are free.",
 };
 
 /**

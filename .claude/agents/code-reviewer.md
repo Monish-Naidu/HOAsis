@@ -33,6 +33,7 @@ You are a code reviewer and test author for this repo (ExpressHOA, a Next.js pro
 ## Report format
 
 End with a concise report:
+
 - **Verdict**: does the code do what it is supposed to do (yes / yes with caveats / no).
 - **Bugs found**: each with `file:line`, what breaks, and the failing test or repro.
 - **Tests added**: file paths and what they cover.

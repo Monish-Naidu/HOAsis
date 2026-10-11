@@ -2,7 +2,16 @@ import type { Community } from "@/lib/data/community";
 import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
-import { addDays, addYears, daysBetween, daysFromToday, formatDate, money, ordinal, pluralize } from "@/lib/utils";
+import {
+  addDays,
+  addYears,
+  daysBetween,
+  daysFromToday,
+  formatDate,
+  money,
+  ordinal,
+  pluralize,
+} from "@/lib/utils";
 import { policyFor } from "@/lib/collections";
 import { totalDues } from "@/lib/home-types";
 import { isDuesLine, isPaymentReversal } from "@/lib/statement";
@@ -83,7 +92,9 @@ export function lateFeesOwed(c: Community): number {
     // payment that cleared it the same afternoon read as payment, then fee:
     // a fee still owed that was in fact paid. Turned over first, the stable
     // sort keeps a day's lines in the order they happened.
-    const lines = [...(c.homeCharges[home.id] ?? [])].reverse().sort((a, b) => a.date.localeCompare(b.date));
+    const lines = [...(c.homeCharges[home.id] ?? [])]
+      .reverse()
+      .sort((a, b) => a.date.localeCompare(b.date));
     let since = 0;
     lines.forEach((line, i) => {
       if (line.balanceAfterCents <= 0) since = i + 1;
@@ -258,8 +269,7 @@ export function monthlyFlows(c: Community, year: number, through?: string) {
   // A year still under way stops at the given month. Four empty months after
   // it read as four months of nothing coming in, and a screen reader table
   // said "$0.00" for money that simply has not had a chance to arrive.
-  const last =
-    through && Number(through.slice(0, 4)) === year ? Number(through.slice(5, 7)) : 12;
+  const last = through && Number(through.slice(0, 4)) === year ? Number(through.slice(5, 7)) : 12;
   return monthlyFlowsBetween(c, `${year}-01-01`, `${year}-${String(last).padStart(2, "0")}-31`);
 }
 
@@ -362,7 +372,9 @@ function shiftMonths(iso: string, n: number): string {
   const m = monthOf(iso) - 1 + n;
   const d = Number(iso.slice(8, 10));
   const target = new Date(Date.UTC(y, m, 1));
-  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const last = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
   const pad = (v: number) => String(v).padStart(2, "0");
   return `${target.getUTCFullYear()}-${pad(target.getUTCMonth() + 1)}-${pad(Math.min(d, last))}`;
 }
@@ -417,13 +429,36 @@ export function spendingBetween(c: Community, from: string, to: string) {
 /* Years: one year on its own, two side by side, and the run of them.          */
 /* -------------------------------------------------------------------------- */
 
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 /** The name of a month by its number, 1 to 12, short or long. */
 export function monthName(month: number, style: "short" | "long" = "short") {
   const long = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
   return style === "long" ? long[month - 1] : SHORT_MONTHS[month - 1];
 }
@@ -451,7 +486,9 @@ export function yearSummary(c: Community, year: number, throughMonth = 12) {
     if (yearOf(e.date) !== year || monthOf(e.date) > throughMonth) continue;
     reserveCents -= e.amountCents;
   }
-  const withData = flows.map((m, i) => (m.inCents > 0 || m.outCents > 0 ? i + 1 : 0)).filter(Boolean);
+  const withData = flows
+    .map((m, i) => (m.inCents > 0 || m.outCents > 0 ? i + 1 : 0))
+    .filter(Boolean);
   return {
     year,
     incomeCents,
@@ -473,7 +510,7 @@ export interface Delta {
 }
 
 /** The change from one figure to another, with a percent unless the earlier figure is zero. */
-export function delta(from: number, to: number): Delta {
+function delta(from: number, to: number): Delta {
   return { cents: to - from, percent: from ? (to - from) / Math.abs(from) : undefined };
 }
 
@@ -640,7 +677,9 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   // Months before the statements on hand were summed by the server, which
   // says a charge was posted but not whether it was dues.
   const chargedByServer = new Set(
-    (c.history?.statementMonths ?? []).filter((m) => m.kind === "charge" && m.count > 0).map((m) => m.month),
+    (c.history?.statementMonths ?? [])
+      .filter((m) => m.kind === "charge" && m.count > 0)
+      .map((m) => m.month),
   );
   // What a month was billed, or null for a month with no bill. The rate
   // fills in only where the statements cannot speak: none at all, or a month
@@ -721,7 +760,13 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     return monthly || onCadence(i) ? cents : null;
   };
 
-  const months: { month: number; label: string; expectedCents: number; collectedCents: number; rate: number }[] = [];
+  const months: {
+    month: number;
+    label: string;
+    expectedCents: number;
+    collectedCents: number;
+    rate: number;
+  }[] = [];
   for (let i = 0; i < 12; i += 1) {
     const billedCents = billOf(year, billedThisYear, i);
     if (billedCents === null) continue;
@@ -751,7 +796,14 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     while (last > 0 && !onCadence(last)) last -= 1;
     const ym = `${year - 1}-${String(last + 1).padStart(2, "0")}`;
     const billedBefore = expectedFor(billedIn(year - 1), year - 1, last);
-    if (billedBefore !== null && first > 0 && first < 12 && firstActive !== "" && ym >= firstActive && ym <= asOfMonth) {
+    if (
+      billedBefore !== null &&
+      first > 0 &&
+      first < 12 &&
+      firstActive !== "" &&
+      ym >= firstActive &&
+      ym <= asOfMonth
+    ) {
       const before = tally(year - 1).collected;
       let collectedCents = 0;
       for (let j = last; j < 12; j += 1) collectedCents += before[j];
@@ -769,8 +821,16 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   // inside the year's totals.
   const nowI = monthOf(asOf) - 1;
   const thisMonth =
-    yearOf(asOf) === year && hasDuesLines && !billedThisYear.seen[nowI] && (monthly || onCadence(nowI))
-      ? { month: nowI + 1, label: SHORT_MONTHS[nowI], expectedCents, collectedCents: collected[nowI] }
+    yearOf(asOf) === year &&
+    hasDuesLines &&
+    !billedThisYear.seen[nowI] &&
+    (monthly || onCadence(nowI))
+      ? {
+          month: nowI + 1,
+          label: SHORT_MONTHS[nowI],
+          expectedCents,
+          collectedCents: collected[nowI],
+        }
       : undefined;
   const collectedYtd = months.reduce((t, m) => t + m.collectedCents, 0);
   const expectedYtd = months.reduce((t, m) => t + m.expectedCents, 0);
@@ -790,7 +850,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
 /* Collections: how far behind, in the four buckets every auditor asks for.    */
 /* -------------------------------------------------------------------------- */
 
-export type AgingKey = "current" | "1-30" | "31-60" | "61+";
+type AgingKey = "current" | "1-30" | "31-60" | "61+";
 
 /**
  * Every household's balance, in one of four buckets by days past due.
@@ -846,7 +906,9 @@ export function budgetVariance(c: Community) {
     const pace = line.annualCents > 0 ? line.ytdActualCents / line.annualCents : 0;
     const toDateCents = Math.round(line.annualCents * elapsed);
     const varianceCents =
-      line.kind === "expense" ? toDateCents - line.ytdActualCents : line.ytdActualCents - toDateCents;
+      line.kind === "expense"
+        ? toDateCents - line.ytdActualCents
+        : line.ytdActualCents - toDateCents;
     return {
       ...line,
       pace,
@@ -921,7 +983,10 @@ export function periodRange(
       // an empty screen the way "This month" does.
       return { from: addDays(asOf, -29), to: asOf };
     case "this-month":
-      return { from: `${year}-${pad(month)}-01`, to: `${year}-${pad(month)}-${pad(lastDay(year, month))}` };
+      return {
+        from: `${year}-${pad(month)}-01`,
+        to: `${year}-${pad(month)}-${pad(lastDay(year, month))}`,
+      };
     case "last-month": {
       const y = month === 1 ? year - 1 : year;
       const m = month === 1 ? 12 : month - 1;
@@ -989,9 +1054,14 @@ type PeriodUnit = "month" | "year";
  * it would mean inventing a boundary nobody asked for. A custom range that
  * happens to be a whole month steps like a month.
  */
-function periodUnit(preset: PeriodPreset, r: { from: string; to: string }, fyMonth: number): PeriodUnit | null {
+function periodUnit(
+  preset: PeriodPreset,
+  r: { from: string; to: string },
+  fyMonth: number,
+): PeriodUnit | null {
   if (preset === "last-30-days" || preset === "last-12-months") return null;
-  if (r.from.slice(8) === "01" && r.to === monthEnd(yearOf(r.from), monthOf(r.from))) return "month";
+  if (r.from.slice(8) === "01" && r.to === monthEnd(yearOf(r.from), monthOf(r.from)))
+    return "month";
   if (
     r.from.slice(8) === "01" &&
     monthOf(r.from) === fyMonth &&
@@ -1191,7 +1261,10 @@ export function ledgerTotals(rows: Community["ledger"]) {
  * as everywhere; transfers to reserves appear under their own name.
  */
 export function totalsByCategory(rows: Community["ledger"]) {
-  const map = new Map<string, { category: string; inCents: number; outCents: number; count: number }>();
+  const map = new Map<
+    string,
+    { category: string; inCents: number; outCents: number; count: number }
+  >();
   for (const e of rows) {
     if (e.status === "needs-review" || e.category === "Opening balance") continue;
     const row = map.get(e.category) ?? { category: e.category, inCents: 0, outCents: 0, count: 0 };
@@ -1266,7 +1339,6 @@ export function insuranceExposure(c: Community) {
   return { rows, totalUninsured: rows.reduce((t, r) => t + r.uninsured, 0) };
 }
 
-
 /**
  * The badge on the nav, from the same source as the screen behind it.
  *
@@ -1285,21 +1357,6 @@ export function complianceSummary(c: Community) {
     openCount: register.overdue.length + register.dueSoon.length,
     total: register.items.length,
   };
-}
-
-/** Average days from issue to funds landing, for ACH and for check. */
-export function payoutSpeed(c: Community) {
-  const byMethod = (m: "ach" | "check") => {
-    const rows = c.payouts.filter((p) => p.method === m);
-    if (!rows.length) return 0;
-    return (
-      rows.reduce(
-        (t, p) => t + (daysFromToday(p.expectedDate) - daysFromToday(p.issuedDate)),
-        0,
-      ) / rows.length
-    );
-  };
-  return { ach: byMethod("ach"), check: byMethod("check") };
 }
 
 /**
@@ -1340,7 +1397,11 @@ export function vendorDecisions(c: Community) {
  * payments. Calendar year, not fiscal: the $600 line for a 1099 is measured
  * on the calendar. Lines waiting on review are held out, as everywhere.
  */
-export function vendorPaidThisYear(c: Community, vendor: Pick<Community["vendors"][number], "id" | "name">, asOf: string = c.asOf) {
+export function vendorPaidThisYear(
+  c: Community,
+  vendor: Pick<Community["vendors"][number], "id" | "name">,
+  asOf: string = c.asOf,
+) {
   const year = asOf.slice(0, 4);
   const name = vendor.name.trim().toLowerCase();
   const payoutIds = new Set(c.payouts.filter((p) => p.vendorId === vendor.id).map((p) => p.id));
@@ -1348,29 +1409,15 @@ export function vendorPaidThisYear(c: Community, vendor: Pick<Community["vendors
   for (const e of c.ledger) {
     if (e.amountCents >= 0 || e.status === "needs-review") continue;
     if (e.category === "Reserve transfer" || e.date.slice(0, 4) !== year || e.date > asOf) continue;
-    const theirs = e.payoutId ? payoutIds.has(e.payoutId) : e.counterparty.trim().toLowerCase() === name;
+    const theirs = e.payoutId
+      ? payoutIds.has(e.payoutId)
+      : e.counterparty.trim().toLowerCase() === name;
     if (theirs) paid -= e.amountCents;
   }
   return paid;
 }
 
-/** Vendors missing a W-9 or ACH setup, and those whose insurance certificate expires within 60 days. */
-export function vendorGaps(c: Community) {
-  return {
-    missingW9: c.vendors.filter((v) => !v.w9OnFile),
-    noAch: c.vendors.filter((v) => !v.achEnabled),
-    expiringCoi: c.vendors.filter(
-      (v) => v.coiExpires && daysFromToday(v.coiExpires) < 60 && daysFromToday(v.coiExpires) >= 0,
-    ),
-  };
-}
-
-export type CalendarKind =
-  | "meeting"
-  | "event"
-  | "ballot-opens"
-  | "ballot-closes"
-  | "deadline";
+type CalendarKind = "meeting" | "event" | "ballot-opens" | "ballot-closes" | "deadline";
 
 /** Everything dated that a resident might want on a calendar. */
 export function calendarEntries(c: Community) {
@@ -1528,9 +1575,7 @@ export function assessmentProgress(c: Community) {
       installmentsPaid: paidInstallments,
       installmentsLeft: Math.max(0, a.installments - paidInstallments),
       /** What one home still owes on it, on average. Buyers ask this. */
-      perHomeRemainingCents: c.homes.length
-        ? Math.round(remaining / c.homes.length)
-        : remaining,
+      perHomeRemainingCents: c.homes.length ? Math.round(remaining / c.homes.length) : remaining,
     };
   });
   return {
@@ -1641,7 +1686,7 @@ export function recordsGaps(c: Community) {
 /* -------------------------------------------------------------------------- */
 
 /** How long after a bill posts the dashboard keeps asking the board to send it. */
-export const UNSENT_BILL_DAYS = 7;
+const UNSENT_BILL_DAYS = 7;
 
 /**
  * "October dues posted" for a board that turned the automatic bill email
@@ -1664,7 +1709,8 @@ export function unsentDuesBill(c: Community): { label: string } | null {
   }
   // A bill posted after today cannot be waiting yet. The older helper clamps
   // at zero, so that case is its own check.
-  if (bill.postedOn > c.asOf || Math.max(0, daysBetween(bill.postedOn, c.asOf)) > UNSENT_BILL_DAYS) return null;
+  if (bill.postedOn > c.asOf || Math.max(0, daysBetween(bill.postedOn, c.asOf)) > UNSENT_BILL_DAYS)
+    return null;
   const sent = c.emailLog.some(
     (e) => e.category === "assessment" && !e.error && e.sentAt.slice(0, 10) >= bill.postedOn,
   );
@@ -1698,7 +1744,10 @@ export function reserveLine(c: Community): string | null {
   const { reserve } = cashPosition(c);
   const study = reserveSummary(c);
   if (reserve === 0 && !study.hasStudy) return null;
-  const pct = study.hasStudy && study.required > 0 ? ` \u00b7 ${Math.round(study.percentFunded * 100)}% funded` : "";
+  const pct =
+    study.hasStudy && study.required > 0
+      ? ` \u00b7 ${Math.round(study.percentFunded * 100)}% funded`
+      : "";
   return `Reserves ${money(reserve, { cents: false })}${pct}`;
 }
 
@@ -1719,7 +1768,7 @@ export function pastDueLine(c: Community): string {
 }
 
 /** A year's dues are on pace when owners have paid this much of what was billed so far. */
-export const DUES_PACE_TARGET = 0.95;
+const DUES_PACE_TARGET = 0.95;
 
 /**
  * Whether dues are coming in at the pace the bills call for.
@@ -1729,7 +1778,9 @@ export const DUES_PACE_TARGET = 0.95;
  * with a third billed and a third paid reads 100%. Null when nothing is
  * billed, because there is nothing to be on pace for.
  */
-export function duesPace(dues: Pick<ReturnType<typeof duesCollection>, "measurable" | "rate">): "on" | "behind" | null {
+export function duesPace(
+  dues: Pick<ReturnType<typeof duesCollection>, "measurable" | "rate">,
+): "on" | "behind" | null {
   if (!dues.measurable) return null;
   return dues.rate >= DUES_PACE_TARGET ? "on" : "behind";
 }
@@ -1744,7 +1795,9 @@ export function duesPaceLines(c: Community, year: number, asOf: string = c.asOf)
   const pace = duesPace(dues);
   if (pace) lines.push(pace === "on" ? "On pace" : "Behind pace");
   if (dues.thisMonth) {
-    lines.push(`${monthName(dues.thisMonth.month, "long")} bill posts on the ${ordinal(billDay(c))}`);
+    lines.push(
+      `${monthName(dues.thisMonth.month, "long")} bill posts on the ${ordinal(billDay(c))}`,
+    );
   }
   return lines;
 }
@@ -1806,9 +1859,13 @@ export function thisMonthLine(c: Community, asOf: string = c.asOf): string | nul
   const parts: string[] = [];
   if (row) {
     parts.push(`billed ${money(row.expectedCents, { cents: false })} on the ${ordinal(day)}`);
-    parts.push(`${money(row.collectedCents, { cents: false })} collected so far (${Math.round(row.rate * 100)}%)`);
+    parts.push(
+      `${money(row.collectedCents, { cents: false })} collected so far (${Math.round(row.rate * 100)}%)`,
+    );
   } else if (dues.thisMonth) {
-    parts.push(`the bill of ${money(dues.thisMonth.expectedCents, { cents: false })} posts on the ${ordinal(day)}`);
+    parts.push(
+      `the bill of ${money(dues.thisMonth.expectedCents, { cents: false })} posts on the ${ordinal(day)}`,
+    );
   } else {
     parts.push("no dues bill this month");
   }

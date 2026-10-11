@@ -3,7 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -73,13 +79,17 @@ describe("the board dashboard", () => {
   it("answers what is coming with the meeting's RSVPs and whether notice went out", () => {
     open();
     expect(screen.getByText("Next meeting")).toBeInTheDocument();
-    expect(screen.getByText(/(coming|No RSVPs yet) · (notice sent|Notice not sent)/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/(coming|No RSVPs yet) · (notice sent|Notice not sent)/),
+    ).toBeInTheDocument();
   });
 
   it("says the month in one sentence from the books", () => {
     open();
     expect(
-      screen.getByText(/^August: billed \$[\d,]+ on the 1st, \$[\d,]+ collected so far \(\d+%\), autopay covers \d+ homes, reminders go out on the 16th\.$/),
+      screen.getByText(
+        /^August: billed \$[\d,]+ on the 1st, \$[\d,]+ collected so far \(\d+%\), autopay covers \d+ homes, reminders go out on the 16th\.$/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -89,16 +99,31 @@ describe("the board dashboard", () => {
     const rows = screen
       .getAllByRole("link")
       .map((a) => a.textContent ?? "")
-      .filter((t) => /to confirm|to approve|asking to join|to answer|to recheck|to send notice for|overdue/.test(t));
+      .filter((t) =>
+        /to confirm|to approve|asking to join|to answer|to recheck|to send notice for|overdue/.test(
+          t,
+        ),
+      );
     expect(rows.length).toBeGreaterThan(0);
-    for (const gone of ["waiting on a signature", "action item", "waiting on an answer", "without notice to owners"]) {
+    for (const gone of [
+      "waiting on a signature",
+      "action item",
+      "waiting on an answer",
+      "without notice to owners",
+    ]) {
       expect(document.body.textContent).not.toContain(gone);
     }
   });
 
   it("links the transactions to confirm to the whole year, where the demo's waiting lines are", () => {
     open();
-    const row = screen.getAllByRole("link").find((a) => /transactions? to confirm/.test(a.textContent ?? ""));
-    if (row) expect(row).toHaveAttribute("href", "/board/money/transactions?status=needs-review&period=this-year");
+    const row = screen
+      .getAllByRole("link")
+      .find((a) => /transactions? to confirm/.test(a.textContent ?? ""));
+    if (row)
+      expect(row).toHaveAttribute(
+        "href",
+        "/board/money/transactions?status=needs-review&period=this-year",
+      );
   });
 });

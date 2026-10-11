@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type { Community } from "@/lib/data/community";
 import type { ChargeLine } from "@/lib/types";
-import { statementFor, statementPeriod, statementPeriodLabel, statementYearOf, statementYears } from "@/lib/statement";
+import {
+  statementFor,
+  statementPeriod,
+  statementPeriodLabel,
+  statementYearOf,
+  statementYears,
+} from "@/lib/statement";
 
-const line = (id: string, date: string, kind: ChargeLine["kind"], cents: number, label = "March assessment"): ChargeLine => ({
+const line = (
+  id: string,
+  date: string,
+  kind: ChargeLine["kind"],
+  cents: number,
+  label = "March assessment",
+): ChargeLine => ({
   id,
   date,
   label,
@@ -13,7 +25,11 @@ const line = (id: string, date: string, kind: ChargeLine["kind"], cents: number,
 });
 
 /** Newest first, as a loaded statement is stored. */
-function community(lines: ChargeLine[], fiscalYearStart = "01-01", history?: Community["history"]): Community {
+function community(
+  lines: ChargeLine[],
+  fiscalYearStart = "01-01",
+  history?: Community["history"],
+): Community {
   return {
     association: { fiscalYearStart },
     homeCharges: { h1: lines },
@@ -46,7 +62,10 @@ describe("statementFor", () => {
   });
 
   it("puts a charge before a payment on the same day", () => {
-    const same = [line("p", "2025-03-01", "payment", 10_000), line("c", "2025-03-01", "charge", 10_000)];
+    const same = [
+      line("p", "2025-03-01", "payment", 10_000),
+      line("c", "2025-03-01", "charge", 10_000),
+    ];
     same[0].balanceAfterCents = 0;
     const s = statementFor(community(same), "h1", 2025);
     expect(s.rows.map((r) => r.id)).toEqual(["c", "p"]);

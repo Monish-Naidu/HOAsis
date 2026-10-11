@@ -11,8 +11,6 @@
 
 import { MAX_EMAIL_LENGTH, isEmail } from "@/lib/input-checks";
 
-export { MAX_EMAIL_LENGTH };
-
 export type EmailCheck = { ok: true; email: string } | { ok: false; message: string };
 
 export function checkNewEmail(raw: string, current: string): EmailCheck {

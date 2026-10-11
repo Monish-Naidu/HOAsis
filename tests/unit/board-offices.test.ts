@@ -19,7 +19,12 @@ const accounts = [
 describe("boardOffices", () => {
   it("lists the four offices in order with who holds each and what it handles", () => {
     const offices = boardOffices(accounts);
-    expect(offices.map((o) => o.label)).toEqual(["President", "Vice President", "Treasurer", "Secretary"]);
+    expect(offices.map((o) => o.label)).toEqual([
+      "President",
+      "Vice President",
+      "Treasurer",
+      "Secretary",
+    ]);
     expect(offices.map((o) => o.holder)).toEqual(["Arya Mehr", null, "Dana Whitcomb", null]);
     expect(offices[0].handles).toBe("Anything, and the final say.");
     expect(offices[1].handles).toBe("Steps in when the President is away.");
@@ -28,7 +33,9 @@ describe("boardOffices", () => {
   });
 
   it("never lists a resident as holding an office", () => {
-    expect(boardOffices([{ name: "Owen Brady", role: "resident" }]).every((o) => o.holder === null)).toBe(true);
+    expect(
+      boardOffices([{ name: "Owen Brady", role: "resident" }]).every((o) => o.holder === null),
+    ).toBe(true);
   });
 
   it("words a choice with the holder, or says nobody holds it", () => {
@@ -65,7 +72,13 @@ describe("unanswered counts", () => {
       thread("secretary", "resident"),
       thread("treasurer", "resident"),
     ]);
-    expect(counts).toEqual({ board: 1, president: 0, "vice-president": 0, treasurer: 2, secretary: 1 });
+    expect(counts).toEqual({
+      board: 1,
+      president: 0,
+      "vice-president": 0,
+      treasurer: 2,
+      secretary: 1,
+    });
   });
 });
 
@@ -76,7 +89,9 @@ describe("addresses and signatures", () => {
   });
 
   it("signs with the name and office, or as the board", () => {
-    expect(boardSignature("Dana Whitcomb", "treasurer")).toBe("Dana Whitcomb, Treasurer, for the board");
+    expect(boardSignature("Dana Whitcomb", "treasurer")).toBe(
+      "Dana Whitcomb, Treasurer, for the board",
+    );
     expect(boardSignature("Dana Whitcomb", null)).toBe("Dana Whitcomb, for the board");
     expect(boardSignature(undefined, null)).toBe("The board");
   });
@@ -92,10 +107,26 @@ describe("who is emailed", () => {
     ...over,
   });
   const seats: OfficeSeat[] = [
-    seat({ full_name: "Arya", profile_id: "p1", role: "president", capabilities: ["communications"] }),
+    seat({
+      full_name: "Arya",
+      profile_id: "p1",
+      role: "president",
+      capabilities: ["communications"],
+    }),
     seat({ full_name: "Dana", profile_id: "p2", role: "treasurer", capabilities: ["finances"] }),
-    seat({ full_name: "Sofia", profile_id: "p3", role: "secretary", capabilities: ["communications"] }),
-    seat({ full_name: "Vic", profile_id: null, role: "vice-president", invited_email: null, capabilities: [] }),
+    seat({
+      full_name: "Sofia",
+      profile_id: "p3",
+      role: "secretary",
+      capabilities: ["communications"],
+    }),
+    seat({
+      full_name: "Vic",
+      profile_id: null,
+      role: "vice-president",
+      invited_email: null,
+      capabilities: [],
+    }),
   ];
   const emails = new Map([
     ["p1", "arya@example.com"],

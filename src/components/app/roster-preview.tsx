@@ -55,7 +55,11 @@ export function RosterPreview({
       setParsed({
         rows: [],
         columns: {},
-        problems: [error instanceof Error ? error.message : "That file could not be read. Check that it is a CSV and try again."],
+        problems: [
+          error instanceof Error
+            ? error.message
+            : "That file could not be read. Check that it is a CSV and try again.",
+        ],
       });
     } finally {
       setReading(false);
@@ -97,9 +101,10 @@ export function RosterPreview({
         </button>
       </div>
       <p className="text-footnote leading-relaxed text-fg-muted">
-        Columns can be in any order and most names work: Name, Email, Unit or Lot, Address,
-        Phone{showBalances ? ", Opening balance" : ""}{showDues ? ", Dues (what that home pays, if not the usual)" : ""}. Save as CSV from Excel or Google Sheets.
-        Only the home is required.
+        Columns can be in any order and most names work: Name, Email, Unit or Lot, Address, Phone
+        {showBalances ? ", Opening balance" : ""}
+        {showDues ? ", Dues (what that home pays, if not the usual)" : ""}. Save as CSV from Excel
+        or Google Sheets. Only the home is required.
       </p>
 
       {parsed && summary ? (
@@ -121,9 +126,14 @@ export function RosterPreview({
           {parsed.rows.length ? (
             <>
               <p className="text-body text-fg">
-                <span className="font-semibold">{fileName}</span>: {pluralize(parsed.rows.length, "row")}.{" "}
-                {summary.creating.length ? `${pluralize(summary.creating.length, `new ${homeWord}`)}` : `no new ${homeWord}s`}
-                {summary.updating.length ? `, ${summary.updating.length} already added (details filled in)` : ""}
+                <span className="font-semibold">{fileName}</span>:{" "}
+                {pluralize(parsed.rows.length, "row")}.{" "}
+                {summary.creating.length
+                  ? `${pluralize(summary.creating.length, `new ${homeWord}`)}`
+                  : `no new ${homeWord}s`}
+                {summary.updating.length
+                  ? `, ${summary.updating.length} already added (details filled in)`
+                  : ""}
                 {summary.withEmail.length ? `, ${summary.withEmail.length} with an email` : ""}
                 {showBalances && summary.withBalance.length
                   ? `, ${money(summary.owedCents)} owed across ${summary.withBalance.length}`
@@ -144,11 +154,17 @@ export function RosterPreview({
                   <thead className="sticky top-0 bg-surface-2 text-left text-fg-muted">
                     <tr>
                       <th className="px-3 py-2 font-semibold">Line</th>
-                      <th className="px-3 py-2 font-semibold">{homeWord[0].toUpperCase() + homeWord.slice(1)}</th>
+                      <th className="px-3 py-2 font-semibold">
+                        {homeWord[0].toUpperCase() + homeWord.slice(1)}
+                      </th>
                       <th className="px-3 py-2 font-semibold">Owner</th>
                       <th className="px-3 py-2 font-semibold">Email</th>
-                      {showBalances ? <th className="px-3 py-2 text-right font-semibold">Owes</th> : null}
-                      {showDues ? <th className="px-3 py-2 text-right font-semibold">Dues</th> : null}
+                      {showBalances ? (
+                        <th className="px-3 py-2 text-right font-semibold">Owes</th>
+                      ) : null}
+                      {showDues ? (
+                        <th className="px-3 py-2 text-right font-semibold">Dues</th>
+                      ) : null}
                       <th className="px-3 py-2 font-semibold">Result</th>
                     </tr>
                   </thead>
@@ -165,11 +181,14 @@ export function RosterPreview({
                               <span className="block text-fg-muted">{row.address}</span>
                             ) : null}
                           </td>
-                          <td className="px-3 py-2 text-fg">{row.name || <span className="text-fg-subtle">No owner</span>}</td>
+                          <td className="px-3 py-2 text-fg">
+                            {row.name || <span className="text-fg-subtle">No owner</span>}
+                          </td>
                           <td className="px-3 py-2 text-fg-muted">{row.email || ""}</td>
                           {showBalances ? (
                             <td className="tnum px-3 py-2 text-right text-fg">
-                              {row.openingBalanceCents !== undefined && row.openingBalanceCents !== 0
+                              {row.openingBalanceCents !== undefined &&
+                              row.openingBalanceCents !== 0
                                 ? money(row.openingBalanceCents)
                                 : ""}
                             </td>
@@ -211,7 +230,8 @@ export function RosterPreview({
                 </Button>
                 {summary.problems.length ? (
                   <span className="text-footnote text-fg-muted">
-                    Fix the {pluralize(summary.problems.length, "row")} in the file and pick it again, or add those homes by hand later.
+                    Fix the {pluralize(summary.problems.length, "row")} in the file and pick it
+                    again, or add those homes by hand later.
                   </span>
                 ) : null}
               </div>

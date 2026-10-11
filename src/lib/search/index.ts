@@ -60,5 +60,7 @@ export function groupHits<T extends { section: string }>(hits: T[], perGroup = 5
     }
     if (group.hits.length < perGroup) group.hits.push(hit);
   }
-  return groups.sort((a, b) => Number(b.section === "Shortcuts") - Number(a.section === "Shortcuts"));
+  return groups.sort(
+    (a, b) => Number(b.section === "Shortcuts") - Number(a.section === "Shortcuts"),
+  );
 }

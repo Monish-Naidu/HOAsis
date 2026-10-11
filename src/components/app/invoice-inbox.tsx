@@ -45,7 +45,12 @@ export function InvoiceInbox() {
       <CardHeader title="Waiting on a signature" subtitle="Payments that need a second approval" />
       <ul>
         {toSign.map((payout, index) => (
-          <SignRow key={payout.id} payout={payout} primary={index === 0} onApprove={() => approve(payout)} />
+          <SignRow
+            key={payout.id}
+            payout={payout}
+            primary={index === 0}
+            onApprove={() => approve(payout)}
+          />
         ))}
       </ul>
     </Card>

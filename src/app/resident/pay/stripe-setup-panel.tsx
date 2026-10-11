@@ -43,7 +43,8 @@ export function StripeSetupPanel({
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error ?? "The form did not open. Try again.");
-        if (!cancelled) setSetup({ clientSecret: data.clientSecret, account: data.stripeAccountId });
+        if (!cancelled)
+          setSetup({ clientSecret: data.clientSecret, account: data.stripeAccountId });
       } catch (error) {
         if (!cancelled) {
           setProblem(error instanceof Error ? error.message : "The form did not open. Try again.");
@@ -136,7 +137,9 @@ function SetupForm({
     });
     if (result.error) {
       setBusy(false);
-      setProblem(result.error.message ?? "Your bank account or card could not be saved. Try again.");
+      setProblem(
+        result.error.message ?? "Your bank account or card could not be saved. Try again.",
+      );
       return;
     }
     const intent = result.setupIntent;
@@ -178,8 +181,8 @@ function SetupForm({
       <Card className="p-4">
         <p className="text-body font-medium text-fg">One more step: confirm your bank</p>
         <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
-          We will send two small deposits to that account in a day or two. Enter the amounts and
-          the account is ready. Until then it shows here as verifying.
+          We will send two small deposits to that account in a day or two. Enter the amounts and the
+          account is ready. Until then it shows here as verifying.
         </p>
         <div className="mt-3 flex gap-2">
           {verifying.url ? (

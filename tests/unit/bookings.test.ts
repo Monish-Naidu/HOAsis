@@ -72,7 +72,10 @@ describe("booking rules", () => {
       [booking({ unit: "7", status: "declined" })],
       "7",
     );
-    expect(slots.every((s) => s.allowed), "a declined booking still blocked the day").toBe(true);
+    expect(
+      slots.every((s) => s.allowed),
+      "a declined booking still blocked the day",
+    ).toBe(true);
   });
 
   it("keeps an older amenity's maxHours rather than overriding it", () => {

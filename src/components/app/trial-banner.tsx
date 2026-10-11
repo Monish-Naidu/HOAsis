@@ -46,11 +46,7 @@ export function TrialBanner() {
   const price = `${money(monthlyFor(homes), { cents: false })} a month for ${homes} ${homes === 1 ? "home" : "homes"}`;
 
   const action = (
-    <ButtonLink
-      href="/board/settings#billing"
-      variant="secondary"
-      size="sm"
-    >
+    <ButtonLink href="/board/settings#billing" variant="secondary" size="sm">
       Add a card
       <ArrowRight className="size-3.5" />
     </ButtonLink>
@@ -62,7 +58,10 @@ export function TrialBanner() {
         <p className="mb-5 flex items-center gap-2 text-footnote text-fg-muted">
           <CalendarClock className="size-3.5" />
           Free until {formatDate(phase.endsOn, "long")}, {phase.daysLeft} days left. Then {price}.{" "}
-          <Link href="/board/settings#billing" className="font-medium text-fg underline underline-offset-2">
+          <Link
+            href="/board/settings#billing"
+            className="font-medium text-fg underline underline-offset-2"
+          >
             Add a card
           </Link>
         </p>
@@ -101,7 +100,9 @@ export function TrialBanner() {
   }
 
   if (phase.phase === "past_due") {
-    const failed = phase.since ? `Your card failed on ${formatDate(phase.since, "long")}. ` : "Your card failed. ";
+    const failed = phase.since
+      ? `Your card failed on ${formatDate(phase.since, "long")}. `
+      : "Your card failed. ";
     return (
       <Callout
         tone="danger"

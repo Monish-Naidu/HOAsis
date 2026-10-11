@@ -34,8 +34,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
   const votes = ballot.options.reduce((t, o) => t + o.votes, 0);
   const cast = ballot.homesVoted ?? Math.round(votes / seats);
   const showResults = closed || settings.showLiveVoteResults;
-  const changed =
-    draft.length !== marked.length || draft.some((id) => !marked.includes(id));
+  const changed = draft.length !== marked.length || draft.some((id) => !marked.includes(id));
 
   return (
     <Card className="overflow-hidden">
@@ -209,7 +208,9 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
           })}
         </div>
       ) : closed && cast === 0 ? (
-        <p className="border-t border-border px-4 py-2.5 text-footnote text-fg-muted">Nobody voted.</p>
+        <p className="border-t border-border px-4 py-2.5 text-footnote text-fg-muted">
+          Nobody voted.
+        </p>
       ) : null}
     </Card>
   );

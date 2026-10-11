@@ -25,7 +25,9 @@ import { formatDate, money, todayIsoDate } from "@/lib/utils";
 export function useAutopayFailures(): AutopayFailure[] {
   const { community, isRemote } = useAppState();
   const associationId = isRemote ? community.association.id : null;
-  const [loaded, setLoaded] = useState<{ associationId: string; rows: AutopayFailure[] } | null>(null);
+  const [loaded, setLoaded] = useState<{ associationId: string; rows: AutopayFailure[] } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!associationId) return;
@@ -81,7 +83,10 @@ export function AutopayFailuresCard({ failures }: { failures: AutopayFailure[] }
         {shown.map((f) => {
           const home = homes.get(f.unitId);
           return (
-            <li key={`${f.unitId}-${f.month}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
+            <li
+              key={`${f.unitId}-${f.month}`}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3"
+            >
               <div className="min-w-[12rem] flex-1">
                 <p className="truncate text-body font-medium text-fg">
                   {home ? placeLabel(home.unit) : "A home"}

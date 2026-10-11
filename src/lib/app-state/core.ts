@@ -5,8 +5,20 @@ import { CircuitBreaker } from "@/lib/core/circuit-breaker";
 import { todayIsoDate } from "@/lib/utils";
 import { newId } from "@/lib/core/ids";
 import { PersistedStore, renameLegacyFields, type Store } from "@/lib/core/store";
-import { NOTHING_CHANGED, remoteSnapshot, reportRemoteError, type RemoteState } from "@/lib/data/remote-store";
-import { isAssociation, isBudgetLines, isChargeLedger, isCommunitySettings, isRecordArray, isSession } from "@/lib/core/guards";
+import {
+  NOTHING_CHANGED,
+  remoteSnapshot,
+  reportRemoteError,
+  type RemoteState,
+} from "@/lib/data/remote-store";
+import {
+  isAssociation,
+  isBudgetLines,
+  isChargeLedger,
+  isCommunitySettings,
+  isRecordArray,
+  isSession,
+} from "@/lib/core/guards";
 import type { Account, Activity, Capability } from "@/lib/types";
 import { meetingJoin } from "@/lib/meetings/video";
 import type { SendOutcome } from "@/lib/email/plain-error";
@@ -39,7 +51,7 @@ export function latest(rc: Community): Community {
 export type NoticeKind = "announcement" | "meeting" | "ballot" | "letter" | "message" | "request";
 
 /** What a send that fell short is called in its toast. */
-export const NOTICE_LABEL: Record<NoticeKind, string> = {
+const NOTICE_LABEL: Record<NoticeKind, string> = {
   announcement: "Emailing the announcement",
   meeting: "Emailing the meeting notice",
   ballot: "Emailing the ballot notice",
@@ -67,16 +79,19 @@ const SAVED_WHERE: Record<NoticeKind, string> = {
  * that leaves as many as the one before is not carrying on, and asking it
  * again could only mail the same homes twice.
  */
-export const NOTICE_CALLS = 12;
+const NOTICE_CALLS = 12;
 
 /** A count out of the server's answer, or zero when it sent none. */
-export const tally = (value: unknown) => (typeof value === "number" && value > 0 ? value : 0);
+const tally = (value: unknown) => (typeof value === "number" && value > 0 ? value : 0);
 
 /** `NOTHING_CHANGED` as its own sentence, for a screen that shows it bare. */
 export const NOT_CHANGED = `${NOTHING_CHANGED[0].toUpperCase()}${NOTHING_CHANGED.slice(1)}`;
 
 /** The notice's line on how to join: one video link, a number only when the board typed one. */
-export function joinLine(m: { id: string; dialIn?: string; passcode?: string }, associationId: string): string {
+export function joinLine(
+  m: { id: string; dialIn?: string; passcode?: string },
+  associationId: string,
+): string {
   const join = meetingJoin(m, associationId);
   const phone = join.dialIn ? `, or dial ${join.dialIn}` : "";
   const code = join.passcode ? ` (passcode ${join.passcode})` : "";
@@ -134,7 +149,14 @@ export async function emailNotice(
   let remaining = 0;
   let left = Infinity;
   let reason: string | undefined;
-  const outcome = (answered: boolean): SendOutcome => ({ answered, sent, failed, already, remaining, reason });
+  const outcome = (answered: boolean): SendOutcome => ({
+    answered,
+    sent,
+    failed,
+    already,
+    remaining,
+    reason,
+  });
   try {
     for (let call = 0; call < NOTICE_CALLS; call++) {
       const response = await fetch("/api/email/notify", {
@@ -154,9 +176,11 @@ export async function emailNotice(
         reason = answer.errors[0];
       }
       if (!response.ok) {
-        const why = typeof answer.error === "string" && answer.error ? answer.error : "it could not be sent";
+        const why =
+          typeof answer.error === "string" && answer.error ? answer.error : "it could not be sent";
         reason ??= why;
-        if (!quiet) reportRemoteError(`${label}: ${why}. It is saved here, but the email did not go`);
+        if (!quiet)
+          reportRemoteError(`${label}: ${why}. It is saved here, but the email did not go`);
         // The route answered, so the caller knows it ran; nothing went.
         return outcome(true);
       }
@@ -220,7 +244,7 @@ export const NO_SESSION: Session = { accountId: null, view: "resident" };
  * One breaker for every store. A browser that refuses site data should trip
  * the circuit once, not once per slice per community.
  */
-export const storageBreaker = new CircuitBreaker("localStorage", {
+const storageBreaker = new CircuitBreaker("localStorage", {
   failureThreshold: 3,
   cooldownMs: 30_000,
 });
@@ -241,11 +265,10 @@ export const homeStore = new PersistedStore<string>("hoasis-home", "", {
   validate: (v): v is string => typeof v === "string",
 });
 
-export const communityStore = new PersistedStore<string>(
-  "hoasis-community",
-  DEFAULT_COMMUNITY_ID,
-  { breaker: storageBreaker, validate: (v): v is string => typeof v === "string" },
-);
+export const communityStore = new PersistedStore<string>("hoasis-community", DEFAULT_COMMUNITY_ID, {
+  breaker: storageBreaker,
+  validate: (v): v is string => typeof v === "string",
+});
 
 /**
  * Photographs owners add of their own homes, keyed by owner id.
@@ -324,7 +347,7 @@ export type MutableSlice = (typeof MUTABLE_SLICES)[number];
  * cache is what keeps `subscribe` and `getSnapshot` referentially stable, which
  * useSyncExternalStore requires.
  */
-export const registry = new Map<string, PersistedStore<never>>();
+const registry = new Map<string, PersistedStore<never>>();
 
 /**
  * Bump when the demo fixtures change in a way a browser's remembered copy
@@ -333,14 +356,17 @@ export const registry = new Map<string, PersistedStore<never>>();
  * fixture instead of showing last month's name over this month's data.
  * Session, theme and the chosen community are keyed separately and survive.
  */
-export const DEMO_FIXTURE_VERSION = 2;
+const DEMO_FIXTURE_VERSION = 2;
 
 /**
  * The slices that were renamed after browsers had already stored them. The
  * storage key keeps the old name: renaming it would drop every demo browser's
  * remembered state.
  */
-const STORED_AS: Partial<Record<MutableSlice, string>> = { homes: "owners", homeCharges: "ownerCharges" };
+const STORED_AS: Partial<Record<MutableSlice, string>> = {
+  homes: "owners",
+  homeCharges: "ownerCharges",
+};
 
 export function sliceStore<K extends MutableSlice>(
   communityId: string,
@@ -358,12 +384,12 @@ export function sliceStore<K extends MutableSlice>(
       slice === "association"
         ? (isAssociation as (v: unknown) => v is Community[K])
         : slice === "settings"
-        ? (isCommunitySettings as (v: unknown) => v is Community[K])
-        : slice === "homeCharges"
-          ? (isChargeLedger as (v: unknown) => v is Community[K])
-          : slice === "budget"
-            ? (isBudgetLines as (v: unknown) => v is Community[K])
-          : (isRecordArray<{ id: string }>() as unknown as (v: unknown) => v is Community[K]),
+          ? (isCommunitySettings as (v: unknown) => v is Community[K])
+          : slice === "homeCharges"
+            ? (isChargeLedger as (v: unknown) => v is Community[K])
+            : slice === "budget"
+              ? (isBudgetLines as (v: unknown) => v is Community[K])
+              : (isRecordArray<{ id: string }>() as unknown as (v: unknown) => v is Community[K]),
   });
   registry.set(key, store as unknown as PersistedStore<never>);
   return store;
@@ -419,7 +445,7 @@ export function voteReceipt(ballotId: string, optionId: string): string {
  * Separate from the slice registry because it is not part of a community's
  * data, it is a note about how far through setup somebody got.
  */
-export const dismissRegistry = new Map<string, PersistedStore<string[]>>();
+const dismissRegistry = new Map<string, PersistedStore<string[]>>();
 
 export function dismissStore(communityId: string): PersistedStore<string[]> {
   const key = `hoasis:${communityId}:setup-skipped`;
@@ -427,8 +453,7 @@ export function dismissStore(communityId: string): PersistedStore<string[]> {
   if (existing) return existing;
   const store = new PersistedStore<string[]>(key, [], {
     breaker: storageBreaker,
-    validate: (v): v is string[] =>
-      Array.isArray(v) && v.every((x) => typeof x === "string"),
+    validate: (v): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string"),
   });
   dismissRegistry.set(key, store);
   return store;
@@ -439,7 +464,7 @@ export function dismissStore(communityId: string): PersistedStore<string[]> {
  * database, kept here in the browser so the demo's Settings, Activity shows
  * the same lines for the same writes. Words come from lib/activity.ts.
  */
-export const activityRegistry = new Map<string, PersistedStore<Activity[]>>();
+const activityRegistry = new Map<string, PersistedStore<Activity[]>>();
 
 export function demoActivityStore(communityId: string): PersistedStore<Activity[]> {
   const key = `hoasis:${communityId}:v${DEMO_FIXTURE_VERSION}:activity`;
@@ -469,7 +494,15 @@ export function logDemoActivity(
   const pad = (n: number) => String(n).padStart(2, "0");
   const at = `${todayIsoDate()}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   demoActivityStore(communityId).update((all) => [
-    { id: newId(), at, actorId: actor?.id, actorName: actor?.name ?? "The board", subjectKind, summary, details },
+    {
+      id: newId(),
+      at,
+      actorId: actor?.id,
+      actorName: actor?.name ?? "The board",
+      subjectKind,
+      summary,
+      details,
+    },
     ...all,
   ]);
 }

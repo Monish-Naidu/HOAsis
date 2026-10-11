@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   if (body.confirm !== "DELETE EVERYTHING") {
     return NextResponse.json(
-      { error: 'Type DELETE EVERYTHING exactly to confirm.' },
+      { error: "Type DELETE EVERYTHING exactly to confirm." },
       { status: 400 },
     );
   }
@@ -121,9 +121,7 @@ export async function POST(request: NextRequest) {
   for (const folder of folders ?? []) {
     const { data: files } = await admin.storage.from("community").list(folder.name);
     if (files?.length) {
-      await admin.storage
-        .from("community")
-        .remove(files.map((f) => `${folder.name}/${f.name}`));
+      await admin.storage.from("community").remove(files.map((f) => `${folder.name}/${f.name}`));
     }
   }
 

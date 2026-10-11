@@ -20,10 +20,7 @@ import { useAppState } from "./provider";
 export function useCurrentHome(): Home | null {
   const { account, community } = useAppState();
   // Indexed per community, so a lookup stays constant time as either grows.
-  const index = useMemo(
-    () => new Map(community.homes.map((home) => [home.id, home])),
-    [community],
-  );
+  const index = useMemo(() => new Map(community.homes.map((home) => [home.id, home])), [community]);
   return useMemo(() => (account ? (index.get(account.homeId) ?? null) : null), [account, index]);
 }
 
@@ -106,8 +103,7 @@ export function useVisiblePosts(): ForumPost[] {
 export function usePendingPosts(): ForumPost[] {
   const { posts } = useAppState();
   return useMemo(
-    () =>
-      posts.filter((p) => p.status === "pending").sort((a, b) => (a.at < b.at ? -1 : 1)),
+    () => posts.filter((p) => p.status === "pending").sort((a, b) => (a.at < b.at ? -1 : 1)),
     [posts],
   );
 }
@@ -140,10 +136,7 @@ export function useReconciliation() {
 /** Payouts still short of the signatures they need. */
 export function usePendingApprovals() {
   const { payouts } = useAppState();
-  return useMemo(
-    () => payouts.filter((p) => p.approvals.length < p.approvalsRequired),
-    [payouts],
-  );
+  return useMemo(() => payouts.filter((p) => p.approvals.length < p.approvalsRequired), [payouts]);
 }
 
 export function useUnreadThreadCount() {
@@ -194,10 +187,7 @@ export function useAssistantContext() {
           .filter((a) => a.kind !== "operating")
           .reduce((t, a) => t + a.apy * a.balanceCents, 0) / reserveBalance
       : 0;
-    const required = community.reserveComponents.reduce(
-      (t, c) => t + c.replacementCostCents,
-      0,
-    );
+    const required = community.reserveComponents.reduce((t, c) => t + c.replacementCostCents, 0);
     const funded = community.reserveComponents.reduce((t, c) => t + c.fundedCents, 0);
 
     return {
@@ -253,7 +243,11 @@ export function useAssistantContext() {
       ballots: community.ballots
         // A ballot past its closing date is closed, pressed or not.
         .filter((b) => b.audience === "owners" && ballotPhase(b) === "open")
-        .map((b) => ({ title: b.title, closesDate: b.closesDate, voted: Boolean(b.myVoteOptionId) })),
+        .map((b) => ({
+          title: b.title,
+          closesDate: b.closesDate,
+          voted: Boolean(b.myVoteOptionId),
+        })),
       requests: requests
         .filter((r) => r.homeId === home?.id)
         .map((r) => ({

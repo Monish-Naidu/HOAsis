@@ -14,25 +14,25 @@ network: the `fetch` calls only run when a remote community is loaded.
 
 ## What sends, remote mode
 
-| Moment (where the UI says it went) | Before 2026-09-25 | Now | Route | `email_log` category | Opt out |
-| --- | --- | --- | --- | --- | --- |
-| Dues run, "Send" on Finances (`DuesMailer`) | Emailed | Emailed | `POST /api/email/send` | `assessment` / `delinquency` | No |
-| Dues letters per rung, "Send reminders" (`RemindersComposer`) and "Start from the letter" on Homeowners | Thread only, not emailed | Emailed to that home | `POST /api/email/notify` kind `letter` | `delinquency` | No |
-| Note to one household from Homeowners ("Sent by email to ...") | Thread only | Emailed | `notify` kind `message` | `message` | Yes |
-| Board reply on a Messages thread ("Reply sent to ...") | Thread only | Emailed to the thread's home (`letter` if the thread is Billing) | `notify` kind `message` / `letter` | `message` / `delinquency` | Yes / No |
-| Announcement posted (Communications) | Home screen only | Emailed to every home | `notify` kind `announcement` | `community` | Yes |
-| Meeting "Send notice" ("Notice sent ...") | Announcement + date recorded, no email | Emailed to every home, statutory | `notify` kind `meeting` | `meeting` | No |
-| Ballot opened to owners (New ballot) | Nothing | Emailed to every home, statutory | `notify` kind `ballot` | `ballot` | No |
-| Request approved / denied / marked fixed | Nothing | Emailed to the home that filed it | `notify` kind `request` | `request` | Yes |
-| Invite a household, "Email invite" / "Email sign-in link" | Emailed | Emailed | `POST /api/email/invite` kind `invite` | `invite` | Yes |
-| Join request approved ("you're in") | Emailed | Emailed | `/api/email/invite` kind `welcome` | `invite` | Yes |
-| Sign up confirmation | Emailed | Emailed | `POST /api/auth/signup` | not logged (no association yet) | n/a |
-| Autopay receipt / decline (cron) | Emailed | Emailed | `/api/autopay/run` via `src/lib/email/autopay.ts` | `assessment` | No |
-| Trial notices to the President (cron) | Emailed | Emailed | `/api/billing/sweep` via `src/lib/email/trial.ts` | `billing` | No |
-| Daily dues cron (`/api/assessments/run`) | Bills, does not email | Unchanged: the board presses Send on Finances | | | |
-| Violation "Send notice" (Notices) | Portal + print only | Unchanged, on purpose: the delivery panel says these go on paper | | | |
-| Amendment "Send to owners" (Governing documents) | Local state only, no row | Unchanged: nothing is persisted remotely yet | | | |
-| Owner writes to the board / owner reply | Thread, unread badge for the board | Unchanged: the board is not emailed | | | |
+| Moment (where the UI says it went)                                                                      | Before 2026-09-25                      | Now                                                              | Route                                             | `email_log` category            | Opt out  |
+| ------------------------------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------- | ------------------------------- | -------- |
+| Dues run, "Send" on Finances (`DuesMailer`)                                                             | Emailed                                | Emailed                                                          | `POST /api/email/send`                            | `assessment` / `delinquency`    | No       |
+| Dues letters per rung, "Send reminders" (`RemindersComposer`) and "Start from the letter" on Homeowners | Thread only, not emailed               | Emailed to that home                                             | `POST /api/email/notify` kind `letter`            | `delinquency`                   | No       |
+| Note to one household from Homeowners ("Sent by email to ...")                                          | Thread only                            | Emailed                                                          | `notify` kind `message`                           | `message`                       | Yes      |
+| Board reply on a Messages thread ("Reply sent to ...")                                                  | Thread only                            | Emailed to the thread's home (`letter` if the thread is Billing) | `notify` kind `message` / `letter`                | `message` / `delinquency`       | Yes / No |
+| Announcement posted (Communications)                                                                    | Home screen only                       | Emailed to every home                                            | `notify` kind `announcement`                      | `community`                     | Yes      |
+| Meeting "Send notice" ("Notice sent ...")                                                               | Announcement + date recorded, no email | Emailed to every home, statutory                                 | `notify` kind `meeting`                           | `meeting`                       | No       |
+| Ballot opened to owners (New ballot)                                                                    | Nothing                                | Emailed to every home, statutory                                 | `notify` kind `ballot`                            | `ballot`                        | No       |
+| Request approved / denied / marked fixed                                                                | Nothing                                | Emailed to the home that filed it                                | `notify` kind `request`                           | `request`                       | Yes      |
+| Invite a household, "Email invite" / "Email sign-in link"                                               | Emailed                                | Emailed                                                          | `POST /api/email/invite` kind `invite`            | `invite`                        | Yes      |
+| Join request approved ("you're in")                                                                     | Emailed                                | Emailed                                                          | `/api/email/invite` kind `welcome`                | `invite`                        | Yes      |
+| Sign up confirmation                                                                                    | Emailed                                | Emailed                                                          | `POST /api/auth/signup`                           | not logged (no association yet) | n/a      |
+| Autopay receipt / decline (cron)                                                                        | Emailed                                | Emailed                                                          | `/api/autopay/run` via `src/lib/email/autopay.ts` | `assessment`                    | No       |
+| Trial notices to the President (cron)                                                                   | Emailed                                | Emailed                                                          | `/api/billing/sweep` via `src/lib/email/trial.ts` | `billing`                       | No       |
+| Daily dues cron (`/api/assessments/run`)                                                                | Bills, does not email                  | Unchanged: the board presses Send on Finances                    |                                                   |                                 |          |
+| Violation "Send notice" (Notices)                                                                       | Portal + print only                    | Unchanged, on purpose: the delivery panel says these go on paper |                                                   |                                 |          |
+| Amendment "Send to owners" (Governing documents)                                                        | Local state only, no row               | Unchanged: nothing is persisted remotely yet                     |                                                   |                                 |          |
+| Owner writes to the board / owner reply                                                                 | Thread, unread badge for the board     | Unchanged: the board is not emailed                              |                                                   |                                 |          |
 
 The new route (`src/app/api/email/notify/route.ts`) follows the dues route:
 the caller's own session answers `has_capability` (communications; finances
@@ -76,18 +76,18 @@ so the domain has to be verified by hand.
    them. The values below are what Resend issues for a `send` subdomain;
    copy the exact DKIM value from the dashboard, it is unique to the account.
 
-   | Type | Name | Value | Purpose |
-   | --- | --- | --- | --- |
-   | MX | `send` | `feedback-smtp.us-east-1.amazonses.com`, priority 10 | Return path for bounces |
-   | TXT | `send` | `v=spf1 include:amazonses.com ~all` | SPF for the return path |
-   | TXT | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQ...` (from the dashboard) | DKIM |
+   | Type | Name                | Value                                                              | Purpose                 |
+   | ---- | ------------------- | ------------------------------------------------------------------ | ----------------------- |
+   | MX   | `send`              | `feedback-smtp.us-east-1.amazonses.com`, priority 10               | Return path for bounces |
+   | TXT  | `send`              | `v=spf1 include:amazonses.com ~all`                                | SPF for the return path |
+   | TXT  | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQ...` (from the dashboard) | DKIM                    |
 
    Optional, recommended once the above verifies: a DMARC record so Gmail
    stops treating the domain as unknown.
 
-   | Type | Name | Value |
-   | --- | --- | --- |
-   | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:monishnaidu18@gmail.com` |
+   | Type | Name     | Value                                                  |
+   | ---- | -------- | ------------------------------------------------------ |
+   | TXT  | `_dmarc` | `v=DMARC1; p=none; rua=mailto:monishnaidu18@gmail.com` |
 
 3. Back in Resend press Verify. It usually clears within minutes at
    Cloudflare; up to 72 hours worst case.

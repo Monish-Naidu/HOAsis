@@ -43,7 +43,7 @@ if (!response.ok) {
   if (String(body.message ?? "").includes("verify a domain")) {
     console.error(
       "\nThe shared resend.dev sender only reaches the Resend account owner.\n" +
-      "Either send to that address, or verify a domain and set EMAIL_FROM.",
+        "Either send to that address, or verify a domain and set EMAIL_FROM.",
     );
   }
   process.exit(1);

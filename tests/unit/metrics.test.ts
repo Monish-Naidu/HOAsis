@@ -74,7 +74,9 @@ describe("compareYears", () => {
   it("keeps reserve transfers out of income and spend, and counts them once", () => {
     const s = yearSummary(c, 2024);
     const operatingSide = c.ledger
-      .filter((e) => e.category === "Reserve transfer" && e.amountCents < 0 && e.date.startsWith("2024"))
+      .filter(
+        (e) => e.category === "Reserve transfer" && e.amountCents < 0 && e.date.startsWith("2024"),
+      )
       .reduce((t, e) => t - e.amountCents, 0);
     expect(s.reserveCents).toBe(operatingSide);
     expect(s.reserveCents).toBeGreaterThan(0);
@@ -138,7 +140,9 @@ describe("agingBuckets", () => {
 describe("duesCollection", () => {
   it("rates only months that have transactions, against units times dues", () => {
     const d = duesCollection(mehrMeadows, 2026);
-    expect(d.expectedCents).toBe(mehrMeadows.association.unitCount * mehrMeadows.association.duesCents);
+    expect(d.expectedCents).toBe(
+      mehrMeadows.association.unitCount * mehrMeadows.association.duesCents,
+    );
     expect(d.months).toHaveLength(8);
     expect(d.rate).toBeGreaterThan(0.85);
     expect(d.rate).toBeLessThanOrEqual(1);
@@ -162,7 +166,16 @@ describe("duesCollection, gross of fees", () => {
     const homeCharges = Object.fromEntries(
       homes.map((o) => [
         o.id,
-        [{ id: `p-${o.id}`, date: "2026-03-02", label: "Card payment", kind: "payment" as const, amountCents: -dues, balanceAfterCents: 0 }],
+        [
+          {
+            id: `p-${o.id}`,
+            date: "2026-03-02",
+            label: "Card payment",
+            kind: "payment" as const,
+            amountCents: -dues,
+            balanceAfterCents: 0,
+          },
+        ],
       ]),
     );
     const c = {
@@ -181,7 +194,10 @@ describe("duesCollection, gross of fees", () => {
 
 /** A bare association for the dues tests: so many homes, each at one amount. */
 function billing(
-  patch: Pick<Community["association"], "unitCount" | "duesCents" | "duesCadence" | "fiscalYearStart">,
+  patch: Pick<
+    Community["association"],
+    "unitCount" | "duesCents" | "duesCadence" | "fiscalYearStart"
+  >,
   asOf: string,
   lines: [date: string, category: Community["ledger"][number]["category"], amountCents: number][],
 ): Community {
@@ -370,21 +386,60 @@ describe("a bill from last year still being paid", () => {
 });
 
 describe("lines waiting on review", () => {
-  const base = { accountId: "acct-operating", counterparty: "Ace Gate & Access", status: "cleared" as const };
+  const base = {
+    accountId: "acct-operating",
+    counterparty: "Ace Gate & Access",
+    status: "cleared" as const,
+  };
   const c: Community = {
     ...mehrMeadows,
     asOf: "2026-08-20",
     homeCharges: {},
     ledger: [
-      { ...base, id: "dep", date: "2026-08-12", description: "Deposit", category: "Assessments", amountCents: 57_000, status: "needs-review" },
-      { ...base, id: "gate", date: "2026-08-11", description: "Gate motor", category: "Repairs & maintenance", amountCents: -138_000 },
-      { ...base, id: "gate-again", date: "2026-08-10", description: "Gate motor", category: "Repairs & maintenance", amountCents: -138_000, status: "needs-review", duplicateOfId: "gate" },
-      { ...base, id: "dues", date: "2026-08-03", description: "Dues", category: "Assessments", amountCents: 28_500 },
+      {
+        ...base,
+        id: "dep",
+        date: "2026-08-12",
+        description: "Deposit",
+        category: "Assessments",
+        amountCents: 57_000,
+        status: "needs-review",
+      },
+      {
+        ...base,
+        id: "gate",
+        date: "2026-08-11",
+        description: "Gate motor",
+        category: "Repairs & maintenance",
+        amountCents: -138_000,
+      },
+      {
+        ...base,
+        id: "gate-again",
+        date: "2026-08-10",
+        description: "Gate motor",
+        category: "Repairs & maintenance",
+        amountCents: -138_000,
+        status: "needs-review",
+        duplicateOfId: "gate",
+      },
+      {
+        ...base,
+        id: "dues",
+        date: "2026-08-03",
+        description: "Dues",
+        category: "Assessments",
+        amountCents: 28_500,
+      },
     ],
   };
 
   it("stay out of the month's money in and out, so a duplicate is not spent twice", () => {
-    expect(monthlyFlows(c, 2026, c.asOf).at(-1)).toEqual({ month: "2026-08", inCents: 28_500, outCents: 138_000 });
+    expect(monthlyFlows(c, 2026, c.asOf).at(-1)).toEqual({
+      month: "2026-08",
+      inCents: 28_500,
+      outCents: 138_000,
+    });
     expect(spendingBetween(c, "2026-08-01", "2026-08-31").totalCents).toBe(138_000);
     expect(yearSummary(c, 2026).spendCents).toBe(138_000);
     expect(operatingRunway(c, c.asOf).avgOutCents).toBe(138_000);
@@ -392,7 +447,9 @@ describe("lines waiting on review", () => {
 
   it("read the same on the overview as on Transactions, for the real August", () => {
     const m = mehrMeadows;
-    const held = m.ledger.filter((e) => e.status === "needs-review" && e.date.startsWith("2026-08"));
+    const held = m.ledger.filter(
+      (e) => e.status === "needs-review" && e.date.startsWith("2026-08"),
+    );
     expect(held.map((e) => e.amountCents).sort((a, b) => a - b)).toEqual([-138_000, 57_000]);
     const overview = monthlyFlows(m, 2026, m.asOf).at(-1)!;
     const transactions = ledgerTotals(filterLedger(m.ledger, periodRange("this-month", m.asOf)));
@@ -409,8 +466,19 @@ describe("lateFeesOwed", () => {
     label: string,
     amountCents: number,
     balanceAfterCents: number,
-  ): ChargeLine => ({ id, date, label, kind: amountCents < 0 ? "payment" : "charge", amountCents, balanceAfterCents });
-  const home = (id: string, balanceCents: number) => ({ ...mehrMeadows.homes[0], id, balanceCents });
+  ): ChargeLine => ({
+    id,
+    date,
+    label,
+    kind: amountCents < 0 ? "payment" : "charge",
+    amountCents,
+    balanceAfterCents,
+  });
+  const home = (id: string, balanceCents: number) => ({
+    ...mehrMeadows.homes[0],
+    id,
+    balanceCents,
+  });
 
   // Five statements written out by hand, each kept newest first as the app
   // keeps them. Dues are $300 and a late fee is $25.
@@ -507,9 +575,18 @@ describe("ledger filters", () => {
   const c = mehrMeadows;
 
   it("measures presets from the given day", () => {
-    expect(periodRange("this-month", "2026-08-20")).toEqual({ from: "2026-08-01", to: "2026-08-31" });
-    expect(periodRange("last-month", "2026-01-15")).toEqual({ from: "2025-12-01", to: "2025-12-31" });
-    expect(periodRange("last-year", "2026-08-20")).toEqual({ from: "2025-01-01", to: "2025-12-31" });
+    expect(periodRange("this-month", "2026-08-20")).toEqual({
+      from: "2026-08-01",
+      to: "2026-08-31",
+    });
+    expect(periodRange("last-month", "2026-01-15")).toEqual({
+      from: "2025-12-01",
+      to: "2025-12-31",
+    });
+    expect(periodRange("last-year", "2026-08-20")).toEqual({
+      from: "2025-01-01",
+      to: "2025-12-31",
+    });
   });
 
   it("runs a balance from the oldest row up so the top row carries the total", () => {
@@ -520,18 +597,43 @@ describe("ledger filters", () => {
     expect(totals.inCents).toBe(0);
     // Held lines move nothing; transfers move the balance but are not spending.
     const counted = rows.filter((e) => e.status !== "needs-review");
-    expect(totals.running.get(rows[0].id)).toBe(
-      counted.reduce((t, e) => t + e.amountCents, 0),
-    );
+    expect(totals.running.get(rows[0].id)).toBe(counted.reduce((t, e) => t + e.amountCents, 0));
     expect(totals.running.get(rows[0].id)).toBe(-totals.outCents + totals.transferCents);
   });
 
   it("holds unconfirmed lines out of the totals, as the overview promises", () => {
-    const base = { accountId: "acct-operating", category: "Repairs & maintenance" as const, counterparty: "Ace" };
+    const base = {
+      accountId: "acct-operating",
+      category: "Repairs & maintenance" as const,
+      counterparty: "Ace",
+    };
     const rows = [
-      { ...base, id: "a", date: "2026-08-11", description: "Gate", amountCents: -138_000, status: "cleared" as const },
-      { ...base, id: "b", date: "2026-08-10", description: "Gate again", amountCents: -138_000, status: "needs-review" as const, duplicateOfId: "a" },
-      { ...base, id: "c", date: "2026-08-09", description: "Dues", category: "Assessments" as const, amountCents: 28_500, status: "pending" as const },
+      {
+        ...base,
+        id: "a",
+        date: "2026-08-11",
+        description: "Gate",
+        amountCents: -138_000,
+        status: "cleared" as const,
+      },
+      {
+        ...base,
+        id: "b",
+        date: "2026-08-10",
+        description: "Gate again",
+        amountCents: -138_000,
+        status: "needs-review" as const,
+        duplicateOfId: "a",
+      },
+      {
+        ...base,
+        id: "c",
+        date: "2026-08-09",
+        description: "Dues",
+        category: "Assessments" as const,
+        amountCents: 28_500,
+        status: "pending" as const,
+      },
     ];
     const totals = ledgerTotals(rows);
     expect(totals.outCents).toBe(138_000);
@@ -542,7 +644,13 @@ describe("ledger filters", () => {
   });
 
   it("counts a reserve transfer as neither money in nor money out", () => {
-    const base = { counterparty: "Mehr Meadows", category: "Reserve transfer" as const, status: "cleared" as const, date: "2026-08-01", description: "Monthly reserve contribution" };
+    const base = {
+      counterparty: "Mehr Meadows",
+      category: "Reserve transfer" as const,
+      status: "cleared" as const,
+      date: "2026-08-01",
+      description: "Monthly reserve contribution",
+    };
     const rows = [
       { ...base, id: "out", accountId: "acct-operating", amountCents: -500_000 },
       { ...base, id: "in", accountId: "acct-reserve", amountCents: 500_000 },
@@ -557,9 +665,15 @@ describe("ledger filters", () => {
   it("agrees with the real ledger: no held line and no transfer in any total", () => {
     const rows = filterLedger(c.ledger, periodRange("this-year", c.asOf));
     const totals = ledgerTotals(rows);
-    const plain = rows.filter((e) => e.status !== "needs-review" && e.category !== "Reserve transfer");
-    expect(totals.inCents).toBe(plain.filter((e) => e.amountCents > 0).reduce((t, e) => t + e.amountCents, 0));
-    expect(totals.outCents).toBe(plain.filter((e) => e.amountCents < 0).reduce((t, e) => t - e.amountCents, 0));
+    const plain = rows.filter(
+      (e) => e.status !== "needs-review" && e.category !== "Reserve transfer",
+    );
+    expect(totals.inCents).toBe(
+      plain.filter((e) => e.amountCents > 0).reduce((t, e) => t + e.amountCents, 0),
+    );
+    expect(totals.outCents).toBe(
+      plain.filter((e) => e.amountCents < 0).reduce((t, e) => t - e.amountCents, 0),
+    );
   });
 
   it("searches description and counterparty, case blind", () => {
@@ -595,7 +709,9 @@ describe("vendorDecisions", () => {
 
 describe("delinquency", () => {
   it("counts every home on the register, as the aging table does", () => {
-    const homes = mehrMeadows.homes.slice(0, 4).map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 }));
+    const homes = mehrMeadows.homes
+      .slice(0, 4)
+      .map((o) => ({ ...o, daysPastDue: 0, balanceCents: 0 }));
     homes.push({ ...homes[0], id: "empty", placeholder: true, displayName: "Lot 99" });
     const d = delinquency({ ...mehrMeadows, homes });
     expect(d.households).toBe(5);
@@ -621,16 +737,27 @@ describe("delinquency", () => {
 });
 
 describe("ledgerSide", () => {
-  const line = (over: Partial<(typeof mehrMeadows.ledger)[number]>) => ({ ...mehrMeadows.ledger[0], ...over });
+  const line = (over: Partial<(typeof mehrMeadows.ledger)[number]>) => ({
+    ...mehrMeadows.ledger[0],
+    ...over,
+  });
 
   it("puts a line in exactly the headline that counts it", () => {
-    expect(ledgerSide(line({ amountCents: 100, category: "Assessments", status: "cleared" }))).toBe("in");
+    expect(ledgerSide(line({ amountCents: 100, category: "Assessments", status: "cleared" }))).toBe(
+      "in",
+    );
     const rows = [
       line({ id: "a", amountCents: 5000, category: "Assessments", status: "cleared" }),
       line({ id: "b", amountCents: -2000, category: "Landscaping", status: "cleared" }),
       line({ id: "c", amountCents: -9000, category: "Reserve transfer", status: "cleared" }),
       line({ id: "d", amountCents: 9000, category: "Reserve transfer", status: "cleared" }),
-      line({ id: "e", amountCents: -700, category: "Assessments", description: "Payment reversed: Lot 3", status: "cleared" }),
+      line({
+        id: "e",
+        amountCents: -700,
+        category: "Assessments",
+        description: "Payment reversed: Lot 3",
+        status: "cleared",
+      }),
       line({ id: "f", amountCents: -400, category: "Landscaping", status: "needs-review" }),
     ];
     const t = ledgerTotals(rows);
@@ -665,13 +792,19 @@ describe("period words and stepping", () => {
     expect(periodRange("this-year", asOf, 7)).toEqual({ from: "2026-07-01", to: "2027-06-30" });
     expect(periodRange("last-year", asOf, 7)).toEqual({ from: "2025-07-01", to: "2026-06-30" });
     // Before the start month, this year is the one that began last calendar year.
-    expect(periodRange("this-year", "2026-03-10", 7)).toEqual({ from: "2025-07-01", to: "2026-06-30" });
+    expect(periodRange("this-year", "2026-03-10", 7)).toEqual({
+      from: "2025-07-01",
+      to: "2026-06-30",
+    });
     expect(periodRange("this-year", asOf)).toEqual({ from: "2026-01-01", to: "2026-12-31" });
   });
 
   it("says which year a fiscal year is", () => {
     const r = periodRange("this-year", asOf, 7);
-    expect(periodWords("this-year", r, 7)).toEqual({ label: "Fiscal year 2026", dates: "Jul 1, 2026 to Jun 30, 2027" });
+    expect(periodWords("this-year", r, 7)).toEqual({
+      label: "Fiscal year 2026",
+      dates: "Jul 1, 2026 to Jun 30, 2027",
+    });
     expect(periodWords("this-year", periodRange("this-year", asOf)).label).toBe("This year");
   });
 
@@ -679,18 +812,32 @@ describe("period words and stepping", () => {
     const thisMonth = periodRange("this-month", asOf);
     const back = stepPeriod("this-month", thisMonth, -1, asOf)!;
     expect(back).toEqual({ preset: "last-month", from: "2026-09-01", to: "2026-09-30" });
-    expect(stepPeriod(back.preset, back, -1, asOf)).toEqual({ preset: "custom", from: "2026-08-01", to: "2026-08-31" });
+    expect(stepPeriod(back.preset, back, -1, asOf)).toEqual({
+      preset: "custom",
+      from: "2026-08-01",
+      to: "2026-08-31",
+    });
     expect(stepPeriod("this-month", thisMonth, 1, asOf)).toBeNull();
     // Leap February.
-    expect(stepPeriod("custom", { from: "2024-03-01", to: "2024-03-31" }, -1, asOf)).toMatchObject({ to: "2024-02-29" });
+    expect(stepPeriod("custom", { from: "2024-03-01", to: "2024-03-31" }, -1, asOf)).toMatchObject({
+      to: "2024-02-29",
+    });
   });
 
   it("steps a fiscal year by its own unit", () => {
     const r = periodRange("this-year", asOf, 7);
-    expect(stepPeriod("this-year", r, -1, asOf, 7)).toEqual({ preset: "last-year", from: "2025-07-01", to: "2026-06-30" });
+    expect(stepPeriod("this-year", r, -1, asOf, 7)).toEqual({
+      preset: "last-year",
+      from: "2025-07-01",
+      to: "2026-06-30",
+    });
     expect(stepPeriod("this-year", r, 1, asOf, 7)).toBeNull();
     const cal = periodRange("this-year", asOf);
-    expect(stepPeriod("this-year", cal, -1, asOf)).toEqual({ preset: "last-year", from: "2025-01-01", to: "2025-12-31" });
+    expect(stepPeriod("this-year", cal, -1, asOf)).toEqual({
+      preset: "last-year",
+      from: "2025-01-01",
+      to: "2025-12-31",
+    });
   });
 
   it("does not step 30 days, 12 months or an odd custom range", () => {

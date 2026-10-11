@@ -335,7 +335,7 @@ export const NO_PLATFORM_FEE: PlatformFeePolicy = {
   waiveOnAch: false,
 };
 
-export const DEFAULT_FEE_POLICY: PlatformFeePolicy = NO_PLATFORM_FEE;
+const DEFAULT_FEE_POLICY: PlatformFeePolicy = NO_PLATFORM_FEE;
 
 export interface PaymentCost {
   amountCents: Cents;
@@ -371,7 +371,9 @@ export function computePaymentCost(
   const uncapped =
     Math.round((amountCents * schedule.processorPercent) / 100) + schedule.processorFlatCents;
   const processorCents =
-    schedule.processorCapCents === undefined ? uncapped : Math.min(uncapped, schedule.processorCapCents);
+    schedule.processorCapCents === undefined
+      ? uncapped
+      : Math.min(uncapped, schedule.processorCapCents);
 
   const waived = policy.waiveOnAch && kind === "ach";
   const platformCents = waived ? 0 : policy.flatCents;
@@ -412,7 +414,7 @@ export function ownerCostFor(
 }
 
 /** Who is better off when a cheaper rail is used. */
-export type Beneficiary = "owner" | "association";
+type Beneficiary = "owner" | "association";
 
 export interface CheapestRail {
   instrument: PaymentInstrument;

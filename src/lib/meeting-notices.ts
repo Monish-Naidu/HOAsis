@@ -18,7 +18,9 @@ function dayText(date: string): string {
 
 function meetingOf(a: Announcement, meetings: readonly Meeting[]): Meeting | undefined {
   const title = a.title.toLowerCase();
-  return meetings.find((m) => title.includes(m.title.toLowerCase()) && a.title.includes(dayText(m.date)));
+  return meetings.find(
+    (m) => title.includes(m.title.toLowerCase()) && a.title.includes(dayText(m.date)),
+  );
 }
 
 function hasMinutes(m: Meeting, documents: readonly DocumentRecord[]): boolean {
@@ -27,7 +29,8 @@ function hasMinutes(m: Meeting, documents: readonly DocumentRecord[]): boolean {
     return (
       d.category === "Meetings" &&
       name.includes("minutes") &&
-      (name.includes(m.title.toLowerCase()) || name.replace(/,/g, "").includes(formatDate(m.date, "long").replace(/,/g, "").toLowerCase()))
+      (name.includes(m.title.toLowerCase()) ||
+        name.replace(/,/g, "").includes(formatDate(m.date, "long").replace(/,/g, "").toLowerCase()))
     );
   });
 }
@@ -42,15 +45,30 @@ export function currentAnnouncements(
   for (const a of announcements) {
     const m = meetingOf(a, meetings);
     if (m?.status === "cancelled") {
-      out.push({ ...a, title: `Cancelled: ${m.title}`, body: m.cancelReason?.trim() || "The board cancelled this meeting.", pinned: false });
+      out.push({
+        ...a,
+        title: `Cancelled: ${m.title}`,
+        body: m.cancelReason?.trim() || "The board cancelled this meeting.",
+        pinned: false,
+      });
     } else if (!m || m.date >= today) {
       out.push(a);
     } else if (m.minutes?.trim()) {
       // The board's own minutes win over a file of the same name: they are
       // on the meeting itself, under Meetings.
-      out.push({ ...a, title: `Minutes from ${m.title}`, body: "The minutes are under Meetings.", pinned: false });
+      out.push({
+        ...a,
+        title: `Minutes from ${m.title}`,
+        body: "The minutes are under Meetings.",
+        pinned: false,
+      });
     } else if (hasMinutes(m, documents)) {
-      out.push({ ...a, title: `Minutes from ${m.title}`, body: "The minutes are in Documents.", pinned: false });
+      out.push({
+        ...a,
+        title: `Minutes from ${m.title}`,
+        body: "The minutes are in Documents.",
+        pinned: false,
+      });
     }
   }
   return out;
@@ -63,7 +81,9 @@ export function cancelledLine(m: Pick<Meeting, "cancelReason">): string {
 
 /** "Was Oct 3", beside the date of a meeting that was moved. */
 export function wasLine(m: Pick<Meeting, "rescheduledFrom" | "date">): string | null {
-  return m.rescheduledFrom && m.rescheduledFrom !== m.date ? `Was ${formatDate(m.rescheduledFrom)}` : null;
+  return m.rescheduledFrom && m.rescheduledFrom !== m.date
+    ? `Was ${formatDate(m.rescheduledFrom)}`
+    : null;
 }
 
 /** "3 attended", or nothing when nobody was marked. */

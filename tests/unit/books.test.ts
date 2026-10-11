@@ -40,14 +40,21 @@ describe("books on the draft", () => {
   });
 
   it("survives a round trip through JSON, which is how the wizard saves progress", () => {
-    const draft = withBooks(emptyDraft(), { fiscalYearStart: "07-01", billingStartsOn: "2026-11-01", openingAsOf: "2026-09-20" });
+    const draft = withBooks(emptyDraft(), {
+      fiscalYearStart: "07-01",
+      billingStartsOn: "2026-11-01",
+      openingAsOf: "2026-09-20",
+    });
     const back = JSON.parse(JSON.stringify(draft));
     expect(booksOf(back, "2026-09-26").fiscalYearStart).toBe("07-01");
     expect(booksOf(back, "2026-09-26").billingStartsOn).toBe("2026-11-01");
   });
 
   it("keeps a phone and an opening balance on a household without the draft knowing", () => {
-    const home = withExtras({ name: "Pat", email: "", unit: "12" }, { phone: "425-555-0114", openingBalanceCents: 18500 });
+    const home = withExtras(
+      { name: "Pat", email: "", unit: "12" },
+      { phone: "425-555-0114", openingBalanceCents: 18500 },
+    );
     expect(home.unit).toBe("12");
     expect(extrasOf(home)).toEqual({ phone: "425-555-0114", openingBalanceCents: 18500 });
   });

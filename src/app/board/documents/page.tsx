@@ -26,7 +26,6 @@ import { DOCUMENT_ACCEPT } from "@/lib/documents";
 import type { DocumentRecord } from "@/lib/types";
 import { moduleOn } from "@/lib/modules";
 
-
 const VISIBILITY_WORD: Record<DocumentRecord["visibility"], string> = {
   public: "public",
   members: "visible to owners",
@@ -67,9 +66,7 @@ function DocumentsScreen() {
     .map((category) => ({
       category,
       docs: documents.filter(
-        (d) =>
-          d.category === category &&
-          d.name.toLowerCase().includes(query.trim().toLowerCase()),
+        (d) => d.category === category && d.name.toLowerCase().includes(query.trim().toLowerCase()),
       ),
     }))
     .filter((g) => g.docs.length);
@@ -114,7 +111,10 @@ function DocumentsScreen() {
                     notify(`${refused.name}: ${refused.reason}`, "warn");
                   }
                 } catch (error) {
-                  notify(error instanceof Error ? error.message : "Could not upload. Try again.", "warn");
+                  notify(
+                    error instanceof Error ? error.message : "Could not upload. Try again.",
+                    "warn",
+                  );
                 } finally {
                   setUploading(false);
                 }
@@ -145,7 +145,9 @@ function DocumentsScreen() {
                 : `${gaps.missing.length} of ${gaps.total} expected records are not on file`}
             </span>
             <span className="block text-footnote leading-snug text-fg-muted">
-              {gaps.complete ? "Nothing missing." : "Records owners can inspect and lenders ask for."}
+              {gaps.complete
+                ? "Nothing missing."
+                : "Records owners can inspect and lenders ask for."}
             </span>
           </span>
           <span className="tnum shrink-0 text-body font-semibold text-fg">
@@ -159,9 +161,7 @@ function DocumentsScreen() {
                 <IconTile icon={AlertTriangle} tint="amber" size="xs" className="mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-body font-medium text-fg">{record.label}</p>
-                  <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
-                    {record.why}
-                  </p>
+                  <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">{record.why}</p>
                 </div>
               </div>
             ))}
@@ -199,30 +199,28 @@ function DocumentsScreen() {
             eight things a buyer must be told have no answer on file" is a
             morning's work with a clear finish. Resale season, so it waits. */}
         {moduleOn("documents-disclosure") ? (
-        <Link
-          href="/board/documents/new-owner"
-          className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
-        >
-          <IconTile icon={ShieldQuestion} tint="blue" size="md" className="shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-body font-semibold text-fg">
-              What a new owner is told
+          <Link
+            href="/board/documents/new-owner"
+            className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 shadow-card transition-colors hover:bg-surface-2"
+          >
+            <IconTile icon={ShieldQuestion} tint="blue" size="md" className="shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-body font-semibold text-fg">
+                What a new owner is told
+              </span>
+              <span className="block text-footnote leading-snug text-fg-muted">
+                {coverage.answered === coverage.total
+                  ? "All eight of the things a buyer must be warned about are answered by a provision."
+                  : `${coverage.total - coverage.answered} of the ${coverage.total} things a buyer must be warned about have no confirmed answer.`}
+              </span>
             </span>
-            <span className="block text-footnote leading-snug text-fg-muted">
-              {coverage.answered === coverage.total
-                ? "All eight of the things a buyer must be warned about are answered by a provision."
-                : `${coverage.total - coverage.answered} of the ${coverage.total} things a buyer must be warned about have no confirmed answer.`}
+            <span className="tnum shrink-0 text-body font-semibold text-fg">
+              {coverage.answered} / {coverage.total}
             </span>
-          </span>
-          <span className="tnum shrink-0 text-body font-semibold text-fg">
-            {coverage.answered} / {coverage.total}
-          </span>
-          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
-        </Link>
+            <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+          </Link>
         ) : null}
-
       </div>
-
 
       <Card className="mt-6">
         <CardHeader
@@ -243,9 +241,7 @@ function DocumentsScreen() {
         {grouped.map(({ category, docs }) => (
           <div key={category}>
             <div className="border-b border-border bg-surface-2 px-5 py-1.5">
-              <p className="text-footnote font-semibold text-fg-muted">
-                {category}
-              </p>
+              <p className="text-footnote font-semibold text-fg-muted">{category}</p>
             </div>
             {docs.map((d) => {
               return (
@@ -300,7 +296,9 @@ function DocumentsScreen() {
                         notify(`${d.name} is now ${VISIBILITY_WORD[next]}`);
                       } catch (error) {
                         notify(
-                          error instanceof Error ? error.message : "Could not change who can see it. Try again.",
+                          error instanceof Error
+                            ? error.message
+                            : "Could not change who can see it. Try again.",
                           "warn",
                         );
                       }
@@ -325,7 +323,12 @@ function DocumentsScreen() {
                           undo ? { label: "Undo", onClick: undo } : undefined,
                         );
                       } catch (error) {
-                        notify(error instanceof Error ? error.message : "Could not remove it. Try again.", "warn");
+                        notify(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not remove it. Try again.",
+                          "warn",
+                        );
                       }
                     }}
                     className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"

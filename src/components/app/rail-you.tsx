@@ -53,7 +53,9 @@ export function RailYou() {
         >
           <Avatar name={account.name} className="rail-you-avatar shrink-0" />
           <span className="min-w-0 flex-1 leading-tight">
-            <span className="block truncate text-footnote font-semibold text-white">{account.name}</span>
+            <span className="block truncate text-footnote font-semibold text-white">
+              {account.name}
+            </span>
             {/* Wraps at the dot rather than truncating: "Vice President · Lo…"
                 hid the one part that says which home. */}
             <span className="block text-caption leading-snug text-navy-300">

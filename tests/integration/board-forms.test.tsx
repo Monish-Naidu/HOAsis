@@ -5,19 +5,25 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board",
   useSearchParams: () => new URLSearchParams(),
 }));
 
 const { AppStateProvider, useAppState } = await import("@/lib/app-state");
 const { ToastProvider } = await import("@/components/app/toast");
-const { BalancesScreen, openingFigures } = await import(
-  "@/app/board/homeowners/opening-balances/balances-screen"
-);
+const { BalancesScreen, openingFigures } =
+  await import("@/app/board/homeowners/opening-balances/balances-screen");
 const { AmendScreen } = await import("@/app/board/documents/governing/amend-screen");
 const { RecordPayment } = await import("@/components/app/record-payment");
-const { AddCreditForm, ChangeDuesForm, RecordPaymentForm } = await import("@/app/board/homeowners/household-money");
+const { AddCreditForm, ChangeDuesForm, RecordPaymentForm } =
+  await import("@/app/board/homeowners/household-money");
 const { DuesSettings } = await import("@/components/app/dues-settings");
 const { HomeownersScreen } = await import("@/app/board/homeowners/homeowners-screen");
 const { homeDues } = await import("@/lib/home-types");
@@ -60,7 +66,9 @@ const openingLine = (homeId: string) =>
   (seen.state.community.homeCharges[homeId] ?? []).find((l) => l.label === OPENING);
 const box = (homeId: string) => {
   const home = seen.state.community.homes.find((o) => o.id === homeId)!;
-  return screen.getByLabelText(`Starting balance for ${home.displayName}, ${home.unit}`) as HTMLInputElement;
+  return screen.getByLabelText(
+    `Starting balance for ${home.displayName}, ${home.unit}`,
+  ) as HTMLInputElement;
 };
 
 describe("opening balances", () => {
@@ -73,13 +81,45 @@ describe("opening balances", () => {
       ] as never,
       homeCharges: {
         // Owes this month's dues and nothing from before the switch.
-        billed: [{ id: "c1", date: "2026-08-01", label: "August assessment", kind: "charge", amountCents: 75_000, balanceAfterCents: 75_000 }],
+        billed: [
+          {
+            id: "c1",
+            date: "2026-08-01",
+            label: "August assessment",
+            kind: "charge",
+            amountCents: 75_000,
+            balanceAfterCents: 75_000,
+          },
+        ],
         // Came over owing $500, and has been billed $250 since.
         carried: [
-          { id: "c2", date: "2026-08-01", label: "August assessment", kind: "charge", amountCents: 25_000, balanceAfterCents: 75_000 },
-          { id: "c3", date: "2026-07-01", label: OPENING, kind: "charge", amountCents: 50_000, balanceAfterCents: 50_000 },
+          {
+            id: "c2",
+            date: "2026-08-01",
+            label: "August assessment",
+            kind: "charge",
+            amountCents: 25_000,
+            balanceAfterCents: 75_000,
+          },
+          {
+            id: "c3",
+            date: "2026-07-01",
+            label: OPENING,
+            kind: "charge",
+            amountCents: 50_000,
+            balanceAfterCents: 50_000,
+          },
         ],
-        credit: [{ id: "c4", date: "2026-07-01", label: OPENING, kind: "credit", amountCents: -12_050, balanceAfterCents: -12_050 }],
+        credit: [
+          {
+            id: "c4",
+            date: "2026-07-01",
+            label: OPENING,
+            kind: "credit",
+            amountCents: -12_050,
+            balanceAfterCents: -12_050,
+          },
+        ],
       } as never,
     });
 
@@ -88,7 +128,9 @@ describe("opening balances", () => {
 
   it("shows a home that owes money an empty box, with what it owes today beside it", () => {
     wrap(<BalancesScreen />);
-    const behind = seen.state.community.homes.find((o) => o.balanceCents > 0 && !openingLine(o.id))!;
+    const behind = seen.state.community.homes.find(
+      (o) => o.balanceCents > 0 && !openingLine(o.id),
+    )!;
 
     expect(box(behind.id).value).toBe("");
     // The figure is there to read, not to save back.
@@ -106,7 +148,10 @@ describe("opening balances", () => {
     wrap(<BalancesScreen />);
     const [target, ...others] = seen.state.community.homes;
     const before = Object.fromEntries(
-      seen.state.community.homes.map((o) => [o.id, { balance: o.balanceCents, lines: seen.state.community.homeCharges[o.id]?.length ?? 0 }]),
+      seen.state.community.homes.map((o) => [
+        o.id,
+        { balance: o.balanceCents, lines: seen.state.community.homeCharges[o.id]?.length ?? 0 },
+      ]),
     );
 
     await user.type(box(target.id), "1240.50");
@@ -118,7 +163,9 @@ describe("opening balances", () => {
     // gave each of these a brought-forward line of its own.
     for (const home of others) {
       const now = seen.state.community.homes.find((o) => o.id === home.id)!;
-      expect(now.balanceCents, `${home.unit} had its balance rewritten`).toBe(before[home.id].balance);
+      expect(now.balanceCents, `${home.unit} had its balance rewritten`).toBe(
+        before[home.id].balance,
+      );
       expect(
         seen.state.community.homeCharges[home.id]?.length ?? 0,
         `${home.unit} was given a line it never had`,
@@ -141,7 +188,9 @@ describe("opening balances", () => {
     await user.click(screen.getByRole("button", { name: "Save 1 balance" }));
     await screen.findByRole("button", { name: "Saved" });
 
-    const lines = (seen.state.community.homeCharges[target.id] ?? []).filter((l) => l.label === OPENING);
+    const lines = (seen.state.community.homeCharges[target.id] ?? []).filter(
+      (l) => l.label === OPENING,
+    );
     expect(lines).toHaveLength(1);
     expect(lines[0].amountCents).toBe(25_000);
   });
@@ -201,7 +250,10 @@ describe("the banner, in the demo", () => {
     act(() => void seen.state.updateSettings({ banner: { detail: "Until Friday" } }));
     act(() => void seen.state.updateSettings({ banner: { title: "Pool closed" } }));
 
-    expect(seen.state.settings.banner).toMatchObject({ title: "Pool closed", detail: "Until Friday" });
+    expect(seen.state.settings.banner).toMatchObject({
+      title: "Pool closed",
+      detail: "Until Friday",
+    });
     expect(seen.state.settings.banner).toHaveProperty("enabled");
   });
 });
@@ -210,7 +262,9 @@ describe("the collections ladder", () => {
   it("shows the day a step's letter went out", () => {
     wrap(<CollectionsLadder />);
     const community = seen.state.community;
-    const owed = collectionsLadder(community, policyFor(community.settings)).rows.find((r) => r.actionDue)!;
+    const owed = collectionsLadder(community, policyFor(community.settings)).rows.find(
+      (r) => r.actionDue,
+    )!;
     const row = () => screen.getByText(owed.home.displayName).closest("div")!;
     expect(within(row()).queryByText(/· Sent /)).not.toBeInTheDocument();
 
@@ -226,7 +280,11 @@ describe("proposing a change to a governing document, in the demo", () => {
     wrap(<AmendScreen />);
 
     await user.click(screen.getByRole("button", { name: "Amend" }));
-    await user.click(screen.getByRole("button", { name: /Send to owners and open voting|Put on the board agenda/ }));
+    await user.click(
+      screen.getByRole("button", {
+        name: /Send to owners and open voting|Put on the board agenda/,
+      }),
+    );
 
     const said = screen.getByRole("status").textContent ?? "";
     expect(said).toMatch(/This demo (sends nothing to owners|does not save it)/);
@@ -270,25 +328,50 @@ describe("a check or cash from an owner", () => {
   });
 
   it("refuses a date in the future", () => {
-    render(<RecordPaymentForm unit="Unit 7" balanceCents={28_500} onSave={async () => true} onCancel={() => {}} />);
+    render(
+      <RecordPaymentForm
+        unit="Unit 7"
+        balanceCents={28_500}
+        onSave={async () => true}
+        onCancel={() => {}}
+      />,
+    );
     fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "60" } });
     fireEvent.change(screen.getByLabelText("Date received"), { target: { value: "2026-08-21" } });
     expect(screen.getByRole("button", { name: "Save payment" })).toBeDisabled();
   });
 
   it("caps a payment at the balance plus $10,000 and says when it passes the balance", () => {
-    render(<RecordPaymentForm unit="Unit 7" balanceCents={28_500} onSave={async () => true} onCancel={() => {}} />);
+    render(
+      <RecordPaymentForm
+        unit="Unit 7"
+        balanceCents={28_500}
+        onSave={async () => true}
+        onCancel={() => {}}
+      />,
+    );
     const button = screen.getByRole("button", { name: "Save payment" });
     fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "300" } });
-    expect(screen.getByText("That is $15.00 more than the home owes. The extra stays as credit.")).toBeInTheDocument();
+    expect(
+      screen.getByText("That is $15.00 more than the home owes. The extra stays as credit."),
+    ).toBeInTheDocument();
     expect(button).toBeEnabled();
     fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: "999999999" } });
-    expect(screen.getByRole("alert")).toHaveTextContent("The most you can record for this home is $10,285.00.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The most you can record for this home is $10,285.00.",
+    );
     expect(button).toBeDisabled();
   });
 
   it("refuses a third decimal and exponent notation", () => {
-    render(<RecordPaymentForm unit="Unit 7" balanceCents={28_500} onSave={async () => true} onCancel={() => {}} />);
+    render(
+      <RecordPaymentForm
+        unit="Unit 7"
+        balanceCents={28_500}
+        onSave={async () => true}
+        onCancel={() => {}}
+      />,
+    );
     const button = screen.getByRole("button", { name: "Save payment" });
     for (const bad of ["285.555", "12e3"]) {
       fireEvent.change(screen.getByLabelText("Payment amount"), { target: { value: bad } });
@@ -334,13 +417,21 @@ describe("opening bank balances on Finances", () => {
     );
     expect(lines).toHaveLength(1);
     expect(lines[0].amountCents).toBe(86_000_00);
-    expect(screen.queryByLabelText(new RegExp(`^Starting balance for ${accounts[0].name}`))).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(new RegExp(`^Starting balance for ${accounts[0].name}`)),
+    ).not.toBeInTheDocument();
   });
 });
 
 describe("a settings field that saves when it is left", () => {
   /** Stands in for the store: the saved value comes back as the prop. */
-  function Harness({ onCommit, multiline }: { onCommit: (next: string) => void; multiline?: boolean }) {
+  function Harness({
+    onCommit,
+    multiline,
+  }: {
+    onCommit: (next: string) => void;
+    multiline?: boolean;
+  }) {
     const [saved, setSaved] = useState("");
     return (
       <>
@@ -414,7 +505,9 @@ describe("a settings field that saves when it is left", () => {
   it("does not let a save landing wipe the words typed since", async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
-    const { rerender } = render(<DraftField value="" aria-label="Insurance carrier" onCommit={onCommit} />);
+    const { rerender } = render(
+      <DraftField value="" aria-label="Insurance carrier" onCommit={onCommit} />,
+    );
     const field = screen.getByLabelText("Insurance carrier") as HTMLInputElement;
 
     // Leaves the field, comes straight back and carries on typing; then the
@@ -452,7 +545,9 @@ describe("a home's own dues in the browser copy", () => {
     const standard = homeDues(seen.state.community.association, { homeType: home.homeType });
 
     await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }),
+    );
     // What it pays now, and where that comes from, before anything is typed.
     expect(screen.getByText(/Pays .* a month now, from /)).toBeInTheDocument();
     await user.clear(screen.getByLabelText("Dues for this home"));
@@ -477,7 +572,9 @@ describe("a home's own dues in the browser copy", () => {
       await seen.state.setHomeDues([{ homeId: home.id, cents: 41_000 }]);
     });
     await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
-    await user.click(screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }),
+    );
     expect(screen.getByText(/from its own amount/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Use the standard rate" }));
     expect(seen.state.community.homes.find((o) => o.id === home.id)!.duesCents).toBeUndefined();
@@ -497,7 +594,9 @@ describe("a home's own dues in the browser copy", () => {
       />,
     );
     expect(screen.queryByRole("button", { name: "Use the standard rate" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Pays \$285\.00 a month now, from the association's rate/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Pays \$285\.00 a month now, from the association's rate/),
+    ).toBeInTheDocument();
   });
 
   it("the form stays open when the write says it was refused", async () => {
@@ -575,7 +674,10 @@ describe("a home's own dues in the browser copy", () => {
       ]);
     });
     expect(screen.getByText(/3 homes pay their own amount/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See them on Homeowners" })).toHaveAttribute("href", "/board/homeowners");
+    expect(screen.getByRole("link", { name: "See them on Homeowners" })).toHaveAttribute(
+      "href",
+      "/board/homeowners",
+    );
     // The standard rate is still its own field, no longer "each home".
     expect(screen.getByLabelText(/^Standard rate, per month/)).toBeInTheDocument();
   });

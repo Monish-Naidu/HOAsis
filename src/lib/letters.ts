@@ -18,7 +18,7 @@ import { homeDues } from "@/lib/home-types";
  */
 
 /** The template trigger for each rung. `null` where the policy owes nothing yet. */
-export function letterTrigger(stage: CollectionStage): MessageTemplate["trigger"] | null {
+function letterTrigger(stage: CollectionStage): MessageTemplate["trigger"] | null {
   switch (stage) {
     case "reminder":
       return "past-due";
@@ -50,7 +50,7 @@ export function dueLetter(
  * Subject and body share one map. They drifted apart once, and the board sent
  * notices whose subject line still said {{unit}}.
  */
-export function letterFields(
+function letterFields(
   home: Home,
   community: Pick<Community, "association" | "settings">,
 ): Record<string, string> {

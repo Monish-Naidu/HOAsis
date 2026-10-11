@@ -44,7 +44,10 @@ export function isPaymentReversal(line: Pick<ChargeLine, "kind" | "label" | "cat
  * running balance never dips below zero before the bill the payment settles.
  * Stable, so two lines of one kind keep the order they were written in.
  */
-export function compareStatement(a: Pick<ChargeLine, "date" | "kind">, b: Pick<ChargeLine, "date" | "kind">): number {
+export function compareStatement(
+  a: Pick<ChargeLine, "date" | "kind">,
+  b: Pick<ChargeLine, "date" | "kind">,
+): number {
   if (a.date !== b.date) return a.date < b.date ? -1 : 1;
   const rank = (k: ChargeLine["kind"]) => (k === "charge" ? 0 : 1);
   return rank(a.kind) - rank(b.kind);
@@ -75,7 +78,11 @@ export function orderStatement(lines: ChargeLine[], headBalanceCents?: Cents): C
 }
 
 /** One line added to a statement, kept in date order with its balances restated. */
-export function addStatementLine(lines: ChargeLine[], line: ChargeLine, headBalanceCents: Cents): ChargeLine[] {
+export function addStatementLine(
+  lines: ChargeLine[],
+  line: ChargeLine,
+  headBalanceCents: Cents,
+): ChargeLine[] {
   return orderStatement([line, ...lines], headBalanceCents);
 }
 
@@ -103,7 +110,11 @@ export interface BalanceSplit {
  * and the rest is owed now. The database finds a home's days past due the same
  * way, so a home that owes only a coming bill is not late.
  */
-export function balanceSplit(lines: ChargeLine[], balanceCents: Cents, asOf: ISODate): BalanceSplit {
+export function balanceSplit(
+  lines: ChargeLine[],
+  balanceCents: Cents,
+  asOf: ISODate,
+): BalanceSplit {
   const owed = Math.max(0, balanceCents);
   const coming = lines
     .filter((l) => l.kind === "charge" && l.date > asOf)
@@ -130,7 +141,7 @@ export function balanceSplit(lines: ChargeLine[], balanceCents: Cents, asOf: ISO
 }
 
 /** One row of a printed statement: a charge or a payment, with the balance after it. */
-export interface StatementRow {
+interface StatementRow {
   id: string;
   date: ISODate;
   label: string;
@@ -172,7 +183,10 @@ export interface HomeStatement {
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** First and last day of the year `year`, counted from the association's fiscal year start. */
-export function statementPeriod(fiscalYearStart: string | undefined, year: number): { from: ISODate; to: ISODate } {
+export function statementPeriod(
+  fiscalYearStart: string | undefined,
+  year: number,
+): { from: ISODate; to: ISODate } {
   const m = fiscalMonth(fiscalYearStart);
   if (m === 1) return { from: `${year}-01-01`, to: `${year}-12-31` };
   const endYear = year + 1;
@@ -204,7 +218,8 @@ export function statementPeriodLabel(fiscalYearStart: string | undefined, year: 
 export function statementYears(community: Community, today: ISODate, homeId?: string): number[] {
   const fy = community.association.fiscalYearStart;
   const years = new Set<number>();
-  const take = (lines: ChargeLine[] | undefined) => lines?.forEach((l) => years.add(statementYearOf(fy, l.date)));
+  const take = (lines: ChargeLine[] | undefined) =>
+    lines?.forEach((l) => years.add(statementYearOf(fy, l.date)));
   if (homeId) take(community.homeCharges[homeId]);
   else Object.values(community.homeCharges).forEach(take);
   if (years.size === 0) years.add(statementYearOf(fy, today));

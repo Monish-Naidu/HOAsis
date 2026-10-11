@@ -92,7 +92,9 @@ export async function POST(request: NextRequest) {
   }
 
   const checks = await Promise.all(
-    ALLOWED[kind].map((needed) => supabase.rpc("has_capability", { target: associationId, needed })),
+    ALLOWED[kind].map((needed) =>
+      supabase.rpc("has_capability", { target: associationId, needed }),
+    ),
   );
   if (!checks.some((c) => c.data)) {
     return refuse("You cannot send that for this association", 403);
@@ -127,7 +129,11 @@ export async function POST(request: NextRequest) {
     });
     log.info("notification sent", { kind, dryRun: Boolean(body.dryRun), result });
     if (result.remaining > 0) {
-      log.warn("notification stopped at the time limit", { kind, sent: result.sent, remaining: result.remaining });
+      log.warn("notification stopped at the time limit", {
+        kind,
+        sent: result.sent,
+        remaining: result.remaining,
+      });
       await recordAppError({
         level: "warn",
         source: "server",
@@ -136,11 +142,22 @@ export async function POST(request: NextRequest) {
         message: `The ${kind} email stopped at the time limit with ${result.remaining} not reached`,
         associationId,
         profileId: auth.user.id,
-        extra: { kind, id: body.id ?? null, sent: result.sent, failed: result.failed - result.remaining, already: result.already, remaining: result.remaining },
+        extra: {
+          kind,
+          id: body.id ?? null,
+          sent: result.sent,
+          failed: result.failed - result.remaining,
+          already: result.already,
+          remaining: result.remaining,
+        },
       });
     }
     if (result.unrecorded) {
-      log.error("notification record not saved", { kind, sent: result.sent, err: result.unrecorded });
+      log.error("notification record not saved", {
+        kind,
+        sent: result.sent,
+        err: result.unrecorded,
+      });
       await recordAppError({
         level: "error",
         source: "server",
@@ -149,7 +166,14 @@ export async function POST(request: NextRequest) {
         message: `The record of the ${kind} email could not be saved`,
         associationId,
         profileId: auth.user.id,
-        extra: { kind, id: body.id ?? null, sent: result.sent, failed: result.failed, already: result.already, why: result.unrecorded },
+        extra: {
+          kind,
+          id: body.id ?? null,
+          sent: result.sent,
+          failed: result.failed,
+          already: result.already,
+          why: result.unrecorded,
+        },
       });
     }
     return NextResponse.json(result);

@@ -8,9 +8,19 @@ import { createFakeSupabase } from "../helpers/fake-supabase";
  * the counts the browser reads to decide whether to ask again.
  */
 
-type Counts = { sent: number; failed: number; skipped: number; already: number; remaining: number; errors: string[]; unrecorded?: string };
+type Counts = {
+  sent: number;
+  failed: number;
+  skipped: number;
+  already: number;
+  remaining: number;
+  errors: string[];
+  unrecorded?: string;
+};
 const done: Counts = { sent: 3, failed: 0, skipped: 0, already: 0, remaining: 0, errors: [] };
-const sendNotification = vi.fn<(input: { kind: string; id?: string }) => Promise<Counts>>(async () => done);
+const sendNotification = vi.fn<(input: { kind: string; id?: string }) => Promise<Counts>>(
+  async () => done,
+);
 vi.mock("@/lib/email/notify", () => ({ sendNotification }));
 
 const recordAppError = vi.fn(async () => "REF");
@@ -55,7 +65,9 @@ describe("who may send a meeting notice", () => {
     holds = ["voting"];
     const response = await POST(notify(meeting));
     expect(response.status).toBe(200);
-    expect(sendNotification).toHaveBeenCalledWith(expect.objectContaining({ kind: "meeting", id: "meeting-1" }));
+    expect(sendNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "meeting", id: "meeting-1" }),
+    );
   });
 
   it("still lets communications send it", async () => {
@@ -65,7 +77,9 @@ describe("who may send a meeting notice", () => {
 
   it("does not let voting send an announcement, or a seat with neither send the notice", async () => {
     holds = ["voting"];
-    const announcement = await POST(notify({ associationId: "assoc-1", kind: "announcement", id: "ann-1" }));
+    const announcement = await POST(
+      notify({ associationId: "assoc-1", kind: "announcement", id: "ann-1" }),
+    );
     expect(announcement.status).toBe(403);
     holds = ["finances"];
     const refused = await POST(notify(meeting));
@@ -84,15 +98,35 @@ describe("what the route answers", () => {
   });
 
   it("says how many remain when the send stopped, and puts the stop on /admin", async () => {
-    sendNotification.mockResolvedValueOnce({ sent: 60, failed: 40, skipped: 0, already: 20, remaining: 40, errors: ["Stopped at the time limit."] });
+    sendNotification.mockResolvedValueOnce({
+      sent: 60,
+      failed: 40,
+      skipped: 0,
+      already: 20,
+      remaining: 40,
+      errors: ["Stopped at the time limit."],
+    });
     const response = await POST(notify(announcement));
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ sent: 60, failed: 40, skipped: 0, already: 20, remaining: 40 });
+    expect(await response.json()).toMatchObject({
+      sent: 60,
+      failed: 40,
+      skipped: 0,
+      already: 20,
+      remaining: 40,
+    });
     expect(recordAppError).toHaveBeenCalledWith(
       expect.objectContaining({
         level: "warn",
         route: "email/notify",
-        extra: expect.objectContaining({ kind: "announcement", id: "ann-1", sent: 60, failed: 0, already: 20, remaining: 40 }),
+        extra: expect.objectContaining({
+          kind: "announcement",
+          id: "ann-1",
+          sent: 60,
+          failed: 0,
+          already: 20,
+          remaining: 40,
+        }),
       }),
     );
   });
@@ -118,7 +152,12 @@ describe("what the route answers", () => {
         level: "error",
         route: "email/notify",
         message: "The record of the announcement email could not be saved",
-        extra: expect.objectContaining({ kind: "announcement", id: "ann-1", sent: 1, why: "permission denied for table email_log" }),
+        extra: expect.objectContaining({
+          kind: "announcement",
+          id: "ann-1",
+          sent: 1,
+          why: "permission denied for table email_log",
+        }),
       }),
     );
   });
@@ -147,7 +186,10 @@ describe("what the route answers", () => {
     holds = [];
     const refused = await POST(notify(announcement));
     expect(refused.status).toBe(403);
-    expect(await refused.json()).toMatchObject({ error: "You cannot send that for this association", ...NOTHING });
+    expect(await refused.json()).toMatchObject({
+      error: "You cannot send that for this association",
+      ...NOTHING,
+    });
   });
 
   it("carries them when the send itself fails, with the reason and a reference", async () => {

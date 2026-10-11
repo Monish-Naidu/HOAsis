@@ -11,7 +11,10 @@ import {
  * roster. A fake Stripe client stands in: what matters is when a write is
  * made and what it says.
  */
-function clientWith(subscription: { status?: string; items?: { id: string; quantity?: number | null }[] }) {
+function clientWith(subscription: {
+  status?: string;
+  items?: { id: string; quantity?: number | null }[];
+}) {
   const retrieve = vi.fn(async () => ({
     status: subscription.status ?? "active",
     items: { data: subscription.items ?? [{ id: "si_1", quantity: 3 }] },
@@ -46,7 +49,10 @@ describe("syncing the quantity to the number of homes", () => {
     const { client, update } = clientWith({ items: [{ id: "si_1", quantity: 40 }] });
     const result = await syncSubscriptionQuantity(client, { subscriptionId: "sub_1", homes: 36 });
     expect(result).toEqual({ outcome: "changed", from: 40, to: 36 });
-    expect(update).toHaveBeenCalledWith("sub_1", expect.objectContaining({ items: [{ id: "si_1", quantity: 36 }] }));
+    expect(update).toHaveBeenCalledWith(
+      "sub_1",
+      expect.objectContaining({ items: [{ id: "si_1", quantity: 36 }] }),
+    );
   });
 
   it("writes nothing when the quantity is already right", async () => {
@@ -59,7 +65,11 @@ describe("syncing the quantity to the number of homes", () => {
 
   it("says what would change on a dry run, and changes nothing", async () => {
     const { client, update } = clientWith({ items: [{ id: "si_1", quantity: 3 }] });
-    const result = await syncSubscriptionQuantity(client, { subscriptionId: "sub_1", homes: 183, dryRun: true });
+    const result = await syncSubscriptionQuantity(client, {
+      subscriptionId: "sub_1",
+      homes: 183,
+      dryRun: true,
+    });
     expect(result).toEqual({ outcome: "changed", from: 3, to: 183 });
     expect(update).not.toHaveBeenCalled();
   });
@@ -89,7 +99,9 @@ describe("carrying the quantity pass on in a later call", () => {
 
   it("does not resume the quantity pass from where the trial pass stopped", () => {
     // The trial pass finished at assoc-5 and no time was left to start this one.
-    const next = new URL(quantityWalkUrl("https://yourhoasis.com/api/billing/sweep?after=assoc-5", null));
+    const next = new URL(
+      quantityWalkUrl("https://yourhoasis.com/api/billing/sweep?after=assoc-5", null),
+    );
     expect(next.searchParams.get("walk")).toBe("quantity");
     expect(next.searchParams.has("after")).toBe(false);
   });

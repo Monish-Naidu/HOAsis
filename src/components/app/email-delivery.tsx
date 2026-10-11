@@ -87,9 +87,18 @@ export function EmailDelivery() {
       />
 
       <div className="grid gap-3 border-b border-border px-5 py-4 sm:grid-cols-3">
-        <Figure label="Arrived" value={arrived} hint={counts.opened ? `${counts.opened} opened` : undefined} tone="ok" />
+        <Figure
+          label="Arrived"
+          value={arrived}
+          hint={counts.opened ? `${counts.opened} opened` : undefined}
+          tone="ok"
+        />
         <Figure label="On its way" value={counts.waiting} tone="neutral" />
-        <Figure label="Did not arrive" value={counts.missed} tone={counts.missed ? "danger" : "neutral"} />
+        <Figure
+          label="Did not arrive"
+          value={counts.missed}
+          tone={counts.missed ? "danger" : "neutral"}
+        />
       </div>
 
       <div className="overflow-x-auto">
@@ -113,9 +122,7 @@ export function EmailDelivery() {
                   </td>
                   <td className="px-3 py-2.5">
                     <p className="max-w-[16rem] truncate text-fg">{entry.to}</p>
-                    {entry.unit ? (
-                      <p className="text-fg-subtle">Unit {entry.unit}</p>
-                    ) : null}
+                    {entry.unit ? <p className="text-fg-subtle">Unit {entry.unit}</p> : null}
                   </td>
                   <td className="px-3 py-2.5">
                     <p className="max-w-[20rem] truncate text-fg-muted">{entry.subject}</p>
@@ -140,8 +147,8 @@ export function EmailDelivery() {
       </div>
 
       <p className="border-t border-border px-5 py-3 text-footnote leading-snug text-fg-subtle">
-        Delivery updates come from our email service. If every status stays On its way, ask
-        whoever set up your account to check that email tracking is switched on.
+        Delivery updates come from our email service. If every status stays On its way, ask whoever
+        set up your account to check that email tracking is switched on.
       </p>
     </Card>
   );
@@ -158,14 +165,11 @@ function Figure({
   hint?: string;
   tone: "ok" | "neutral" | "danger";
 }) {
-  const color =
-    tone === "ok" ? "text-ok" : tone === "danger" ? "text-danger" : "text-fg";
+  const color = tone === "ok" ? "text-ok" : tone === "danger" ? "text-danger" : "text-fg";
   return (
     <div className="rounded-lg bg-surface-2 px-3.5 py-3">
       <p className="text-footnote font-semibold text-fg-muted">{label}</p>
-      <p className={`tnum mt-0.5 text-title2 font-semibold tracking-[-0.02em] ${color}`}>
-        {value}
-      </p>
+      <p className={`tnum mt-0.5 text-title2 font-semibold tracking-[-0.02em] ${color}`}>{value}</p>
       {hint ? <p className="text-footnote text-fg-subtle">{hint}</p> : null}
     </div>
   );

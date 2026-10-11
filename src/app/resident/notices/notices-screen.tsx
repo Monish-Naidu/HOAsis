@@ -102,8 +102,7 @@ export function NoticesScreen() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={stage.tone}>{stage.label}</Badge>
                     <span className="text-footnote text-fg-subtle">
-                      {violation.reference} · opened{" "}
-                      {formatDate(violation.openedDate, "medium")}
+                      {violation.reference} · opened {formatDate(violation.openedDate, "medium")}
                     </span>
                   </div>
                   <p className="mt-1.5 text-headline font-semibold tracking-[-0.01em] text-fg">
@@ -159,7 +158,6 @@ export function NoticesScreen() {
               </Card>
             );
           })}
-
         </>
       )}
     </div>
@@ -194,8 +192,8 @@ function OpenFooter({ violation }: { violation: Violation }) {
           <Check className="mt-0.5 size-3.5 shrink-0 text-ok" />
           <span>
             You told the board this was fixed on {formatDate(violation.ownerFixedDate, "long")}
-            {violation.ownerFixedNote ? ` · ${violation.ownerFixedNote}` : ""}. They close it
-            once they have checked.
+            {violation.ownerFixedNote ? ` · ${violation.ownerFixedNote}` : ""}. They close it once
+            they have checked.
           </span>
         </p>
       ) : saying ? (
@@ -230,8 +228,8 @@ function OpenFooter({ violation }: { violation: Violation }) {
       ) : (
         <>
           <p className="text-footnote leading-relaxed text-fg-muted">
-            Fixed it? Tell the board and they will close this. Disagree? Ask the board. They
-            reply in writing.
+            Fixed it? Tell the board and they will close this. Disagree? Ask the board. They reply
+            in writing.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => setSaying(true)}>

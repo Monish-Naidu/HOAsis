@@ -63,8 +63,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "That setup does not belong to this home" }, { status: 403 });
   }
   const microdeposits =
-    intent.status === "requires_action" &&
-    intent.next_action?.type === "verify_with_microdeposits"
+    intent.status === "requires_action" && intent.next_action?.type === "verify_with_microdeposits"
       ? intent.next_action.verify_with_microdeposits
       : null;
   if ((intent.status !== "succeeded" && !microdeposits) || !intent.payment_method) {
@@ -99,9 +98,7 @@ export async function POST(request: NextRequest) {
     };
   } else if (pm.type === "card" && pm.card) {
     const brand = (
-      ["visa", "mastercard", "amex", "discover"].includes(pm.card.brand)
-        ? pm.card.brand
-        : "unknown"
+      ["visa", "mastercard", "amex", "discover"].includes(pm.card.brand) ? pm.card.brand : "unknown"
     ) as CardBrand;
     row = {
       kind: "card",
@@ -157,7 +154,13 @@ export async function POST(request: NextRequest) {
     // RLS refusals land here: someone saving to a home that is not theirs.
     return NextResponse.json({ error: "Could not save the payment method" }, { status: 403 });
   }
-  log.info("payment method saved", { instrumentId: inserted.id, kind: row.kind, verifying: Boolean(microdeposits), associationId, unitId });
+  log.info("payment method saved", {
+    instrumentId: inserted.id,
+    kind: row.kind,
+    verifying: Boolean(microdeposits),
+    associationId,
+    unitId,
+  });
 
   return NextResponse.json({ id: inserted.id });
 }
@@ -203,7 +206,11 @@ export async function DELETE(request: NextRequest) {
   const token = (instrument.detail as { token?: string } | null)?.token;
   if (token?.startsWith("pm_") && association?.stripe_account_id) {
     try {
-      await stripe().paymentMethods.detach(token, {}, { stripeAccount: association.stripe_account_id });
+      await stripe().paymentMethods.detach(
+        token,
+        {},
+        { stripeAccount: association.stripe_account_id },
+      );
     } catch (problem) {
       // Already detached, or gone: the row still has to go.
       const code = (problem as { code?: string }).code;
@@ -230,7 +237,10 @@ export async function DELETE(request: NextRequest) {
       .limit(1)
       .maybeSingle();
     if (successor) {
-      await supabase.from("payment_instruments").update({ is_default: true }).eq("id", successor.id);
+      await supabase
+        .from("payment_instruments")
+        .update({ is_default: true })
+        .eq("id", successor.id);
     }
   }
 

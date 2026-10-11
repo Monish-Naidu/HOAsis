@@ -34,7 +34,7 @@ export const GRACE_DAYS = 14;
 export const PAST_DUE_LOCK_DAYS = 14;
 
 /** Trial notices, most distant first. Keys are stored in `billing_notices`. */
-export const TRIAL_NOTICES = [
+const TRIAL_NOTICES = [
   { key: "14-days", daysBefore: 14 },
   { key: "3-days", daysBefore: 3 },
   { key: "ended", daysBefore: 0 },
@@ -121,7 +121,9 @@ export function boardLocked(phase: BillingPhase): boolean {
  * wall, the Settings card and the owner's note. Null while the board can still
  * work, so nothing says "read-only" before it is true.
  */
-export function lockWords(phase: BillingPhase): { title: string; body: string; pill: string } | null {
+export function lockWords(
+  phase: BillingPhase,
+): { title: string; body: string; pill: string } | null {
   if (!boardLocked(phase)) return null;
   const title =
     phase.phase === "ended"

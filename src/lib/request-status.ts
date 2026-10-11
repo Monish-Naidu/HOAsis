@@ -84,8 +84,18 @@ export function openRequestCount(rows: { status: RequestStatus }[]): number {
 }
 
 const MONTHS = [
-  "january", "february", "march", "april", "may", "june",
-  "july", "august", "september", "october", "november", "december",
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
 ];
 
 /**
@@ -101,7 +111,8 @@ export function scheduledFor(r: {
   for (const e of [...r.thread].reverse()) {
     const m = /^Scheduled for ([A-Za-z]+) (\d{1,2}), (\d{4})\./.exec(e.body ?? "");
     const month = m ? MONTHS.indexOf(m[1].toLowerCase()) : -1;
-    if (m && month >= 0) return `${m[3]}-${String(month + 1).padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+    if (m && month >= 0)
+      return `${m[3]}-${String(month + 1).padStart(2, "0")}-${m[2].padStart(2, "0")}`;
   }
   return undefined;
 }
@@ -113,7 +124,10 @@ export function scheduledFor(r: {
  * sent or under review, and a finished repair is Fixed.
  */
 export function requestStatusLabel(
-  r: Shaped & { workOrder?: { scheduledOn?: string; completedOn?: string }; thread?: { at: string; kind: string; body?: string }[] },
+  r: Shaped & {
+    workOrder?: { scheduledOn?: string; completedOn?: string };
+    thread?: { at: string; kind: string; body?: string }[];
+  },
 ): string {
   switch (requestGroup(r)) {
     case "done":
@@ -125,7 +139,9 @@ export function requestStatusLabel(
       return on ? `Scheduled ${formatDate(on)}` : "Scheduled";
     }
     case "decision":
-      return r.status === "submitted" || r.status === "draft" ? statusLabel[r.status] : "Under review";
+      return r.status === "submitted" || r.status === "draft"
+        ? statusLabel[r.status]
+        : "Under review";
   }
 }
 
@@ -158,12 +174,17 @@ export function statusAfterReply(r: { kind: string; status: RequestStatus }): Re
 }
 
 /** A closed request stays in Done for this many days, then moves to the Closed filter. */
-export const RECENT_DAYS = 30;
+const RECENT_DAYS = 30;
 
 export function groupRequests<
   T extends Shaped & { thread: { at: string }[]; decisionDate?: string; submittedDate: string },
 >(rows: T[]) {
-  const groups: Record<RequestGroup, T[]> = { decision: [], scheduling: [], progress: [], done: [] };
+  const groups: Record<RequestGroup, T[]> = {
+    decision: [],
+    scheduling: [],
+    progress: [],
+    done: [],
+  };
   const closed: T[] = [];
   for (const r of rows) {
     const group = requestGroup(r);

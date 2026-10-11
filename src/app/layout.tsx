@@ -34,7 +34,14 @@ export const metadata: Metadata = {
     title: "Your community. Your HOAsis.",
     description: DESCRIPTION,
     url: "/",
-    images: [{ url: "/marketing/hero-oasis-light.jpg", width: 1672, height: 941, alt: "An illustrated neighborhood around a lake" }],
+    images: [
+      {
+        url: "/marketing/hero-oasis-light.jpg",
+        width: 1672,
+        height: 941,
+        alt: "An illustrated neighborhood around a lake",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",

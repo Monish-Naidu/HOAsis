@@ -57,7 +57,7 @@ above, in the order they matter:
     supabase.com → project → Authentication → SMTP Settings → enable custom
     SMTP with Resend's host (`smtp.resend.com`, port 465), username
     `resend`, password a Resend API key, sender `Your HOAsis
-    <hello@yourhoasis.com>`. Then Authentication → URL Configuration: Site
+<hello@yourhoasis.com>`. Then Authentication → URL Configuration: Site
     URL `https://yourhoasis.com`, and add `https://yourhoasis.com/auth/callback`
     and `https://*.vercel.app/auth/callback` to the redirect list, so a link
     opened from a preview still signs in.

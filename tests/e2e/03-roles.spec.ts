@@ -27,8 +27,8 @@ test.describe("officers", () => {
       await expectHealthy(page, `${officer.name} dashboard`);
 
       const tabs = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
-          (a.textContent ?? "").trim().split("\n")[0],
+        Array.from(document.querySelectorAll('aside a[href^="/board"]')).map(
+          (a) => (a.textContent ?? "").trim().split("\n")[0],
         ),
       );
       expect(tabs.length, `${officer.name} has no navigation at all`).toBeGreaterThan(0);
@@ -46,8 +46,8 @@ test.describe("officers", () => {
       await page.goto("/board");
 
       const tabs = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
-          (a.textContent ?? "").trim().split("\n")[0],
+        Array.from(document.querySelectorAll('aside a[href^="/board"]')).map(
+          (a) => (a.textContent ?? "").trim().split("\n")[0],
         ),
       );
 
@@ -71,8 +71,8 @@ test.describe("officers", () => {
     await page.waitForLoadState("networkidle");
 
     const tabs = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map((a) =>
-        (a.textContent ?? "").trim().split("\n")[0],
+      Array.from(document.querySelectorAll('aside a[href^="/board"]')).map(
+        (a) => (a.textContent ?? "").trim().split("\n")[0],
       ),
     );
     // The dashboard itself is not a capability, but nothing that manages money
@@ -101,17 +101,18 @@ test.describe("officers", () => {
       if (!landed.startsWith("/board")) {
         // Sent home is the right answer. Sent to sign in would mean the
         // session never took, and the test would be passing on nothing.
-        expect(landed, `${path} sent a resident somewhere other than their own home`).toBe("/resident");
+        expect(landed, `${path} sent a resident somewhere other than their own home`).toBe(
+          "/resident",
+        );
         continue;
       }
 
       // Assert the property rather than the wording, so rephrasing the refusal
       // does not silently turn this test off: whatever it says, the board's
       // figures must not be on the page.
-      expect(
-        health.text,
-        `${path} showed an association figure to a resident`,
-      ).not.toMatch(/\$[\d,]{3,}/);
+      expect(health.text, `${path} showed an association figure to a resident`).not.toMatch(
+        /\$[\d,]{3,}/,
+      );
       for (const leak of ["Operating cash", "Reserves", "Past due", "Needs your review"]) {
         expect(health.text, `${path} leaked "${leak}" to a resident`).not.toContain(leak);
       }
@@ -216,9 +217,17 @@ test.describe("booking an amenity", () => {
     await page.goto("/resident/requests/new");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: /Booking|Reserve/i }).first().click();
+    await page
+      .getByRole("button", { name: /Booking|Reserve/i })
+      .first()
+      .click();
     await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
-    await expect(page.locator("main").getByText(/\d+ (AM|PM)/).first()).toBeVisible();
+    await expect(
+      page
+        .locator("main")
+        .getByText(/\d+ (AM|PM)/)
+        .first(),
+    ).toBeVisible();
 
     const health = await inspect(page);
     expect(health.crashed, "the slot picker crashed").toBe(false);
@@ -233,9 +242,17 @@ test.describe("booking an amenity", () => {
     await page.goto("/resident/requests/new");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: /Booking|Reserve/i }).first().click();
+    await page
+      .getByRole("button", { name: /Booking|Reserve/i })
+      .first()
+      .click();
     await page.getByLabel("Amenity").selectOption({ label: "Clubhouse" });
-    await expect(page.locator("main").getByText(/\d+ (AM|PM)/).first()).toBeVisible();
+    await expect(
+      page
+        .locator("main")
+        .getByText(/\d+ (AM|PM)/)
+        .first(),
+    ).toBeVisible();
 
     // Every offered time is a button; a taken one is disabled rather than
     // absent, so the resident can see it exists and pick another day.

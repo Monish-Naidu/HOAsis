@@ -63,7 +63,8 @@ const EIN: PortingStep = {
   key: "ein",
   title: "Get an EIN",
   detail: "Free from the IRS on Form SS-4, in about fifteen minutes. Never pay anyone for one.",
-  because: "A bank will not open an account in the association's name without it, so this comes first.",
+  because:
+    "A bank will not open an account in the association's name without it, so this comes first.",
   href: "/library/first-30-days-self-managed-board",
 };
 
@@ -85,42 +86,54 @@ export const HANDOVER_STEPS: PortingStep[] = [
   {
     key: "turnover-study",
     title: "Get an independent turnover study, before you sign a release",
-    detail: "An engineer inspects the common areas and the construction. A CPA reviews the books from the first day the association existed.",
-    because: "This is the whole thing. A release signed before the study is a release signed without knowing what it gives up, and it is the one document a builder always has ready.",
+    detail:
+      "An engineer inspects the common areas and the construction. A CPA reviews the books from the first day the association existed.",
+    because:
+      "This is the whole thing. A release signed before the study is a release signed without knowing what it gives up, and it is the one document a builder always has ready.",
     href: "/library/developer-turnover-checklist",
   },
   {
     key: "reserve-check",
     title: "Check what the reserve account actually holds",
-    detail: "Against the study, and against what the declaration says the builder owed. Ask for the deposit history, not the balance.",
-    because: "A balance tells you where you are. The deposit history tells you whether the builder funded reserves all along or topped it up the week before turnover.",
+    detail:
+      "Against the study, and against what the declaration says the builder owed. Ask for the deposit history, not the balance.",
+    because:
+      "A balance tells you where you are. The deposit history tells you whether the builder funded reserves all along or topped it up the week before turnover.",
     href: "/board/reserves",
   },
   {
     key: "unsold-dues",
     title: "Ask what the builder paid on the lots it owned",
-    detail: "Every unsold lot owed an assessment, or the builder owed the deficit. Get the ledger showing which, and that it was paid.",
-    because: "It is the most commonly skipped obligation in the category, and the amount is usually large enough to matter. It also gets harder to collect the day the builder dissolves the entity.",
+    detail:
+      "Every unsold lot owed an assessment, or the builder owed the deficit. Get the ledger showing which, and that it was paid.",
+    because:
+      "It is the most commonly skipped obligation in the category, and the amount is usually large enough to matter. It also gets harder to collect the day the builder dissolves the entity.",
     href: "/board/money",
   },
   {
     key: "warranty",
     title: "Write down when the construction warranties end",
-    detail: "Roads, roofs, the pool, the drainage. Each has its own clock, and some start at recording rather than at handover.",
-    because: "A defect found the month after a warranty expires is the association's, permanently. Knowing the dates is what makes the inspection worth doing now rather than in spring.",
+    detail:
+      "Roads, roofs, the pool, the drainage. Each has its own clock, and some start at recording rather than at handover.",
+    because:
+      "A defect found the month after a warranty expires is the association's, permanently. Knowing the dates is what makes the inspection worth doing now rather than in spring.",
   },
   {
     key: "records",
     title: "Take the records in a form you can use",
-    detail: "The roster with balances, the ledger, contracts, insurance, minutes, the reserve study, and every recorded document.",
-    because: "Ask while the builder still wants the handover to go smoothly. Afterwards you are a former counterparty rather than a partner.",
+    detail:
+      "The roster with balances, the ledger, contracts, insurance, minutes, the reserve study, and every recorded document.",
+    because:
+      "Ask while the builder still wants the handover to go smoothly. Afterwards you are a former counterparty rather than a partner.",
     href: "/board/documents",
   },
   {
     key: "handover-board",
     title: "Seat your own board and remove the builder's signers",
-    detail: "New signature cards at the bank the same week, and their access removed the day control passes.",
-    because: "An account somebody else can still reach is an account you cannot reconcile, and the gap tends to be months rather than days.",
+    detail:
+      "New signature cards at the bank the same week, and their access removed the day control passes.",
+    because:
+      "An account somebody else can still reach is an account you cannot reconcile, and the gap tends to be months rather than days.",
     href: "/board/settings",
   },
 ];
@@ -130,15 +143,19 @@ export const BUILDER_STEPS: PortingStep[] = [
   {
     key: "unsold",
     title: "Decide what the unsold lots pay, and write it down",
-    detail: "Either the builder pays the full assessment on every lot it still owns, or it funds the deficit between what owners pay and what the budget needs.",
-    because: "This is the single largest source of turnover litigation. Whichever the declaration says, the association's books have to show it happening from the first month.",
+    detail:
+      "Either the builder pays the full assessment on every lot it still owns, or it funds the deficit between what owners pay and what the budget needs.",
+    because:
+      "This is the single largest source of turnover litigation. Whichever the declaration says, the association's books have to show it happening from the first month.",
     href: "/board/money",
   },
   {
     key: "builder-reserves",
     title: "Fund reserves from the first dues bill",
-    detail: "Get a study while the components are new and their replacement dates are known exactly.",
-    because: "A budget that omits reserves sets a low first-year due, and the board that inherits it has to raise dues in its first month. That is the handover everybody remembers.",
+    detail:
+      "Get a study while the components are new and their replacement dates are known exactly.",
+    because:
+      "A budget that omits reserves sets a low first-year due, and the board that inherits it has to raise dues in its first month. That is the handover everybody remembers.",
     href: "/board/reserves",
   },
 ];

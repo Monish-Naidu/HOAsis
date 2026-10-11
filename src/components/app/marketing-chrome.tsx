@@ -85,8 +85,7 @@ export function MarketingHeader() {
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
             {LINKS.map((link) => {
-              const active =
-                link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+              const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
@@ -207,8 +206,8 @@ export function MarketingFooter() {
         </nav>
       </div>
       <p className="mx-auto w-full max-w-6xl px-5 pb-8 text-[13px] text-fg-subtle">
-        Figures shown are demo data for a fictional Washington association. The library is
-        general information, not legal advice. Photography from Unsplash.
+        Figures shown are demo data for a fictional Washington association. The library is general
+        information, not legal advice. Photography from Unsplash.
       </p>
     </footer>
   );

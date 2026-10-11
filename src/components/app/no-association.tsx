@@ -70,8 +70,8 @@ export function NoAssociationYet() {
           Waiting on the board of {pending.name}
         </h1>
         <p className="mt-2 text-body leading-relaxed text-fg-muted">
-          Your account is ready. The board checks that {pending.unitLabel || "your home"} is yours and
-          lets you in. We will email {email || "you"} when they do. Asked{" "}
+          Your account is ready. The board checks that {pending.unitLabel || "your home"} is yours
+          and lets you in. We will email {email || "you"} when they do. Asked{" "}
           {formatDate(pending.createdAt.slice(0, 10), "medium")}.
         </p>
         <button
@@ -176,8 +176,8 @@ export function NoAssociationYet() {
       </div>
       {email ? (
         <p className="mt-6 text-footnote leading-snug text-fg-subtle">
-          Did your board say they added you? They may have used a different email. Ask them to change it
-          to {email}.
+          Did your board say they added you? They may have used a different email. Ask them to
+          change it to {email}.
         </p>
       ) : null}
       {signedInAs}

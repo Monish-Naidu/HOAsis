@@ -265,7 +265,7 @@ export function smsReadiness(input: {
  * is the TCPA's line and is not waivable by consent. A dues reminder that
  * arrives at 6am is a complaint whether or not it was legal.
  */
-export const QUIET_HOURS = { earliest: 8, latest: 21 } as const;
+const QUIET_HOURS = { earliest: 8, latest: 21 } as const;
 
 export function withinSendingHours(hour: number): boolean {
   return hour >= QUIET_HOURS.earliest && hour < QUIET_HOURS.latest;

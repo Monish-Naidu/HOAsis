@@ -69,8 +69,12 @@ describe("slugFromHost", () => {
 describe("community paths", () => {
   it("builds and parses the canonical form", () => {
     expect(communityPath("oakview-commons")).toBe("/c/oakview-commons");
-    expect(communityPath("oakview-commons", "/board/settings")).toBe("/c/oakview-commons/board/settings");
-    expect(communityPath("oakview-commons", "resident/pay")).toBe("/c/oakview-commons/resident/pay");
+    expect(communityPath("oakview-commons", "/board/settings")).toBe(
+      "/c/oakview-commons/board/settings",
+    );
+    expect(communityPath("oakview-commons", "resident/pay")).toBe(
+      "/c/oakview-commons/resident/pay",
+    );
     expect(communityUrl("https://yourhoasis.com/", "oakview-commons", "/resident")).toBe(
       "https://yourhoasis.com/c/oakview-commons/resident",
     );
@@ -80,7 +84,10 @@ describe("community paths", () => {
     });
     expect(parseCommunityPath("/c/oakview-commons")).toEqual({ slug: "oakview-commons", path: "" });
     expect(parseCommunityPath("/board")).toEqual({ slug: null, path: "/board" });
-    expect(parseCommunityPath("/c/Not%20A%20Slug/board")).toEqual({ slug: null, path: "/c/Not%20A%20Slug/board" });
+    expect(parseCommunityPath("/c/Not%20A%20Slug/board")).toEqual({
+      slug: null,
+      path: "/c/Not%20A%20Slug/board",
+    });
   });
 
   it("lands on the shell that fits the role when no page is named", () => {
@@ -101,7 +108,9 @@ describe("normalizeAssociationName", () => {
 
   it("keeps punctuation, since Maple Ridge and Maple-Ridge are different names", () => {
     expect(normalizeAssociationName("Maple-Ridge")).toBe("maple-ridge");
-    expect(normalizeAssociationName("Maple Ridge")).not.toBe(normalizeAssociationName("Maple-Ridge"));
+    expect(normalizeAssociationName("Maple Ridge")).not.toBe(
+      normalizeAssociationName("Maple-Ridge"),
+    );
   });
 });
 

@@ -4,7 +4,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/money/statements",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -12,7 +18,9 @@ vi.mock("next/navigation", () => ({
 const { AppStateProvider, useAppState } = await import("@/lib/app-state");
 const { StatementsScreen } = await import("@/app/board/money/statements/statements-screen");
 
-const wrapper = ({ children }: { children: ReactNode }) => <AppStateProvider>{children}</AppStateProvider>;
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <AppStateProvider>{children}</AppStateProvider>
+);
 
 describe("the statements screen in the demo", () => {
   it("counts one statement per home, filters to homes with a balance, and prints them all", async () => {

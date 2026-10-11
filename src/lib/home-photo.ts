@@ -5,7 +5,7 @@
  * roll, and neither the badge nor the Account card ever needs more than
  * ~800px. Returns a JPEG data URL. Browser only: it needs a canvas.
  */
-export const HOME_PHOTO_MAX_EDGE = 800;
+const HOME_PHOTO_MAX_EDGE = 800;
 
 export async function shrinkImage(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) {

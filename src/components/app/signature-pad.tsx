@@ -97,15 +97,16 @@ export function SignaturePad({
       <p className="mt-1.5 text-footnote leading-relaxed text-fg-muted">{statement}</p>
 
       <label className="mt-3 block">
-        <span className="text-footnote font-semibold text-fg-muted">
-          Type your full legal name
-        </span>
+        <span className="text-footnote font-semibold text-fg-muted">Type your full legal name</span>
         <input
           value={typedName}
           onChange={(e) => onTypedName(e.target.value)}
           autoComplete="name"
           placeholder="Rhea Calloway"
-          className={cn(fieldClass, "mt-1.5 font-[family-name:var(--font-signature,inherit)] text-title3")}
+          className={cn(
+            fieldClass,
+            "mt-1.5 font-[family-name:var(--font-signature,inherit)] text-title3",
+          )}
         />
       </label>
 

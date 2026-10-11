@@ -19,15 +19,19 @@ import {
   savingsOffers,
 } from "./association";
 import { documents } from "./documents";
-import {
-  ledgerEntries,
-  homeCharges,
-  paymentMethods,
-  payouts,
-  vendors,
-} from "./ledger";
+import { ledgerEntries, homeCharges, paymentMethods, payouts, vendors } from "./ledger";
 import { threads } from "./messages";
-import { accounts, accountById, accessLevel, CAPABILITY_LABEL, DEFAULT_ACCOUNT_ID, GRANTABLE, isAdmin, NO_CAPABILITIES, sees } from "./accounts";
+import {
+  accounts,
+  accountById,
+  accessLevel,
+  CAPABILITY_LABEL,
+  DEFAULT_ACCOUNT_ID,
+  GRANTABLE,
+  isAdmin,
+  NO_CAPABILITIES,
+  sees,
+} from "./accounts";
 import { architecturalForms, communityAmenities, communitySettings } from "./settings";
 import { forumCategories, forumPosts } from "./forum";
 import { paymentInstruments, supportedInstitutions } from "./payments";
@@ -117,12 +121,7 @@ export {
   unitCount,
 } from "./new-community";
 export { policyTemplates, US_STATES };
-export type {
-  CommunityDraft,
-  DraftHousehold,
-  HomeNaming,
-  PropertyType,
-} from "./new-community";
+export type { CommunityDraft, DraftHousehold, HomeNaming, PropertyType } from "./new-community";
 export type { BudgetLine };
 
 /* -------------------------------------------------------------------------- */
@@ -249,8 +248,6 @@ export function insuranceExposure() {
   return { rows, totalUninsured: rows.reduce((t, r) => t + r.uninsured, 0) };
 }
 
-
-
 export function openRequests() {
   return requests.filter((r) => !["approved", "denied", "closed"].includes(r.status));
 }
@@ -330,7 +327,12 @@ export function assistantContext() {
       status: m.status,
     })),
     liveMeeting: live ? { title: live.title, attendees: live.attendees.length } : undefined,
-    events: events.map((e) => ({ title: e.title, date: e.date, time: e.time, location: e.location })),
+    events: events.map((e) => ({
+      title: e.title,
+      date: e.date,
+      time: e.time,
+      location: e.location,
+    })),
     ballots: ballots
       .filter((b) => b.audience === "owners" && ballotPhase(b) === "open")
       .map((b) => ({

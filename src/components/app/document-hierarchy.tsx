@@ -30,8 +30,8 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
           Three documents, and which one wins
         </p>
         <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
-          When two of them disagree, the one higher up this list governs. Most arguments in
-          an association are really this question.
+          When two of them disagree, the one higher up this list governs. Most arguments in an
+          association are really this question.
         </p>
       </div>
 
@@ -44,8 +44,8 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
             <p className="text-body font-semibold text-fg">State law</p>
             <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
               Beats all three of the documents below. A covenant the legislature has since
-              overridden stays printed in the declaration and stops being enforceable
-              anyway, which is why a provision existing is not the same as it applying.
+              overridden stays printed in the declaration and stops being enforceable anyway, which
+              is why a provision existing is not the same as it applying.
             </p>
           </div>
         </div>
@@ -66,9 +66,7 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
                     {meta.recorded ? " · recorded with the county" : ""}
                   </span>
                 </div>
-                <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
-                  {meta.plain}
-                </p>
+                <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">{meta.plain}</p>
                 <p className="mt-1 text-footnote leading-relaxed text-fg-subtle">
                   Changed by: {meta.changedBy.toLowerCase()}.
                 </p>

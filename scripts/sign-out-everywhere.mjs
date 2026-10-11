@@ -18,11 +18,28 @@ if (!email) {
 }
 const reason = reasonWords.join(" ") || null;
 const env = loadEnv();
-const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
 
-const { data: profile } = await admin.from("profiles").select("id, full_name").ilike("email", email.trim()).maybeSingle();
-if (!profile) { console.error(`Nobody has signed up with ${email}.`); process.exit(1); }
+const { data: profile } = await admin
+  .from("profiles")
+  .select("id, full_name")
+  .ilike("email", email.trim())
+  .maybeSingle();
+if (!profile) {
+  console.error(`Nobody has signed up with ${email}.`);
+  process.exit(1);
+}
 
-const { data: count, error } = await admin.rpc("sign_out_everywhere", { p_profile_id: profile.id, p_reason: reason });
-if (error) { console.error(`Could not sign them out: ${error.message}`); process.exit(1); }
-console.log(`${profile.full_name || email} signed out of ${count} ${count === 1 ? "session" : "sessions"}.`);
+const { data: count, error } = await admin.rpc("sign_out_everywhere", {
+  p_profile_id: profile.id,
+  p_reason: reason,
+});
+if (error) {
+  console.error(`Could not sign them out: ${error.message}`);
+  process.exit(1);
+}
+console.log(
+  `${profile.full_name || email} signed out of ${count} ${count === 1 ? "session" : "sessions"}.`,
+);

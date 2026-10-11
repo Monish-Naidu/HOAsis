@@ -35,7 +35,9 @@ export async function sendPaymentsPausedNotice(input: {
       .is("ends_on", null)
       .contains("capabilities", ["finances"]);
 
-    const profileIds = (seats ?? []).map((s) => s.profile_id).filter((id): id is string => Boolean(id));
+    const profileIds = (seats ?? [])
+      .map((s) => s.profile_id)
+      .filter((id): id is string => Boolean(id));
     const { data: profiles } = profileIds.length
       ? await admin.from("profiles").select("id, email").in("id", profileIds)
       : { data: [] as { id: string; email: string | null }[] };
@@ -69,7 +71,9 @@ export async function sendPaymentsPausedNotice(input: {
               html: built.html,
               text: built.text,
             },
-            { idempotencyKey: `payments-paused/${input.associationId}/${input.day}/${person.email.toLowerCase()}` },
+            {
+              idempotencyKey: `payments-paused/${input.associationId}/${input.day}/${person.email.toLowerCase()}`,
+            },
           );
           providerId = sent.data?.id ?? null;
           error = sent.error?.message ?? null;

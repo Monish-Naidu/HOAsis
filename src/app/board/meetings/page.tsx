@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { CalendarDays, CalendarPlus, ChevronDown, Megaphone, Video } from "lucide-react";
-import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, buttonClass } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  PageHeader,
+  buttonClass,
+} from "@/components/ui/primitives";
 import { meetingJoin } from "@/lib/meetings/video";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
@@ -33,7 +41,10 @@ function Rsvps({ meeting }: { meeting: Meeting }) {
       </summary>
       <ul className="mt-1.5 grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
         {[...coming, ...not].map((r) => (
-          <li key={r.profileId ?? `${r.unit}-${r.name}`} className="flex items-center gap-2 text-fg-muted">
+          <li
+            key={r.profileId ?? `${r.unit}-${r.name}`}
+            className="flex items-center gap-2 text-fg-muted"
+          >
             <span
               className={`size-1.5 shrink-0 rounded-full ${r.response === "yes" ? "bg-ok" : "bg-fg-subtle"}`}
             />
@@ -70,7 +81,8 @@ export default function BoardMeetings() {
   // A meeting still marked live (the demo's) counts as today too.
   const today = todayIsoDate();
   const todays = community.meetings.filter(
-    (m) => m.status !== "ended" && m.status !== "cancelled" && (m.date === today || m.status === "live"),
+    (m) =>
+      m.status !== "ended" && m.status !== "cancelled" && (m.date === today || m.status === "live"),
   );
   // Split by phase, not stored status: nothing marks a real association's
   // meeting ended, so its date does. One held today is still upcoming.
@@ -176,7 +188,12 @@ export default function BoardMeetings() {
                 {join(m).dialIn ? ` · dial in ${join(m).dialIn}` : ""}
                 {join(m).passcode ? ` · passcode ${join(m).passcode}` : ""}
               </p>
-              <p className={cn("mt-0.5 text-footnote", m.noticeSentDate ? "text-fg-subtle" : "text-warn")}>
+              <p
+                className={cn(
+                  "mt-0.5 text-footnote",
+                  m.noticeSentDate ? "text-fg-subtle" : "text-warn",
+                )}
+              >
                 {m.noticeSentDate
                   ? `Notice sent ${formatDate(m.noticeSentDate, "long")}`
                   : "Notice not sent yet"}
@@ -247,7 +264,7 @@ export default function BoardMeetings() {
                     {formatDate(m.date, "long")} · {m.time} · {m.location}
                     {wasLine(m) ? ` · ${wasLine(m)}` : ""}
                     {m.status !== "cancelled" && (m.attended?.length || m.attendees.length)
-                      ? ` · ${(m.attended?.length ? attendedLine(m) : `${m.attendees.length} attended`)}`
+                      ? ` · ${m.attended?.length ? attendedLine(m) : `${m.attendees.length} attended`}`
                       : ""}
                     {m.ballotIds.length ? ` · ${pluralize(m.ballotIds.length, "ballot")}` : ""}
                   </p>
@@ -274,7 +291,10 @@ export default function BoardMeetings() {
                     <p className="text-footnote font-semibold text-fg-muted">In the room</p>
                     <ul className="mt-1.5 space-y-1">
                       {m.attendees.map((a) => (
-                        <li key={a.name} className="flex items-center gap-2 text-footnote text-fg-muted">
+                        <li
+                          key={a.name}
+                          className="flex items-center gap-2 text-footnote text-fg-muted"
+                        >
                           <span className="truncate">{a.name}</span>
                           <span className="ml-auto shrink-0 text-fg-subtle">
                             {a.role ?? placeLabel(a.unit ?? "")}
@@ -286,7 +306,11 @@ export default function BoardMeetings() {
                 ) : null}
                 {m.status !== "cancelled" ? (
                   <div className="sm:col-span-2">
-                    {m.minutes ? null : <p className="mb-2 text-footnote font-semibold text-fg-muted">Record minutes</p>}
+                    {m.minutes ? null : (
+                      <p className="mb-2 text-footnote font-semibold text-fg-muted">
+                        Record minutes
+                      </p>
+                    )}
                     <MinutesPanel meeting={m} />
                   </div>
                 ) : null}

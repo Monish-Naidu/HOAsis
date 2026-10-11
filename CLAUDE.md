@@ -36,18 +36,18 @@ reviewers in `.claude/agents/`, the priority list in `docs/work-tracker.md`.
 
 ## Where things go
 
-| Kind of code | Lives in | Rule |
-| --- | --- | --- |
-| Routes and pages | `src/app/` | Server components; thin: read selectors, render, hand off to a client component only for real interaction |
-| Shared screen pieces | `src/components/app/` | One component per concern; `src/components/ui/primitives.tsx` for anything used three times |
-| Pure logic and selectors | `src/lib/*.ts` | No React, no fetch, no `new Date()`; every exported function has a unit test |
-| Data layer | `src/lib/data/` | `index.ts` is the only import screens use; `remote.ts` maps Supabase rows; fixtures are the demo |
-| Mutations | `src/lib/app-state.tsx` | Signed-in branch calls one SQL function through `remoteWrite`; demo branch edits local state the same way the database would |
-| Money, email, meetings | `src/lib/payments/`, `src/lib/email/`, `src/lib/meetings/` | Server-only where a key is involved |
-| Server routes and jobs | `src/app/api/` | Authorised with `CRON_SECRET` or a webhook signature; log with `logger()`; record a cron run |
-| Database | `supabase/migrations/NNNN_name.sql` | Numbered, never edited once applied; redefine a function by copying it whole into a new file; grants explicit; every change proven by a `scripts/verify-*.mjs` suite |
-| Tests | `tests/unit`, `tests/integration`, `tests/e2e` | Pure logic, screens with the fake server, the signed-out demo in a browser |
-| Notes for people | `docs/` | Decisions, the tracker, go-live steps; not a second copy of the code |
+| Kind of code             | Lives in                                                   | Rule                                                                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Routes and pages         | `src/app/`                                                 | Server components; thin: read selectors, render, hand off to a client component only for real interaction                                                            |
+| Shared screen pieces     | `src/components/app/`                                      | One component per concern; `src/components/ui/primitives.tsx` for anything used three times                                                                          |
+| Pure logic and selectors | `src/lib/*.ts`                                             | No React, no fetch, no `new Date()`; every exported function has a unit test                                                                                         |
+| Data layer               | `src/lib/data/`                                            | `index.ts` is the only import screens use; `remote.ts` maps Supabase rows; fixtures are the demo                                                                     |
+| Mutations                | `src/lib/app-state.tsx`                                    | Signed-in branch calls one SQL function through `remoteWrite`; demo branch edits local state the same way the database would                                         |
+| Money, email, meetings   | `src/lib/payments/`, `src/lib/email/`, `src/lib/meetings/` | Server-only where a key is involved                                                                                                                                  |
+| Server routes and jobs   | `src/app/api/`                                             | Authorised with `CRON_SECRET` or a webhook signature; log with `logger()`; record a cron run                                                                         |
+| Database                 | `supabase/migrations/NNNN_name.sql`                        | Numbered, never edited once applied; redefine a function by copying it whole into a new file; grants explicit; every change proven by a `scripts/verify-*.mjs` suite |
+| Tests                    | `tests/unit`, `tests/integration`, `tests/e2e`             | Pure logic, screens with the fake server, the signed-out demo in a browser                                                                                           |
+| Notes for people         | `docs/`                                                    | Decisions, the tracker, go-live steps; not a second copy of the code                                                                                                 |
 
 ## Rules that matter
 

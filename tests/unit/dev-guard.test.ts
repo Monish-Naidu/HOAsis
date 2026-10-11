@@ -60,14 +60,24 @@ describe("environmentBlocks", () => {
   it("stays shut when the flag is on but no project has been named", () => {
     // The state this machine was in: the flag true, and .env.local pointing
     // at the only project there is.
-    expect(environmentBlocks({ ...OPEN, TEST_RESET_PROJECT_REF: undefined })).toMatch(/TEST_RESET_PROJECT_REF/);
-    expect(environmentBlocks({ ...OPEN, TEST_RESET_PROJECT_REF: "  " })).toMatch(/TEST_RESET_PROJECT_REF/);
+    expect(environmentBlocks({ ...OPEN, TEST_RESET_PROJECT_REF: undefined })).toMatch(
+      /TEST_RESET_PROJECT_REF/,
+    );
+    expect(environmentBlocks({ ...OPEN, TEST_RESET_PROJECT_REF: "  " })).toMatch(
+      /TEST_RESET_PROJECT_REF/,
+    );
   });
 
   it("stays shut when the named project is not the one connected", () => {
-    expect(environmentBlocks({ ...OPEN, TEST_RESET_PROJECT_REF: "someotherproject" })).toMatch(/does not name/);
-    expect(environmentBlocks({ ...OPEN, NEXT_PUBLIC_SUPABASE_URL: "https://production.supabase.co" })).toMatch(/does not name/);
-    expect(environmentBlocks({ ...OPEN, NEXT_PUBLIC_SUPABASE_URL: undefined })).toMatch(/does not name/);
+    expect(environmentBlocks({ ...OPEN, TEST_RESET_PROJECT_REF: "someotherproject" })).toMatch(
+      /does not name/,
+    );
+    expect(
+      environmentBlocks({ ...OPEN, NEXT_PUBLIC_SUPABASE_URL: "https://production.supabase.co" }),
+    ).toMatch(/does not name/);
+    expect(environmentBlocks({ ...OPEN, NEXT_PUBLIC_SUPABASE_URL: undefined })).toMatch(
+      /does not name/,
+    );
   });
 });
 
@@ -76,7 +86,9 @@ describe("liveDataBlocks", () => {
     const { admin, asked } = adminWith(nothingLive);
     expect(await liveDataBlocks(admin)).toBeNull();
     expect(asked()).toHaveLength(1);
-    expect(asked()[0].argsOf("or")).toEqual(["billing_subscription_id.not.is.null,stripe_charges_enabled.eq.true"]);
+    expect(asked()[0].argsOf("or")).toEqual([
+      "billing_subscription_id.not.is.null,stripe_charges_enabled.eq.true",
+    ]);
   });
 
   it("refuses next to an association with a subscription or payments on, and names it", async () => {
@@ -93,8 +105,12 @@ describe("liveDataBlocks", () => {
 describe("testToolsBlocked", () => {
   it("does not even reach for the database when the environment says no", async () => {
     const admin = vi.fn();
-    expect(await testToolsBlocked(admin as never, { ...OPEN, NODE_ENV: "production" })).toMatch(/production/);
-    expect(await testToolsBlocked(admin as never, { ...OPEN, ALLOW_TEST_RESET: "false" })).toMatch(/switched off/);
+    expect(await testToolsBlocked(admin as never, { ...OPEN, NODE_ENV: "production" })).toMatch(
+      /production/,
+    );
+    expect(await testToolsBlocked(admin as never, { ...OPEN, ALLOW_TEST_RESET: "false" })).toMatch(
+      /switched off/,
+    );
     expect(admin).not.toHaveBeenCalled();
   });
 
@@ -111,7 +127,9 @@ describe("testToolsBlocked", () => {
  * The admin client is a stand-in; what matters is that nothing is deleted
  * and nothing is listed while any lock is shut.
  */
-const liveAnswer = { current: nothingLive as { data: { name: string }[] | null; error: { message: string } | null } };
+const liveAnswer = {
+  current: nothingLive as { data: { name: string }[] | null; error: { message: string } | null },
+};
 const fake = createFakeSupabase({
   // The guard reads with .or(); the list page reads the same table without it.
   "associations.select": (call) => (call.has("or") ? liveAnswer.current : { data: [] }),
@@ -134,7 +152,9 @@ function open() {
 }
 
 const deleteOne = () =>
-  associations.DELETE(new NextRequest("http://localhost/api/dev/associations?id=assoc-1", { method: "DELETE" }));
+  associations.DELETE(
+    new NextRequest("http://localhost/api/dev/associations?id=assoc-1", { method: "DELETE" }),
+  );
 const deleteAll = () =>
   reset.POST(
     new NextRequest("http://localhost/api/dev/reset", {
@@ -154,7 +174,10 @@ describe("the dev routes", () => {
     // The list answers 200 with the reason, which the test tools page shows.
     const listed = await associations.GET();
     expect(listed.status).toBe(200);
-    expect(await listed.json()).toMatchObject({ enabled: false, reason: expect.stringMatching(/production/) });
+    expect(await listed.json()).toMatchObject({
+      enabled: false,
+      reason: expect.stringMatching(/production/),
+    });
     expect(fake.calls).toHaveLength(0);
     vi.unstubAllEnvs();
   });

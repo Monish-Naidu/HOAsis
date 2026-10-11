@@ -90,8 +90,19 @@ describe("parseRosterCsv", () => {
     });
     expect(parsed.rows).toHaveLength(7);
     const [pat, marcus, empty] = parsed.rows;
-    expect(pat).toMatchObject({ line: 2, name: "Pat Alvarez", unit: "12", phone: "425-555-0114", openingBalanceCents: 0, problems: [] });
-    expect(marcus).toMatchObject({ email: "marcus@example.com", openingBalanceCents: 18500, problems: [] });
+    expect(pat).toMatchObject({
+      line: 2,
+      name: "Pat Alvarez",
+      unit: "12",
+      phone: "425-555-0114",
+      openingBalanceCents: 0,
+      problems: [],
+    });
+    expect(marcus).toMatchObject({
+      email: "marcus@example.com",
+      openingBalanceCents: 18500,
+      problems: [],
+    });
     expect(empty).toMatchObject({ name: "", email: "", unit: "16", problems: [] });
     expect(empty.openingBalanceCents).toBeUndefined();
   });
@@ -106,7 +117,9 @@ describe("parseRosterCsv", () => {
   });
 
   it("uses the address as the key when there is no number", () => {
-    const parsed = parseRosterCsv("Name,Address\nPat,1 Alder Way\nSam,3 Alder Way\nTwo,1 alder way");
+    const parsed = parseRosterCsv(
+      "Name,Address\nPat,1 Alder Way\nSam,3 Alder Way\nTwo,1 alder way",
+    );
     expect(parsed.rows.map((r) => r.unit)).toEqual(["1 Alder Way", "3 Alder Way", "1 alder way"]);
     expect(parsed.rows[2].problems[0]).toMatch(/Same home as line 2/);
   });

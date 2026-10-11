@@ -18,7 +18,13 @@ import { forgetRead } from "@/app/start/wizard-progress";
  */
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/start",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -40,7 +46,12 @@ const draft: CommunityDraft = {
 function openOn(saved: CommunityDraft) {
   window.sessionStorage.setItem(
     "hoasis-setup-progress",
-    JSON.stringify({ draft: saved, current: "homes", exploring: true, awaitingConfirmation: false }),
+    JSON.stringify({
+      draft: saved,
+      current: "homes",
+      exploring: true,
+      awaitingConfirmation: false,
+    }),
   );
   forgetRead();
   render(
@@ -79,7 +90,9 @@ describe("the homes question, by address, with rows still parked", () => {
     expect(defaultHomeNaming(draft)).toBe("addresses");
     openOn(draft);
 
-    expect(await screen.findByText(/2 rows from your file are not on this list \(5, 6\)/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/2 rows from your file are not on this list \(5, 6\)/),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Continue/ })).toBeDisabled();
 
     await userEvent.click(screen.getByRole("button", { name: "Leave these out" }));

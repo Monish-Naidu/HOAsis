@@ -8,7 +8,7 @@
  */
 
 /** Wraps a field in quotes when it contains a delimiter, a quote, or a newline. */
-export function escapeCsvField(value: unknown): string {
+function escapeCsvField(value: unknown): string {
   const text = value === null || value === undefined ? "" : String(value);
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }

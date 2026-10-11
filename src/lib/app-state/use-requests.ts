@@ -1,12 +1,26 @@
 import { useCallback } from "react";
 import { formatDate, todayIsoDate } from "@/lib/utils";
-import { type AppDeps, emailNotice, latest, newId, remoteWrite, sessionStore, sliceStore } from "./core";
+import {
+  type AppDeps,
+  emailNotice,
+  latest,
+  newId,
+  remoteWrite,
+  sessionStore,
+  sliceStore,
+} from "./core";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Json } from "@/lib/supabase/database.types";
 import type { HomeRequest, WorkOrder } from "@/lib/types";
 import { type ReplyEmail, replyEmailState } from "@/lib/email/plain-error";
 import { statusAfterReply, statusLabel } from "@/lib/request-status";
-import { attachmentFileName, attachmentPath, attachmentProblem, fileSizeWords, uploadAttachment } from "@/lib/attachments";
+import {
+  attachmentFileName,
+  attachmentPath,
+  attachmentProblem,
+  fileSizeWords,
+  uploadAttachment,
+} from "@/lib/attachments";
 import { isUuid } from "@/lib/core/ids";
 
 /**
@@ -28,7 +42,8 @@ export function useRequestsActions(deps: AppDeps) {
       const previous = request.workOrder;
       let body: string | null = null;
       if (!workOrder) body = "The work order was taken off this request.";
-      else if (!previous) body = `Work order opened${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
+      else if (!previous)
+        body = `Work order opened${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
       else if (workOrder.completedOn && !previous.completedOn) body = "The work is done.";
       else if (workOrder.scheduledOn && workOrder.scheduledOn !== previous.scheduledOn)
         body = `Scheduled for ${formatDate(workOrder.scheduledOn, "medium")}${workOrder.vendorName ? ` with ${workOrder.vendorName}` : ""}.`;
@@ -91,26 +106,30 @@ export function useRequestsActions(deps: AppDeps) {
         // so the form stays put instead of saying "Request submitted".
         let stored = "";
         return remoteWrite("Sending the request", async () => {
-          const { data, error } = await supabaseBrowser().from("requests").insert({
-            // The form names the request before it is sent, so the files can
-            // be filed under it once it is stored.
-            id: isUuid(request.id) ? request.id : newId(),
-            association_id: rc.id,
-            unit_id: request.homeId,
-            filed_by: remote.profileId,
-            reference: request.reference,
-            kind: request.kind,
-            title: request.title,
-            body: request.summary,
-            status: request.status === "draft" ? "submitted" : request.status,
-            submitted_on: request.submittedDate,
-            due_on: request.dueDate ?? null,
-            due_reason: request.dueReason ?? null,
-            attachments: request.attachments,
-            thread: request.thread,
-            submission: request.submission ?? null,
-            certificate_id: request.certificateId ?? null,
-          }).select("reference").single();
+          const { data, error } = await supabaseBrowser()
+            .from("requests")
+            .insert({
+              // The form names the request before it is sent, so the files can
+              // be filed under it once it is stored.
+              id: isUuid(request.id) ? request.id : newId(),
+              association_id: rc.id,
+              unit_id: request.homeId,
+              filed_by: remote.profileId,
+              reference: request.reference,
+              kind: request.kind,
+              title: request.title,
+              body: request.summary,
+              status: request.status === "draft" ? "submitted" : request.status,
+              submitted_on: request.submittedDate,
+              due_on: request.dueDate ?? null,
+              due_reason: request.dueReason ?? null,
+              attachments: request.attachments,
+              thread: request.thread,
+              submission: request.submission ?? null,
+              certificate_id: request.certificateId ?? null,
+            })
+            .select("reference")
+            .single();
           if (error) throw new Error(error.message);
           stored = data?.reference ?? "";
         }).then((ok) => (ok ? stored : null));
@@ -216,7 +235,9 @@ export function useRequestsActions(deps: AppDeps) {
           // Told only once the reply is on the record. The same email kind
           // as a decision: it says the request was updated and carries the words.
           // The board hears how it went, so the generic toasts stay quiet.
-          return replyEmailState(await emailNotice(rc.id, { kind: "request", id: requestId, body: text }, true));
+          return replyEmailState(
+            await emailNotice(rc.id, { kind: "request", id: requestId, body: text }, true),
+          );
         });
       }
       const actor = sliceStore(communityId, "accounts")
@@ -277,7 +298,11 @@ export function useRequestsActions(deps: AppDeps) {
                 ...r,
                 attachments: [
                   ...r.attachments,
-                  ...sendable.map((f) => ({ name: f.name, size: fileSizeWords(f.size), addedOn: todayIsoDate() })),
+                  ...sendable.map((f) => ({
+                    name: f.name,
+                    size: fileSizeWords(f.size),
+                    addedOn: todayIsoDate(),
+                  })),
                 ],
               }
             : r,

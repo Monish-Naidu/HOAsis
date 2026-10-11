@@ -47,7 +47,11 @@ export function RequireCapability({ children }: { children: React.ReactNode }) {
       <>
         {mayChange ? null : (
           <div data-testid="board-read-only" className="mb-4">
-            <Callout tone="info" icon={<Eye className="size-4" />} title="You can look here, not change it">
+            <Callout
+              tone="info"
+              icon={<Eye className="size-4" />}
+              title="You can look here, not change it"
+            >
               You can view this page, but changes will not be saved. The President can give you
               access to make changes.
             </Callout>
@@ -65,8 +69,8 @@ export function RequireCapability({ children }: { children: React.ReactNode }) {
   return (
     <div data-testid="board-refusal">
       <Callout tone="warn" icon={<Lock className="size-4" />} title="This is not yours to open">
-        You need access to {list} to see this. The President can give you access, so ask
-        them if you think you should have it.
+        You need access to {list} to see this. The President can give you access, so ask them if you
+        think you should have it.
       </Callout>
     </div>
   );

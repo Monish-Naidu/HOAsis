@@ -23,7 +23,10 @@ export const firstName = (name: string): string => name.trim().split(/\s+/)[0] ?
  * is a different flow), and never at all unless two people are on the home,
  * because the last owner goes by a recorded sale.
  */
-export function removableSeats(seats: readonly OwnerSeat[], viewerAccountId: string | null): OwnerSeat[] {
+export function removableSeats(
+  seats: readonly OwnerSeat[],
+  viewerAccountId: string | null,
+): OwnerSeat[] {
   if (seats.length < 2) return [];
   return seats.filter((s) => s.removable && !(viewerAccountId && s.accountId === viewerAccountId));
 }

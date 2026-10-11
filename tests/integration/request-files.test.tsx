@@ -10,7 +10,11 @@ import type { RemoteCommunitySummary } from "@/lib/data/remote";
  * shared fake has no Storage, so the upload is a small stand-in beside it.
  */
 
-const fake = vi.hoisted(() => ({ current: null as unknown as ReturnType<typeof import("../helpers/fake-supabase").createFakeSupabase> }));
+const fake = vi.hoisted(() => ({
+  current: null as unknown as ReturnType<
+    typeof import("../helpers/fake-supabase").createFakeSupabase
+  >,
+}));
 const uploads = vi.hoisted(() => ({
   made: [] as { path: string; type: string }[],
   /** A path ending in this fails to upload. */
@@ -32,7 +36,8 @@ vi.mock("@/lib/supabase/client", async () => {
       storage: {
         from: () => ({
           upload: async (path: string, _file: Blob, options: { contentType: string }) => {
-            if (uploads.failing && path.endsWith(uploads.failing)) return { data: null, error: { message: "Upload refused" } };
+            if (uploads.failing && path.endsWith(uploads.failing))
+              return { data: null, error: { message: "Upload refused" } };
             uploads.made.push({ path, type: options.contentType });
             return { data: { path }, error: null };
           },
@@ -42,7 +47,13 @@ vi.mock("@/lib/supabase/client", async () => {
   };
 });
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
   usePathname: () => "/board/requests",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -78,11 +89,14 @@ beforeAll(async () => {
   ({ mehrMeadows: fixture } = await import("@/lib/data/communities"));
 });
 
-const file = (name: string, type: string, size = 2048) => new File([new Uint8Array(size)], name, { type });
+const file = (name: string, type: string, size = 2048) =>
+  new File([new Uint8Array(size)], name, { type });
 
 describe("attachFiles in the demo", () => {
   it("lists the file on the request with its name and size, and sends nothing anywhere", async () => {
-    const wrapper = ({ children }: { children: ReactNode }) => <app.AppStateProvider>{children}</app.AppStateProvider>;
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <app.AppStateProvider>{children}</app.AppStateProvider>
+    );
     const { result } = renderHook(() => app.useAppState(), { wrapper });
     const target = result.current.requests[0];
     let ok = false;
@@ -93,7 +107,9 @@ describe("attachFiles in the demo", () => {
       ]);
     });
     const after = result.current.requests.find((r) => r.id === target.id)!;
-    expect(after.attachments.slice(target.attachments.length)).toMatchObject([{ name: "leak.jpg", size: "2.5 MB" }]);
+    expect(after.attachments.slice(target.attachments.length)).toMatchObject([
+      { name: "leak.jpg", size: "2.5 MB" },
+    ]);
     // The second file could not go, so the answer is that not everything was saved.
     expect(ok).toBe(false);
     expect(uploads.made).toEqual([]);
@@ -119,23 +135,39 @@ describe("attachFiles signed in", () => {
 
   const render = () =>
     renderHook(() => app.useAppState(), {
-      wrapper: ({ children }: { children: ReactNode }) => <app.AppStateProvider>{children}</app.AppStateProvider>,
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <app.AppStateProvider>{children}</app.AppStateProvider>
+      ),
     });
 
   it("uploads each file under the request, then tells the request about it", async () => {
     const { result } = render();
     let ok = false;
     await act(async () => {
-      ok = await result.current.attachFiles(REQUEST, [file("Leak.JPG", "image/jpeg"), file("quote.pdf", "application/pdf", 4096)]);
+      ok = await result.current.attachFiles(REQUEST, [
+        file("Leak.JPG", "image/jpeg"),
+        file("quote.pdf", "application/pdf", 4096),
+      ]);
     });
 
     expect(ok).toBe(true);
     expect(uploads.made.map((u) => u.type)).toEqual(["image/jpeg", "application/pdf"]);
-    for (const u of uploads.made) expect(u.path).toMatch(new RegExp(`^${ASSOCIATION}/requests/${REQUEST}/[a-z0-9]+-`));
+    for (const u of uploads.made)
+      expect(u.path).toMatch(new RegExp(`^${ASSOCIATION}/requests/${REQUEST}/[a-z0-9]+-`));
     const told = fake.current.callsTo("rpc:add_request_attachment");
     expect(told.map((c) => c.args[1])).toMatchObject([
-      { p_request_id: REQUEST, p_name: "Leak.JPG", p_size_bytes: 2048, p_path: uploads.made[0].path },
-      { p_request_id: REQUEST, p_name: "quote.pdf", p_size_bytes: 4096, p_path: uploads.made[1].path },
+      {
+        p_request_id: REQUEST,
+        p_name: "Leak.JPG",
+        p_size_bytes: 2048,
+        p_path: uploads.made[0].path,
+      },
+      {
+        p_request_id: REQUEST,
+        p_name: "quote.pdf",
+        p_size_bytes: 4096,
+        p_path: uploads.made[1].path,
+      },
     ]);
   });
 

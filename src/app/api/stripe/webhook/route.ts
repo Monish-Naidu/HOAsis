@@ -150,22 +150,20 @@ export async function POST(request: NextRequest) {
         return retryLater("Could not look up the unit");
       }
       if (ours === "no") break;
-      const { error: pendingError } = await supabaseAdmin()
-        .from("payments")
-        .upsert(
-          {
-            association_id: meta.associationId,
-            unit_id: meta.unitId,
-            paid_by: meta.paidBy,
-            amount_cents: meta.assessmentCents,
-            platform_fee_cents: meta.platformFeeCents,
-            rail: meta.rail,
-            state: "pending",
-            stripe_payment_intent_id: intent.id,
-          },
-          // A retry, or a `succeeded` that arrived first: leave the row alone.
-          { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
-        );
+      const { error: pendingError } = await supabaseAdmin().from("payments").upsert(
+        {
+          association_id: meta.associationId,
+          unit_id: meta.unitId,
+          paid_by: meta.paidBy,
+          amount_cents: meta.assessmentCents,
+          platform_fee_cents: meta.platformFeeCents,
+          rail: meta.rail,
+          state: "pending",
+          stripe_payment_intent_id: intent.id,
+        },
+        // A retry, or a `succeeded` that arrived first: leave the row alone.
+        { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
+      );
       if (pendingError) {
         // This row is what stops autopay and the late fee run from acting on
         // money already in flight, so losing it quietly means the same dues
@@ -173,7 +171,10 @@ export async function POST(request: NextRequest) {
         // key that no longer resolves (the payer's profile was deleted) will
         // never succeed, so that one is put on /admin and acknowledged.
         if (pendingError.code === "23503") {
-          log.error("pending payment row refused", { intentId: intent.id, error: pendingError.message });
+          log.error("pending payment row refused", {
+            intentId: intent.id,
+            error: pendingError.message,
+          });
           await recordAppError({
             level: "error",
             source: "server",
@@ -184,7 +185,10 @@ export async function POST(request: NextRequest) {
           });
           break;
         }
-        log.error("pending payment row failed", { intentId: intent.id, error: pendingError.message });
+        log.error("pending payment row failed", {
+          intentId: intent.id,
+          error: pendingError.message,
+        });
         return retryLater(pendingError.message);
       }
       break;
@@ -205,7 +209,10 @@ export async function POST(request: NextRequest) {
         // it: no usable metadata, or a unit that is not this account's.
         // Retrying cannot fix either, so it is acknowledged, but never
         // silently. It lands on /admin with the intent to look up.
-        log.error("settled payment not recorded", { intentId: intent.id, account: event.account ?? null });
+        log.error("settled payment not recorded", {
+          intentId: intent.id,
+          account: event.account ?? null,
+        });
         await recordAppError({
           level: "error",
           source: "server",
@@ -217,7 +224,9 @@ export async function POST(request: NextRequest) {
             account: event.account ?? null,
             unitId: meta?.unitId ?? null,
             amountCents: intent.amount ?? null,
-            why: meta ? "The unit does not belong to the account the event came from" : "The intent carries no usable metadata",
+            why: meta
+              ? "The unit does not belong to the account the event came from"
+              : "The intent carries no usable metadata",
           },
         });
         break;
@@ -260,7 +269,11 @@ export async function POST(request: NextRequest) {
         p_paid_by: meta.paidBy ?? undefined,
       });
       if (error) {
-        log.error("record_payment failed", { err: error.message, intentId: intent.id, associationId: meta.associationId });
+        log.error("record_payment failed", {
+          err: error.message,
+          intentId: intent.id,
+          associationId: meta.associationId,
+        });
         // A 500 makes Stripe retry, which record_payment is built to tolerate.
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
@@ -278,7 +291,10 @@ export async function POST(request: NextRequest) {
       if (error) {
         // A pending row left standing reads as money on its way, to the
         // owner and to autopay. Ask Stripe to say it again.
-        log.error("could not fail the pending payment", { err: error.message, intentId: intent.id });
+        log.error("could not fail the pending payment", {
+          err: error.message,
+          intentId: intent.id,
+        });
         return retryLater(error.message);
       }
       break;
@@ -300,7 +316,10 @@ export async function POST(request: NextRequest) {
         .select("id, detail")
         .eq("detail->>setupIntentId", intent.id);
       if (readError) {
-        log.error("could not read the verifying bank", { err: readError.message, setupIntentId: intent.id });
+        log.error("could not read the verifying bank", {
+          err: readError.message,
+          setupIntentId: intent.id,
+        });
         return retryLater(readError.message);
       }
       for (const row of rows ?? []) {
@@ -308,9 +327,16 @@ export async function POST(request: NextRequest) {
         delete detail.status;
         delete detail.verifyUrl;
         delete detail.setupIntentId;
-        const { error } = await admin.from("payment_instruments").update({ detail }).eq("id", row.id);
+        const { error } = await admin
+          .from("payment_instruments")
+          .update({ detail })
+          .eq("id", row.id);
         if (error) {
-          log.error("could not clear the verifying mark", { err: error.message, setupIntentId: intent.id, instrumentId: row.id });
+          log.error("could not clear the verifying mark", {
+            err: error.message,
+            setupIntentId: intent.id,
+            instrumentId: row.id,
+          });
           return retryLater(error.message);
         }
       }
@@ -329,7 +355,10 @@ export async function POST(request: NextRequest) {
         .delete()
         .eq("detail->>setupIntentId", intent.id);
       if (error) {
-        log.error("could not remove the failed bank", { err: error.message, setupIntentId: intent.id });
+        log.error("could not remove the failed bank", {
+          err: error.message,
+          setupIntentId: intent.id,
+        });
         return retryLater(error.message);
       }
       break;
@@ -358,7 +387,11 @@ export async function POST(request: NextRequest) {
             settingsUrl: `${request.nextUrl.origin}${communityPath(row.slug, "/board/settings")}`,
             day: new Date().toISOString().slice(0, 10),
           });
-          log.warn("payments paused by Stripe", { associationId: row.id, emailed: told.sent, emailFailed: told.failed });
+          log.warn("payments paused by Stripe", {
+            associationId: row.id,
+            emailed: told.sent,
+            emailFailed: told.failed,
+          });
         }
       }
       break;
@@ -415,7 +448,10 @@ export async function POST(request: NextRequest) {
           return retryLater("Could not look up the unit");
         }
         if (ours === "yes") {
-          log.warn("refund arrived before its payment", { intentId, associationId: meta?.associationId });
+          log.warn("refund arrived before its payment", {
+            intentId,
+            associationId: meta?.associationId,
+          });
           return retryLater("The refunded payment is not recorded yet");
         }
       }
@@ -448,12 +484,22 @@ export async function POST(request: NextRequest) {
       if (paymentError) {
         // Without the payment there is nobody to tell. Nothing has been
         // sent or recorded yet, so asking for the event again is safe.
-        log.error("could not read the disputed payment", { err: paymentError.message, intentId, disputeId: dispute.id });
+        log.error("could not read the disputed payment", {
+          err: paymentError.message,
+          intentId,
+          disputeId: dispute.id,
+        });
         return retryLater(paymentError.message);
       }
 
       const opened = event.type === "charge.dispute.created";
-      const kind = opened ? "opened" : dispute.status === "won" ? "won" : dispute.status === "lost" ? "lost" : null;
+      const kind = opened
+        ? "opened"
+        : dispute.status === "won"
+          ? "won"
+          : dispute.status === "lost"
+            ? "lost"
+            : null;
 
       // Booked before anybody is told, so the email's "the statement shows
       // it as owed again" is true when it is read. A failure is answered
@@ -466,12 +512,19 @@ export async function POST(request: NextRequest) {
           p_amount_cents: dispute.amount,
         });
         if (lossError) {
-          log.error("record_dispute_loss failed", { err: lossError.message, intentId, disputeId: dispute.id });
+          log.error("record_dispute_loss failed", {
+            err: lossError.message,
+            intentId,
+            disputeId: dispute.id,
+          });
           return NextResponse.json({ error: lossError.message }, { status: 500 });
         }
         if (!booked && payment) {
           // The payment is ours but not settled here yet. Ask again.
-          log.warn("a lost dispute arrived before its payment settled", { intentId, disputeId: dispute.id });
+          log.warn("a lost dispute arrived before its payment settled", {
+            intentId,
+            disputeId: dispute.id,
+          });
           return retryLater("The disputed payment is not recorded yet");
         }
       }
@@ -489,13 +542,18 @@ export async function POST(request: NextRequest) {
             disputeId: dispute.id,
             amountCents: dispute.amount,
             reason: dispute.reason ?? null,
-            evidenceDueOn: opened && dueBy ? new Date(dueBy * 1000).toISOString().slice(0, 10) : null,
+            evidenceDueOn:
+              opened && dueBy ? new Date(dueBy * 1000).toISOString().slice(0, 10) : null,
           });
         } catch (problem) {
           log.error("dispute email failed", { err: problem, disputeId: dispute.id });
         }
         if (emailed.sent === 0) {
-          log.warn("nobody was emailed about the dispute", { disputeId: dispute.id, associationId: payment.association_id, failed: emailed.failed });
+          log.warn("nobody was emailed about the dispute", {
+            disputeId: dispute.id,
+            associationId: payment.association_id,
+            failed: emailed.failed,
+          });
         }
       }
       await recordAppError({

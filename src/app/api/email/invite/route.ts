@@ -7,7 +7,14 @@ import { inviteEmail } from "@/lib/email/templates";
 import { signInUrl } from "@/lib/email/sign-in-link";
 import { replyToFor } from "@/lib/email/reply-to";
 import { createInviteLimiter, spendInvites } from "@/lib/email/invite-limit";
-import { createPacer, logAttempt, recentlySent, sentKey, stoppedLine, unrecordedLine } from "@/lib/email/pace";
+import {
+  createPacer,
+  logAttempt,
+  recentlySent,
+  sentKey,
+  stoppedLine,
+  unrecordedLine,
+} from "@/lib/email/pace";
 import { remoteInviteUrl } from "@/lib/invitations";
 import { communityPath, placeLabel } from "@/lib/community-links";
 
@@ -52,7 +59,9 @@ export async function POST(request: NextRequest) {
   }
   const { associationId, kind = "invite" } = body;
   const log = logger("email/invite", request, { associationId });
-  const unitIds = Array.isArray(body.unitIds) ? body.unitIds.filter((u) => typeof u === "string") : [];
+  const unitIds = Array.isArray(body.unitIds)
+    ? body.unitIds.filter((u) => typeof u === "string")
+    : [];
   if (!associationId || unitIds.length === 0) {
     return NextResponse.json({ error: "associationId and unitIds are required" }, { status: 400 });
   }
@@ -94,7 +103,14 @@ export async function POST(request: NextRequest) {
 
   const origin = siteOrigin(request);
   const client = new Resend(key);
-  const result = { sent: 0, failed: 0, skipped: 0, errors: [] as string[], already: 0, remaining: 0 };
+  const result = {
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    errors: [] as string[],
+    already: 0,
+    remaining: 0,
+  };
 
   const pacer = createPacer();
   // A batch for more than one home that names somebody invited in the last
@@ -243,7 +259,14 @@ export async function POST(request: NextRequest) {
       break;
     }
   }
-  log.info("invites sent", { kind, sent: result.sent, failed: result.failed, skipped: result.skipped, already: result.already, remaining: result.remaining });
+  log.info("invites sent", {
+    kind,
+    sent: result.sent,
+    failed: result.failed,
+    skipped: result.skipped,
+    already: result.already,
+    remaining: result.remaining,
+  });
 
   return NextResponse.json(result);
 }

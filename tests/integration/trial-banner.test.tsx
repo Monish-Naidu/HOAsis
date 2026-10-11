@@ -17,7 +17,10 @@ const BODY = "The board's screens are read-only until a card is added; residents
 
 const set = (over: Record<string, unknown>) => {
   association = {
-    subscriptionStatus: "active", trialEndsOn: "2026-01-01", billing: { subscriptionId: "sub_1" }, ...over,
+    subscriptionStatus: "active",
+    trialEndsOn: "2026-01-01",
+    billing: { subscriptionId: "sub_1" },
+    ...over,
   };
 };
 
@@ -26,7 +29,9 @@ describe("the board banner", () => {
     set({ subscriptionStatus: "past_due", pastDueSince: "2026-10-15" });
     render(<TrialBanner />);
     expect(
-      screen.getByText("Your card failed on October 15, 2026. Update it within 9 days or the board side becomes read-only."),
+      screen.getByText(
+        "Your card failed on October 15, 2026. Update it within 9 days or the board side becomes read-only.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -52,7 +57,8 @@ describe("the board banner", () => {
 });
 
 describe("the owner's Home line", () => {
-  const line = "The board's subscription ended, so the board's side is paused. You can still pay and read everything here.";
+  const line =
+    "The board's subscription ended, so the board's side is paused. You can still pay and read everything here.";
 
   it("shows when the board is locked, cancelled or past the two weeks", () => {
     set({ subscriptionStatus: "canceled" });

@@ -43,7 +43,8 @@ function publish(next: State) {
 /** Loads once per signed in person. Safe to call from anywhere, any number of times. */
 export function loadJoinStatus(profileId: string | null, force = false): void {
   if (!hasSupabase || !profileId) {
-    if (state.requests !== null || state.loadedFor !== null) publish({ requests: null, loadedFor: null });
+    if (state.requests !== null || state.loadedFor !== null)
+      publish({ requests: null, loadedFor: null });
     return;
   }
   if (!force && state.loadedFor === profileId) return;
@@ -54,7 +55,7 @@ export function loadJoinStatus(profileId: string | null, force = false): void {
 }
 
 /** The raw answer, for the places that decide where to send somebody. */
-export async function fetchJoinStatus(): Promise<JoinStatus[]> {
+async function fetchJoinStatus(): Promise<JoinStatus[]> {
   try {
     const { data } = await supabaseBrowser().rpc("my_join_requests");
     const rows = (data ?? []) as {

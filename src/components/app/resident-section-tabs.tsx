@@ -31,7 +31,10 @@ export function ResidentSectionTabs() {
   const current = residentTabFor(pathname);
 
   return (
-    <nav aria-label={section.webLabel ?? section.label} className="-mt-1 mb-6 border-b border-border">
+    <nav
+      aria-label={section.webLabel ?? section.label}
+      className="-mt-1 mb-6 border-b border-border"
+    >
       <div
         className={cn(
           // The same strip, spacing and fade the board's SectionTabs draws.
@@ -48,7 +51,9 @@ export function ResidentSectionTabs() {
               aria-current={active ? "page" : undefined}
               className={cn(
                 "inline-flex h-10 shrink-0 items-center whitespace-nowrap text-callout font-medium transition-colors duration-200",
-                active ? "text-fg shadow-[inset_0_-2px_0_var(--primary)]" : "text-fg-muted hover:text-fg",
+                active
+                  ? "text-fg shadow-[inset_0_-2px_0_var(--primary)]"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               {tab.tab ?? tab.webLabel ?? tab.label}

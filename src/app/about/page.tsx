@@ -78,36 +78,34 @@ export default function AboutPage() {
           <div className="mt-6 space-y-4 text-[17px] leading-[1.75] text-fg-muted">
             <p>
               A board is usually three or four neighbors with day jobs. Between them they are
-              responsible for a few hundred thousand dollars, a set of roads and roofs that
-              will need replacing, and a stack of legal deadlines nobody mentioned at the
-              meeting where they volunteered.
+              responsible for a few hundred thousand dollars, a set of roads and roofs that will
+              need replacing, and a stack of legal deadlines nobody mentioned at the meeting where
+              they volunteered.
             </p>
             <p>
-              Almost all of that was decided before they arrived. The builder set the first
-              budget, wrote the covenants, and chose what went into reserves, and the board
-              that inherits those choices finds out what they were somewhere around the second
-              winter. A community handed over well and one handed over badly look identical on
-              the day, and completely different four years later.
+              Almost all of that was decided before they arrived. The builder set the first budget,
+              wrote the covenants, and chose what went into reserves, and the board that inherits
+              those choices finds out what they were somewhere around the second winter. A community
+              handed over well and one handed over badly look identical on the day, and completely
+              different four years later.
             </p>
             <p>
-              Most software for this assumes a professional manager sits in the middle. It
-              expects someone who knows what accrual accounting is, who has run an election
-              before, and who reads statutes for a living. The owners who end up holding a new
-              community have none of that and exactly the same liability.
+              Most software for this assumes a professional manager sits in the middle. It expects
+              someone who knows what accrual accounting is, who has run an election before, and who
+              reads statutes for a living. The owners who end up holding a new community have none
+              of that and exactly the same liability.
             </p>
             <p>
               Your HOAsis assumes the other thing. It assumes you are careful, busy, unpaid, and
-              slightly afraid of getting something wrong. So it shows its work, refuses to guess
-              on your behalf, and names the deadline before it passes.
+              slightly afraid of getting something wrong. So it shows its work, refuses to guess on
+              your behalf, and names the deadline before it passes.
             </p>
           </div>
         </Reveal>
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="text-[13px] font-semibold text-fg-muted">
-              What we believe
-            </h2>
+            <h2 className="text-[13px] font-semibold text-fg-muted">What we believe</h2>
           </Reveal>
           <div className="mt-4 space-y-4">
             {BELIEFS.map(({ icon, tint, title, body }, index) => (
@@ -115,7 +113,9 @@ export default function AboutPage() {
                 <Card className="flex items-start gap-4 p-5">
                   <IconTile icon={icon} tint={tint} size="md" />
                   <div className="min-w-0">
-                    <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">{title}</h3>
+                    <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-fg">
+                      {title}
+                    </h3>
                     <p className="mt-1.5 text-[15px] leading-relaxed text-fg-muted">{body}</p>
                   </div>
                 </Card>
@@ -126,12 +126,10 @@ export default function AboutPage() {
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="text-[13px] font-semibold text-fg-muted">
-              Who we are
-            </h2>
+            <h2 className="text-[13px] font-semibold text-fg-muted">Who we are</h2>
             <p className="mt-3 text-[17px] leading-[1.75] text-fg-muted">
-              Two people who between them cover the whole job: one who knows what actually breaks
-              in a community, and one who knows why the numbers never quite match.
+              Two people who between them cover the whole job: one who knows what actually breaks in
+              a community, and one who knows why the numbers never quite match.
             </p>
           </Reveal>
 
@@ -174,19 +172,17 @@ export default function AboutPage() {
 
         <section className="mt-12">
           <Reveal>
-            <h2 className="text-[13px] font-semibold text-fg-muted">
-              Who it is for
-            </h2>
+            <h2 className="text-[13px] font-semibold text-fg-muted">Who it is for</h2>
             <div className="mt-4 space-y-4 text-[17px] leading-[1.75] text-fg-muted">
               <p>
-                Self-managed associations, roughly 20 to 400 homes, where a handful of neighbors
-                run the whole thing. Single family, townhome, condo, or a mix. If you have a professional
-                manager and are happy, we are not trying to change your mind.
+                Self-managed associations, roughly 20 to 400 homes, where a handful of neighbors run
+                the whole thing. Single family, townhome, condo, or a mix. If you have a
+                professional manager and are happy, we are not trying to change your mind.
               </p>
               <p>
-                The library is free and always will be, for any board, whether or not they ever
-                use the product. Most of what goes wrong in an association goes wrong because
-                nobody told the volunteers what was expected of them.
+                The library is free and always will be, for any board, whether or not they ever use
+                the product. Most of what goes wrong in an association goes wrong because nobody
+                told the volunteers what was expected of them.
               </p>
             </div>
           </Reveal>

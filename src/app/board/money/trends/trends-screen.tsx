@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { Card, CardHeader, PageHeader } from "@/components/ui/primitives";
 import { NetTrendChart, YearCompareChart } from "@/components/app/board-charts";
-import { DeltaChip, InlineBar, Segmented, SelectField, StatTile } from "@/components/app/finance-ui";
+import {
+  DeltaChip,
+  InlineBar,
+  Segmented,
+  SelectField,
+  StatTile,
+} from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
 import { compareYears, ledgerYears, monthName, netByYear } from "@/lib/metrics";
 import { money, todayIsoDate } from "@/lib/utils";
@@ -27,7 +33,10 @@ export function TrendsScreen() {
   const [a, setA] = useState(years.find((y) => y < b) ?? b);
   const [measure, setMeasure] = useState<Measure>("income");
 
-  const options = years.map((y) => ({ value: String(y), label: y === thisYear ? `${y}, this year` : String(y) }));
+  const options = years.map((y) => ({
+    value: String(y),
+    label: y === thisYear ? `${y}, this year` : String(y),
+  }));
   const trend = netByYear(community);
 
   if (years.length < 2) {
@@ -35,7 +44,9 @@ export function TrendsScreen() {
       <>
         <PageHeader title="Trends" description="Year over year." />
         <Card className="p-6">
-          <p className="text-headline font-semibold tracking-[-0.015em] text-fg">One year of history so far</p>
+          <p className="text-headline font-semibold tracking-[-0.015em] text-fg">
+            One year of history so far
+          </p>
           <p className="mt-1.5 max-w-[60ch] text-body leading-relaxed text-fg-muted">
             Comparisons start once the books cover a second calendar year. Until then the Overview
             shows this year month by month.
@@ -52,7 +63,8 @@ export function TrendsScreen() {
     b: measure === "income" ? m.bIn : m.bOut,
   }));
   const span = cmp.partial ? `January to ${monthName(cmp.throughMonth, "long")}` : "Full year";
-  const yearLabel = (y: number) => (cmp.partial ? `${y} to ${monthName(cmp.throughMonth)}` : String(y));
+  const yearLabel = (y: number) =>
+    cmp.partial ? `${y} to ${monthName(cmp.throughMonth)}` : String(y);
 
   return (
     <>
@@ -61,9 +73,19 @@ export function TrendsScreen() {
         description={`${span} of each year. Reserve funding is shown separately.`}
         action={
           <div className="flex items-center gap-2 text-footnote text-fg-muted">
-            <SelectField label="Earlier year" value={String(a)} onChange={(v) => setA(Number(v))} options={options} />
+            <SelectField
+              label="Earlier year"
+              value={String(a)}
+              onChange={(v) => setA(Number(v))}
+              options={options}
+            />
             <span>against</span>
-            <SelectField label="Later year" value={String(b)} onChange={(v) => setB(Number(v))} options={options} />
+            <SelectField
+              label="Later year"
+              value={String(b)}
+              onChange={(v) => setB(Number(v))}
+              options={options}
+            />
           </div>
         }
       />
@@ -93,7 +115,8 @@ export function TrendsScreen() {
       </div>
       <p className="tnum mt-3 flex flex-wrap items-center gap-x-2 text-footnote text-fg-muted">
         <span>
-          Reserve funding {money(cmp.b.reserveCents, { cents: false })} in {b}, {money(cmp.a.reserveCents, { cents: false })} in {a}
+          Reserve funding {money(cmp.b.reserveCents, { cents: false })} in {b},{" "}
+          {money(cmp.a.reserveCents, { cents: false })} in {a}
         </span>
         <DeltaChip delta={cmp.reserve} goodWhen="neither" />
       </p>
@@ -139,20 +162,32 @@ export function TrendsScreen() {
               </thead>
               <tbody>
                 {cmp.categories.map((row) => (
-                  <tr key={row.category} className="border-b border-border text-body last:border-b-0 hover:bg-surface-2">
+                  <tr
+                    key={row.category}
+                    className="border-b border-border text-body last:border-b-0 hover:bg-surface-2"
+                  >
                     <td className="px-5 py-2.5 font-medium text-fg">{row.category}</td>
-                    <td className="tnum px-3 py-2.5 text-right text-fg-muted">{money(row.aCents, { cents: false })}</td>
-                    <td className="tnum px-3 py-2.5 text-right font-semibold text-fg">{money(row.bCents, { cents: false })}</td>
+                    <td className="tnum px-3 py-2.5 text-right text-fg-muted">
+                      {money(row.aCents, { cents: false })}
+                    </td>
+                    <td className="tnum px-3 py-2.5 text-right font-semibold text-fg">
+                      {money(row.bCents, { cents: false })}
+                    </td>
                     <td className="px-3 py-2.5 text-right">
-                      <DeltaChip
-                        delta={row.change}
-                        goodWhen="down"
-                      />
+                      <DeltaChip delta={row.change} goodWhen="down" />
                     </td>
                     <td className="px-5 py-2.5">
                       <span className="flex flex-col gap-1">
-                        <InlineBar value={row.aCents} max={cmp.peakCategoryCents} colorClass="bg-chart-other" />
-                        <InlineBar value={row.bCents} max={cmp.peakCategoryCents} colorClass="bg-chart-1" />
+                        <InlineBar
+                          value={row.aCents}
+                          max={cmp.peakCategoryCents}
+                          colorClass="bg-chart-other"
+                        />
+                        <InlineBar
+                          value={row.bCents}
+                          max={cmp.peakCategoryCents}
+                          colorClass="bg-chart-1"
+                        />
                       </span>
                     </td>
                   </tr>

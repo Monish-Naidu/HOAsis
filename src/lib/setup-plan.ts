@@ -48,7 +48,8 @@ import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
  * has exactly one definition: the Stripe item is done (`buildPlan().payments`).
  */
 
-export type PlanPhaseId = "before-handover" | "before-bank" | "collect" | "obligations" | "everything-else";
+type PlanPhaseId =
+  "before-handover" | "before-bank" | "collect" | "obligations" | "everything-else";
 
 export interface PlanPhase {
   id: PlanPhaseId;
@@ -138,8 +139,15 @@ export function profileFromDraft(draft: CommunityDraft): AssociationProfile {
  * direction is a nuisance, not a liability, and the task links to the article.
  */
 const RESERVE_STUDY_STATES = new Set([
-  "California", "Colorado", "Florida", "Hawaii", "Nevada", "Oregon",
-  "Utah", "Virginia", "Washington",
+  "California",
+  "Colorado",
+  "Florida",
+  "Hawaii",
+  "Nevada",
+  "Oregon",
+  "Utah",
+  "Virginia",
+  "Washington",
 ]);
 
 /**
@@ -230,7 +238,8 @@ function because(
     case "roster": {
       const r = rosterStatus(c, p);
       if (r.homes <= 1) return "Only your own home is listed.";
-      if (r.withoutOwner === 0) return `${pluralize(r.homes, "home")}, every one with an owner listed.`;
+      if (r.withoutOwner === 0)
+        return `${pluralize(r.homes, "home")}, every one with an owner listed.`;
       if (r.stillSelling) {
         return `${pluralize(r.homes, "home")} listed. ${r.withoutOwner} not sold yet, which is expected while you are still selling.`;
       }
@@ -264,11 +273,12 @@ function because(
     case "first-bill": {
       const bill = firstBill(c);
       if (!bill.done) return "No dues amount is set, so nothing can be billed.";
-      const amount = bill.ownCount > 0
-        ? `${money(bill.totalCents)} across ${pluralize(bill.homes, "home")}, each at what it pays`
-        : bill.varies
-        ? "each kind of home at its own amount"
-        : `${money(bill.cents)} per home, billed ${bill.cadence}`;
+      const amount =
+        bill.ownCount > 0
+          ? `${money(bill.totalCents)} across ${pluralize(bill.homes, "home")}, each at what it pays`
+          : bill.varies
+            ? "each kind of home at its own amount"
+            : `${money(bill.cents)} per home, billed ${bill.cadence}`;
       return `${bill.issued ? "Dues have been billed. Next bill" : "First bill"} ${formatDate(bill.date, "long")}, ${amount}.`;
     }
 
@@ -403,12 +413,14 @@ const PHASE_META: { id: PlanPhaseId; title: string; outcome: string }[] = [
   {
     id: "before-handover",
     title: "Before you sign the handover",
-    outcome: "Most of what matters is decided before you sign anything. Mark each one done as you finish it.",
+    outcome:
+      "Most of what matters is decided before you sign anything. Mark each one done as you finish it.",
   },
   {
     id: "before-bank",
     title: "Before the bank will open an account",
-    outcome: "What has to exist on paper before the bank opens an account in the association's name.",
+    outcome:
+      "What has to exist on paper before the bank opens an account in the association's name.",
   },
   {
     id: "collect",
@@ -435,7 +447,7 @@ const PHASE_META: { id: PlanPhaseId; title: string; outcome: string }[] = [
 const HIDDEN_BY_SWITCH = new Set(["budget", "billing", ...HANDOVER_KEYS, ...BUILDER_KEYS]);
 
 /** The one answer to "can owners pay online", and how every screen says it. */
-export interface PaymentsLine {
+interface PaymentsLine {
   /** The Stripe step is done (or this is the demo). The only thing that makes the claim true. */
   ready: boolean;
   /** Steps in "Get paid" still open, the Stripe step among them. */
@@ -478,7 +490,9 @@ export function buildPlan(
           task.key === "reserves" && hasRecords(facts) ? "Enter your reserve study" : task.label,
         unavailable,
         // Never done where it cannot be done, whatever the records say.
-        complete: !unavailable && (isDone(community, facts) || (Boolean(task.doneWhenDismissed) && wasDismissed)),
+        complete:
+          !unavailable &&
+          (isDone(community, facts) || (Boolean(task.doneWhenDismissed) && wasDismissed)),
         because: because(task, profile, community, wasDismissed),
       };
     });

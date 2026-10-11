@@ -93,13 +93,28 @@ function ChangeDateForm({ meeting: m, onClose }: { meeting: Meeting; onClose: ()
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <Field label="New date">
-          <input type="date" value={date} min={todayIsoDate()} onChange={(e) => setDate(e.target.value)} className={fieldClass} />
+          <input
+            type="date"
+            value={date}
+            min={todayIsoDate()}
+            onChange={(e) => setDate(e.target.value)}
+            className={fieldClass}
+          />
         </Field>
         <Field label="Time">
-          <input value={time} onChange={(e) => setTime(e.target.value)} placeholder="7:00 PM" className={fieldClass} />
+          <input
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            placeholder="7:00 PM"
+            className={fieldClass}
+          />
         </Field>
         <Field label="Where">
-          <input value={location} onChange={(e) => setLocation(e.target.value)} className={fieldClass} />
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className={fieldClass}
+          />
         </Field>
       </div>
       {error ? (
@@ -157,8 +172,17 @@ function CancelForm({ meeting: m, onClose }: { meeting: Meeting; onClose: () => 
         void cancel();
       }}
     >
-      <Field label="Why is it cancelled?" hint="Residents see this on their calendar." error={error}>
-        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="No quorum, storm warning" className={fieldClass} />
+      <Field
+        label="Why is it cancelled?"
+        hint="Residents see this on their calendar."
+        error={error}
+      >
+        <input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="No quorum, storm warning"
+          className={fieldClass}
+        />
       </Field>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button type="submit" variant="danger" size="sm" disabled={saving}>
@@ -193,7 +217,15 @@ export function MinutesPanel({ meeting: m }: { meeting: Meeting }) {
 /** Longer than this folds into a `<details>`; the board has the whole text one press away. */
 const FOLD_AFTER = 600;
 
-function SavedMinutes({ meeting: m, text, onEdit }: { meeting: Meeting; text: string; onEdit: () => void }) {
+function SavedMinutes({
+  meeting: m,
+  text,
+  onEdit,
+}: {
+  meeting: Meeting;
+  text: string;
+  onEdit: () => void;
+}) {
   const placeLabel = useHomeLabel();
   const body = <p className="whitespace-pre-line text-body text-fg-muted">{text}</p>;
   const came = m.attended ?? [];
@@ -216,12 +248,16 @@ function SavedMinutes({ meeting: m, text, onEdit }: { meeting: Meeting; text: st
       )}
       {came.length ? (
         <details className="mt-2 text-footnote">
-          <summary className="cursor-pointer select-none font-medium text-fg-muted">{attendedLine(m)}</summary>
+          <summary className="cursor-pointer select-none font-medium text-fg-muted">
+            {attendedLine(m)}
+          </summary>
           <ul className="mt-1.5 grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
             {came.map((a) => (
               <li key={attendeeKey(a)} className="flex items-center gap-2 text-fg-muted">
                 <span className="truncate">{a.name}</span>
-                <span className="ml-auto shrink-0 text-fg-subtle">{a.role ?? (a.unit ? placeLabel(a.unit) : "")}</span>
+                <span className="ml-auto shrink-0 text-fg-subtle">
+                  {a.role ?? (a.unit ? placeLabel(a.unit) : "")}
+                </span>
               </li>
             ))}
           </ul>
@@ -247,7 +283,12 @@ function MinutesForm({ meeting: m, onClose }: { meeting: Meeting; onClose: () =>
     .map((r) => ({ name: r.name, unit: r.unit, channel: "in-person" as const }));
   const board: MeetingAttendee[] = community.accounts
     .filter((a) => a.role !== "resident")
-    .map((a) => ({ name: a.name, unit: a.unit, role: ROLE_LABEL[a.role], channel: "in-person" as const }));
+    .map((a) => ({
+      name: a.name,
+      unit: a.unit,
+      role: ROLE_LABEL[a.role],
+      channel: "in-person" as const,
+    }));
   const savedList = m.attended ?? [];
   const [added, setAdded] = useState<MeetingAttendee[]>([]);
   const everyone = new Map<string, MeetingAttendee>();
@@ -267,7 +308,11 @@ function MinutesForm({ meeting: m, onClose }: { meeting: Meeting; onClose: () =>
   function addSomeone() {
     const who = name.trim();
     if (!who) return;
-    const person: MeetingAttendee = { name: who, unit: home.trim() || undefined, channel: "in-person" };
+    const person: MeetingAttendee = {
+      name: who,
+      unit: home.trim() || undefined,
+      channel: "in-person",
+    };
     setAdded((all) => [...all, person]);
     setTicked((all) => new Set(all).add(attendeeKey(person)));
     setName("");
@@ -305,8 +350,17 @@ function MinutesForm({ meeting: m, onClose }: { meeting: Meeting; onClose: () =>
         void save();
       }}
     >
-      <Field label="Minutes" hint="What was decided and who moved it. Residents can read them." error={error}>
-        <textarea value={minutes} onChange={(e) => setMinutes(e.target.value)} rows={8} className={textareaClass} />
+      <Field
+        label="Minutes"
+        hint="What was decided and who moved it. Residents can read them."
+        error={error}
+      >
+        <textarea
+          value={minutes}
+          onChange={(e) => setMinutes(e.target.value)}
+          rows={8}
+          className={textareaClass}
+        />
       </Field>
       <fieldset className="mt-4">
         <legend className="mb-1 text-footnote font-semibold text-fg-muted">Who came</legend>
@@ -352,7 +406,12 @@ function MinutesForm({ meeting: m, onClose }: { meeting: Meeting; onClose: () =>
             />
           </Field>
           <Field label="Home" className="w-28">
-            <input value={home} onChange={(e) => setHome(e.target.value)} placeholder="12" className={fieldClass} />
+            <input
+              value={home}
+              onChange={(e) => setHome(e.target.value)}
+              placeholder="12"
+              className={fieldClass}
+            />
           </Field>
           <Button variant="secondary" size="md" disabled={!name.trim()} onClick={addSomeone}>
             Add

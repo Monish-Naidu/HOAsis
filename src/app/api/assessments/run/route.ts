@@ -41,8 +41,15 @@ export async function GET(request: NextRequest) {
 
   const plan = cronPlan(request, { budgetMs: CRON_BUDGET_MS });
   const report = {
-    today, dryRun, checked: 0, billed: [] as string[], quiet: [] as string[], lateFees: [] as string[], errors: [] as string[],
-    complete: true, next: null as string | null,
+    today,
+    dryRun,
+    checked: 0,
+    billed: [] as string[],
+    quiet: [] as string[],
+    lateFees: [] as string[],
+    errors: [] as string[],
+    complete: true,
+    next: null as string | null,
   };
 
   const walk = await walkPages(
@@ -50,7 +57,9 @@ export async function GET(request: NextRequest) {
     (after, limit) => {
       let query = admin
         .from("associations")
-        .select("id, name, dues_cents, dues_cadence, due_day, fiscal_year_start, created_at, billing_starts_on, subscription_status, past_due_since, trial_ends_at, billing_subscription_id")
+        .select(
+          "id, name, dues_cents, dues_cadence, due_day, fiscal_year_start, created_at, billing_starts_on, subscription_status, past_due_since, trial_ends_at, billing_subscription_id",
+        )
         .is("deleted_at", null)
         .order("id")
         .limit(limit);
@@ -113,13 +122,30 @@ export async function GET(request: NextRequest) {
   );
 
   const summary = {
-    checked: report.checked, billed: report.billed.length, quiet: report.quiet.length, lateFees: report.lateFees.length,
-    errors: report.errors.length, complete: walk.complete, after: plan.after, dryRun,
+    checked: report.checked,
+    billed: report.billed.length,
+    quiet: report.quiet.length,
+    lateFees: report.lateFees.length,
+    errors: report.errors.length,
+    complete: walk.complete,
+    after: plan.after,
+    dryRun,
   };
   if (walk.error) {
     log.error("assessments run failed", { err: walk.error, ...summary });
-    if (!dryRun) await recordCronRun({ job: "assessments", requestId: log.requestId, startedAt, ok: false, summary, error: walk.error });
-    return NextResponse.json({ error: walk.error, reference: log.requestId, ...report }, { status: 500 });
+    if (!dryRun)
+      await recordCronRun({
+        job: "assessments",
+        requestId: log.requestId,
+        startedAt,
+        ok: false,
+        summary,
+        error: walk.error,
+      });
+    return NextResponse.json(
+      { error: walk.error, reference: log.requestId, ...report },
+      { status: 500 },
+    );
   }
   if (!walk.complete && walk.last) {
     report.complete = false;
@@ -127,7 +153,14 @@ export async function GET(request: NextRequest) {
     if (!dryRun) scheduleContinuation(request, plan.continuation(walk.last));
   }
   log.info("assessments run finished", summary);
-  if (!dryRun) await recordCronRun({ job: "assessments", requestId: log.requestId, startedAt, ok: report.errors.length === 0, summary });
+  if (!dryRun)
+    await recordCronRun({
+      job: "assessments",
+      requestId: log.requestId,
+      startedAt,
+      ok: report.errors.length === 0,
+      summary,
+    });
 
   return NextResponse.json(report);
 }

@@ -29,7 +29,7 @@ export const SEND_GAP_MS = 550;
 /** How long a roster send may run before it stops and reports. */
 export const SEND_BUDGET_MS = 45_000;
 
-export function pause(ms: number): Promise<void> {
+function pause(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 

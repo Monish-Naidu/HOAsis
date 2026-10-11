@@ -110,13 +110,13 @@ export interface BoardRoute {
 }
 
 export const BOARD_ROUTES: BoardRoute[] = [
-
   { href: "/board", label: "Dashboard", icon: LayoutDashboard, key: "dashboard", tint: "blue" },
   {
     href: "/board/setup",
     label: "Setting up",
     icon: ListChecks,
-    key: "setup", tint: "amber",
+    key: "setup",
+    tint: "amber",
     module: "setup",
     // Second in the list while it exists, and gone the day it is finished.
     //
@@ -243,7 +243,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/homeowners",
     label: "Homeowners",
     icon: Users,
-    key: "homeowners", tint: "violet",
+    key: "homeowners",
+    tint: "violet",
     module: "homeowners",
     // Was ungated, which showed every household's balance, email and days past
     // due to any resident who reached the URL.
@@ -274,7 +275,15 @@ export const BOARD_ROUTES: BoardRoute[] = [
     hidden: true,
     parent: "homeowners",
   },
-  { href: "/board/vendors", label: "Vendors", icon: Truck, key: "vendors", tint: "amber", need: ["vendors"], module: "vendors" },
+  {
+    href: "/board/vendors",
+    label: "Vendors",
+    icon: Truck,
+    key: "vendors",
+    tint: "amber",
+    need: ["vendors"],
+    module: "vendors",
+  },
   {
     href: "/board/requests",
     label: "Requests",
@@ -295,7 +304,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Notices",
     tab: "Notices",
     icon: TriangleAlert,
-    key: "violations", tint: "coral",
+    key: "violations",
+    tint: "coral",
     module: "notices",
     // Enforcement rides the same capability as requests: both are the board
     // answering a household, and splitting the grant would strand one queue.
@@ -308,7 +318,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     label: "Messages",
     tab: "Inbox",
     icon: MessagesSquare,
-    key: "communications", tint: "coral",
+    key: "communications",
+    tint: "coral",
     module: "communications",
     // Finances opens it too. The database shows a treasurer the Billing
     // conversations only (0044): the past due letters are theirs to answer.
@@ -320,7 +331,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     parent: "communications",
     label: "Announcements",
     icon: Megaphone,
-    key: "announcements", tint: "coral",
+    key: "announcements",
+    tint: "coral",
     module: "communications",
     need: ["communications"],
   },
@@ -330,7 +342,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     parent: "communications",
     label: "Community",
     icon: MessageSquareText,
-    key: "forum", tint: "blue",
+    key: "forum",
+    tint: "blue",
     module: "forum",
     need: ["forum"],
   },
@@ -338,7 +351,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/meetings",
     label: "Meetings",
     icon: Video,
-    key: "meetings", tint: "amber",
+    key: "meetings",
+    tint: "amber",
     module: "meetings",
     need: ["voting"],
   },
@@ -357,7 +371,8 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/compliance",
     label: "Compliance",
     icon: ShieldCheck,
-    key: "compliance", tint: "violet",
+    key: "compliance",
+    tint: "violet",
     module: "compliance",
     need: ["compliance"],
   },
@@ -365,11 +380,20 @@ export const BOARD_ROUTES: BoardRoute[] = [
     href: "/board/documents",
     label: "Documents",
     icon: FileText,
-    key: "documents", tint: "violet",
+    key: "documents",
+    tint: "violet",
     module: "documents",
     need: ["documents"],
   },
-  { href: "/board/settings", label: "Settings", icon: Settings, key: "settings", tint: "neutral", need: ["settings"], module: "settings" },
+  {
+    href: "/board/settings",
+    label: "Settings",
+    icon: Settings,
+    key: "settings",
+    tint: "neutral",
+    need: ["settings"],
+    module: "settings",
+  },
 ];
 
 /**

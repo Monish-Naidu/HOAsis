@@ -13,9 +13,9 @@ import { createHarness } from "./lib/harness.mjs";
 
 /* ------------------------------------------------------------------ setup */
 
-const {
-  admin, anon, stamp, PASSWORD, check, cleanup, cleanupAll, report,
-} = createHarness({ passwordPrefix: "verify-rls-" });
+const { admin, anon, stamp, PASSWORD, check, cleanup, cleanupAll, report } = createHarness({
+  passwordPrefix: "verify-rls-",
+});
 const email = (who) => `rls-${who}-${stamp}@example.com`;
 
 /** A client acting as a signed in person, subject to every policy. */
@@ -314,11 +314,7 @@ async function run() {
       .from("profiles")
       .update({ full_name: "Renamed Resident", phone: "425 555 0100" })
       .eq("id", s.resident.id);
-    check(
-      "but can still change their own name and phone",
-      !nameError,
-      nameError?.message ?? "",
-    );
+    check("but can still change their own name and phone", !nameError, nameError?.message ?? "");
 
     const { error: homeError } = await asResident
       .from("profiles")

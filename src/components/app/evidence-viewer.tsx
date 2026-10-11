@@ -98,7 +98,11 @@ export function EvidenceViewer({
 
       <div className="border-t border-border px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={photo.vantage === "street" || photo.vantage === "common-area" ? "neutral" : "warn"}>
+          <Badge
+            tone={
+              photo.vantage === "street" || photo.vantage === "common-area" ? "neutral" : "warn"
+            }
+          >
             <Eye className="mr-1 inline size-3" />
             {VANTAGE_LABEL[photo.vantage]}
           </Badge>
@@ -115,9 +119,7 @@ export function EvidenceViewer({
             key={concern.photoId}
             className={cn(
               "mt-2.5 flex items-start gap-2 rounded-lg px-3 py-2 text-footnote leading-relaxed",
-              concern.severity === "warn"
-                ? "bg-warn-soft text-fg"
-                : "bg-surface-2 text-fg-muted",
+              concern.severity === "warn" ? "bg-warn-soft text-fg" : "bg-surface-2 text-fg-muted",
             )}
           >
             <AlertTriangle

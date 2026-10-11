@@ -11,5 +11,7 @@ export function bankLine(accounts: BankAccount[], which: "operating" | "reserve"
     .map((a) => a.institution.trim())
     .filter(Boolean);
   const unique = [...new Set(names)];
-  return unique.length > 1 ? `${unique.slice(0, -1).join(", ")} and ${unique[unique.length - 1]}` : (unique[0] ?? "");
+  return unique.length > 1
+    ? `${unique.slice(0, -1).join(", ")} and ${unique[unique.length - 1]}`
+    : (unique[0] ?? "");
 }

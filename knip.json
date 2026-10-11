@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/app/**/page.tsx",
+    "src/app/**/route.ts",
+    "src/app/**/layout.tsx",
+    "src/lib/data/index.ts",
+    "src/instrumentation*.ts",
+    "scripts/**/*.mjs",
+    "tests/**/*.test.{ts,tsx}",
+    "*.config.{mjs,mts,ts}"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.mjs", "tests/**/*.{test,spec}.{ts,tsx}"],
+  "ignore": ["scripts/.qa/**", "src/lib/tokens.ts"],
+  "ignoreDependencies": ["tailwindcss"],
+  "ignoreBinaries": ["vercel"]
+}

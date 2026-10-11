@@ -101,9 +101,6 @@ The {{association}} Board`,
 ];
 
 /** Fills the tokens a template declares. Unknown tokens are left visible on purpose. */
-export function renderTemplate(
-  body: string,
-  values: Partial<Record<string, string>>,
-): string {
+export function renderTemplate(body: string, values: Partial<Record<string, string>>): string {
   return body.replace(/\{\{(\w+)\}\}/g, (match, token: string) => values[token] ?? match);
 }

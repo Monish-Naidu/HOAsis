@@ -79,7 +79,15 @@ interface ResidentTab {
  */
 export const residentTabs: ResidentTab[] = [
   { href: "/resident", label: "Home", icon: Home, tint: "blue", bar: true },
-  { href: "/resident/pay", label: "Pay", tab: "Pay", tabLabel: "Pay", icon: CreditCard, tint: "teal", bar: true },
+  {
+    href: "/resident/pay",
+    label: "Pay",
+    tab: "Pay",
+    tabLabel: "Pay",
+    icon: CreditCard,
+    tint: "teal",
+    bar: true,
+  },
   // Under Payments: the balance and the history are two views of the same
   // money. Violet, the records tint: neutral grey made its title tile look
   // switched off.
@@ -90,7 +98,13 @@ export const residentTabs: ResidentTab[] = [
     tint: "violet",
     parent: "/resident/pay",
   },
-  { href: "/resident/requests", label: "Requests", icon: MessageSquarePlus, tint: "blue", bar: true },
+  {
+    href: "/resident/requests",
+    label: "Requests",
+    icon: MessageSquarePlus,
+    tint: "blue",
+    bar: true,
+  },
   // Under Requests: a question is a request that needs no decision. Asking
   // the board used to mean email, with no trace here.
   {
@@ -155,7 +169,14 @@ export const residentTabs: ResidentTab[] = [
     tint: "blue",
     blurb: "Text size, light or dark, and your contact details",
   },
-  { href: "/resident/more", label: "More", icon: LayoutGrid, tint: "blue", bar: true, phoneOnly: true },
+  {
+    href: "/resident/more",
+    label: "More",
+    icon: LayoutGrid,
+    tint: "blue",
+    bar: true,
+    phoneOnly: true,
+  },
 ];
 
 /** The tabs this association shows: its modules on, its switches on. */

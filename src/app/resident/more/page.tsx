@@ -16,7 +16,8 @@ import { useAppState } from "@/lib/app-state";
  * Voting) are that row's tabs, which draw on a phone too.
  */
 export default function ResidentMore() {
-  const { settings, signOut, account, setView, community, communities, setCommunity } = useAppState();
+  const { settings, signOut, account, setView, community, communities, setCommunity } =
+    useAppState();
   const router = useRouter();
   const rows = residentMoreRows(visibleResidentTabs(settings));
   // On a phone the header has room for a name and three controls, so the two
@@ -56,7 +57,9 @@ export default function ResidentMore() {
           <IconTile icon={Users} tint="neutral" size="sm" />
           <span className="min-w-0 flex-1">
             <span className="block text-body font-semibold text-fg">Your board</span>
-            <span className="block text-footnote text-fg-muted">Who holds each office, and how to write to them</span>
+            <span className="block text-footnote text-fg-muted">
+              Who holds each office, and how to write to them
+            </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
         </Link>
@@ -76,7 +79,9 @@ export default function ResidentMore() {
               <IconTile icon={LayoutDashboard} tint="neutral" size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block text-body font-semibold text-fg">Board view</span>
-                <span className="block text-footnote text-fg-muted">The board&apos;s side of {settings.displayName}</span>
+                <span className="block text-footnote text-fg-muted">
+                  The board&apos;s side of {settings.displayName}
+                </span>
               </span>
               <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
             </button>
@@ -94,7 +99,9 @@ export default function ResidentMore() {
             >
               <IconTile icon={Building2} tint="neutral" size="sm" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-body font-semibold text-fg">{option.label}</span>
+                <span className="block truncate text-body font-semibold text-fg">
+                  {option.label}
+                </span>
                 <span className="block truncate text-footnote text-fg-muted">
                   Switch association{option.place ? ` · ${option.place}` : ""}
                 </span>

@@ -32,8 +32,7 @@ export function AddBudgetLine() {
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Landscaping");
   const [annual, setAnnual] = useState("");
 
-  const field =
-    cn(fieldClass, "w-auto");
+  const field = cn(fieldClass, "w-auto");
   const cents = Math.round((Number(annual) || 0) * 100);
 
   function submit() {

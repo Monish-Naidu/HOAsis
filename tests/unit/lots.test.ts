@@ -283,7 +283,9 @@ describe("the founder's own lot", () => {
 
     const community = buildCommunity(final, "2026-08-26");
     expect(community.homes).toHaveLength(40);
-    expect(community.homes.filter((o) => o.unit === "Lot 12").map((o) => o.displayName)).toEqual(["Pat"]);
+    expect(community.homes.filter((o) => o.unit === "Lot 12").map((o) => o.displayName)).toEqual([
+      "Pat",
+    ]);
     expect(community.homes.some((o) => o.unit === "12")).toBe(false);
   });
 
@@ -307,7 +309,8 @@ describe("the founder's own lot", () => {
       founder: { name: "Pat", email: "pat@example.com", unit: "2" },
       lotPrefix: " A-",
       phases,
-      households: rebuildLotHomes<DraftHousehold>({ phases, prefix: " A-", households: [] }).households,
+      households: rebuildLotHomes<DraftHousehold>({ phases, prefix: " A-", households: [] })
+        .households,
     };
 
     expect(draft.households).toHaveLength(4);
@@ -319,7 +322,9 @@ describe("the founder's own lot", () => {
     expect(final.households.map((h) => h.unit)).toEqual(["A-1", "A-3", "A-4"]);
     const community = buildCommunity(final, "2026-08-26");
     expect(community.homes).toHaveLength(4);
-    expect(community.homes.filter((o) => o.unit === "A-2").map((o) => o.displayName)).toEqual(["Pat"]);
+    expect(community.homes.filter((o) => o.unit === "A-2").map((o) => o.displayName)).toEqual([
+      "Pat",
+    ]);
   });
 
   it("gives the founder their range's kind of home under that prefix, typed either way", () => {
@@ -371,7 +376,9 @@ describe("the founder's own lot", () => {
  * walk the keystrokes a board actually types and check nobody goes missing.
  */
 describe("rebuilding the homes while the ranges are typed", () => {
-  const range = (to: number, from = 1): LotPhase[] => [{ id: "phase-1", label: "Phase 1", from, to }];
+  const range = (to: number, from = 1): LotPhase[] => [
+    { id: "phase-1", label: "Phase 1", from, to },
+  ];
   // What the homes question holds between keystrokes.
   type State = { households: DraftHousehold[]; parked: DraftHousehold[]; prefix: string };
   const start: State = { households: [], parked: [], prefix: "" };
@@ -426,7 +433,9 @@ describe("rebuilding the homes while the ranges are typed", () => {
     expect(hasDetails({ unit: "4", name: "", email: " ", homeType: "condos" })).toBe(false);
     expect(hasDetails({ unit: "4", name: "Ana", email: "" })).toBe(true);
     // A balance of zero from a spreadsheet is still something entered.
-    expect(hasDetails({ unit: "4", name: "", email: "", openingBalanceCents: 0 } as DraftHousehold)).toBe(true);
+    expect(
+      hasDetails({ unit: "4", name: "", email: "", openingBalanceCents: 0 } as DraftHousehold),
+    ).toBe(true);
   });
 
   it("keeps every buyer when a range is shrunk and grown again", () => {
@@ -457,7 +466,14 @@ describe("rebuilding the homes while the ranges are typed", () => {
   it("keeps every buyer while a prefix is typed a letter at a time", () => {
     let s = name(type(start, range(6)), "3", "Ana");
     for (const prefix of ["L", "Lo", "Lot"]) s = type(s, range(6), prefix);
-    expect(s.households.map((h) => h.unit)).toEqual(["Lot 1", "Lot 2", "Lot 3", "Lot 4", "Lot 5", "Lot 6"]);
+    expect(s.households.map((h) => h.unit)).toEqual([
+      "Lot 1",
+      "Lot 2",
+      "Lot 3",
+      "Lot 4",
+      "Lot 5",
+      "Lot 6",
+    ]);
     expect(named(s)).toEqual(["Lot 3: Ana"]);
     // And back off again.
     s = type(s, range(6), "");
@@ -490,7 +506,11 @@ describe("rebuilding the homes while the ranges are typed", () => {
     expect(s.parked).toEqual([]);
     expect(s.households.map((h) => h.name)).toEqual(rows.map((h) => h.name));
     // The fields the draft type does not know ride along untouched.
-    expect(s.households[39]).toMatchObject({ unit: "40", phone: "555-0100", openingBalanceCents: 40_000 });
+    expect(s.households[39]).toMatchObject({
+      unit: "40",
+      phone: "555-0100",
+      openingBalanceCents: 40_000,
+    });
   });
 
   it("parks a row no range covers, and never takes an address for a lot", () => {
@@ -543,7 +563,12 @@ describe("rebuilding the homes while the ranges are typed", () => {
       ...emptyDraft(),
       parkedHouseholds: [{ name: "Ana", email: "ana@example.com", unit: "5" }],
     };
-    const saved = JSON.stringify({ draft, current: "homes", exploring: false, awaitingConfirmation: false });
+    const saved = JSON.stringify({
+      draft,
+      current: "homes",
+      exploring: false,
+      awaitingConfirmation: false,
+    });
     expect(parseProgress(saved)?.draft.parkedHouseholds).toEqual(draft.parkedHouseholds);
   });
 
@@ -635,7 +660,8 @@ describe("what the importer says it did", () => {
       ...emptyDraft(),
       homeNaming: "numbers",
       phases,
-      households: rebuildLotHomes<DraftHousehold>({ phases, prefix: "", households: [] }).households,
+      households: rebuildLotHomes<DraftHousehold>({ phases, prefix: "", households: [] })
+        .households,
     };
   };
 
@@ -677,12 +703,16 @@ describe("what the importer says it did", () => {
     };
     const merged = mergeRoster(draft, [row("5")]);
     expect(merged.patch.households?.find((h) => h.unit === "3")?.name).toBe("Listed");
-    expect(merged.patch.parkedHouseholds).toEqual([{ name: "Parked duplicate", email: "", unit: "3" }]);
+    expect(merged.patch.parkedHouseholds).toEqual([
+      { name: "Parked duplicate", email: "", unit: "3" },
+    ]);
     // Only the file's own row is counted.
     expect(merged).toMatchObject({ added: 1, waiting: 0 });
 
     // A row in the file for that lot fills in the listed owner, not the parked one.
-    const again = mergeRoster(draft, [{ ...row("3", "From the file"), email: "three@example.com" }]);
+    const again = mergeRoster(draft, [
+      { ...row("3", "From the file"), email: "three@example.com" },
+    ]);
     expect(again.patch.households?.find((h) => h.unit === "3")).toMatchObject({
       name: "Listed",
       email: "three@example.com",
@@ -725,7 +755,14 @@ describe("the homes step waits for a range that cannot be created", () => {
       phase({ id: "g2", label: "Group 2", from: 110, to: 124, duesCents: 41_000 }),
     ]);
     expect(homesAnswered(draft)).toBe(false);
-    expect(homesAnswered(base([phase({ id: "g2", from: 113, to: 124, duesCents: 41_000 }), phase({ id: "g1", from: 101, to: 112 })]))).toBe(true);
+    expect(
+      homesAnswered(
+        base([
+          phase({ id: "g2", from: 113, to: 124, duesCents: 41_000 }),
+          phase({ id: "g1", from: 101, to: 112 }),
+        ]),
+      ),
+    ).toBe(true);
   });
 
   it("holds Continue while a group pays zero, instead of swapping in the usual amount", () => {

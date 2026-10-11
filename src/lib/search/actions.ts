@@ -21,7 +21,7 @@ const UNIT = /^(?:unit|lot|home|#)?\s*(\d{1,5}[a-z]?)$/i;
 const BARE_NUMBER = /^\d+$/;
 
 /** Cents, when the whole query is a dollar amount; null otherwise. */
-export function amountInQuery(query: string): number | null {
+function amountInQuery(query: string): number | null {
   const m = AMOUNT.exec(query.trim());
   if (!m) return null;
   const cents = Math.round(Number(`${m[1].replace(/,/g, "")}${m[3] ?? ""}`) * 100);
@@ -29,12 +29,18 @@ export function amountInQuery(query: string): number | null {
 }
 
 /** The unit as typed, when the whole query reads like a unit number. */
-export function unitInQuery(query: string): string | null {
+function unitInQuery(query: string): string | null {
   const m = UNIT.exec(query.trim());
   return m ? m[1].toLowerCase() : null;
 }
 
-function shortcut(id: string, title: string, subtitle: string, href: string, icon: SearchHit["icon"]): SearchHit {
+function shortcut(
+  id: string,
+  title: string,
+  subtitle: string,
+  href: string,
+  icon: SearchHit["icon"],
+): SearchHit {
   return {
     id,
     kind: "shortcut",
@@ -55,7 +61,11 @@ const offered = (key: string, community: Community, can: (c: Capability) => bool
 };
 
 /** Shortcuts for a board seat. */
-export function boardShortcuts(query: string, community: Community, can: (c: Capability) => boolean): SearchHit[] {
+export function boardShortcuts(
+  query: string,
+  community: Community,
+  can: (c: Capability) => boolean,
+): SearchHit[] {
   const out: SearchHit[] = [];
   const unit = unitInQuery(query);
   const homes =
@@ -107,7 +117,11 @@ export function boardShortcuts(query: string, community: Community, can: (c: Cap
 }
 
 /** Shortcuts for an owner: their own money, never anybody else's home. */
-export function residentShortcuts(query: string, community: Community, home: Home | null): SearchHit[] {
+export function residentShortcuts(
+  query: string,
+  community: Community,
+  home: Home | null,
+): SearchHit[] {
   const out: SearchHit[] = [];
   const unit = unitInQuery(query);
   const myHome = unit !== null && home !== null && home.unit.trim().toLowerCase() === unit;
@@ -117,7 +131,9 @@ export function residentShortcuts(query: string, community: Community, home: Hom
       shortcut(
         "act-pay",
         `Pay ${money(cents)}`,
-        home && home.balanceCents > 0 ? `Payments · you owe ${money(home.balanceCents)}` : "Payments",
+        home && home.balanceCents > 0
+          ? `Payments · you owe ${money(home.balanceCents)}`
+          : "Payments",
         "/resident/pay",
         CreditCard,
       ),

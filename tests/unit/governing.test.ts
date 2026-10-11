@@ -40,9 +40,7 @@ function article(patch: Partial<GoverningArticle>): GoverningArticle {
 
 describe("the hierarchy", () => {
   it("orders the documents so the recorded one wins", () => {
-    expect(GOVERNING_DOCS.declaration.precedence).toBeLessThan(
-      GOVERNING_DOCS.bylaws.precedence,
-    );
+    expect(GOVERNING_DOCS.declaration.precedence).toBeLessThan(GOVERNING_DOCS.bylaws.precedence);
     expect(GOVERNING_DOCS.bylaws.precedence).toBeLessThan(GOVERNING_DOCS.rules.precedence);
   });
 
@@ -75,9 +73,7 @@ describe("amendmentThreshold", () => {
   });
 
   it("says a rule takes a board vote and no owner vote at all", () => {
-    expect(amendmentThreshold(governingArticles, "rules")).toBe(
-      "a vote of the board at a meeting",
-    );
+    expect(amendmentThreshold(governingArticles, "rules")).toBe("a vote of the board at a meeting");
   });
 
   it("falls back to naming the document rather than inventing a number", () => {
@@ -134,9 +130,7 @@ describe("resolveCitation", () => {
     expect(resolveCitation("CC&Rs Art. XCIX", governingArticles).problem).toBe(
       "not-in-this-document",
     );
-    expect(resolveCitation("some rule somewhere", governingArticles).problem).toBe(
-      "no-document",
-    );
+    expect(resolveCitation("some rule somewhere", governingArticles).problem).toBe("no-document");
     expect(resolveCitation("Bylaws Article I", []).problem).toBe("document-not-loaded");
   });
 });
@@ -169,9 +163,7 @@ describe("disclosureFindings", () => {
   it("stops proposing candidates once a topic has a confirmed answer", () => {
     const confirmed = article({ id: "a", disclosureTopics: ["solar"] });
     const mentions = article({ id: "b", text: ["A solar panel is a panel."] });
-    const finding = disclosureFindings([confirmed, mentions]).find(
-      (f) => f.meta.topic === "solar",
-    );
+    const finding = disclosureFindings([confirmed, mentions]).find((f) => f.meta.topic === "solar");
     expect(finding?.candidates).toEqual([]);
   });
 

@@ -12,7 +12,8 @@ import { SEATS, seedSession } from "./helpers";
  * and a resident cannot find somebody else's request.
  */
 test.describe("search", () => {
-  const dialog = (page: import("@playwright/test").Page) => page.getByRole("dialog", { name: "Search" });
+  const dialog = (page: import("@playwright/test").Page) =>
+    page.getByRole("dialog", { name: "Search" });
 
   test("the board finds a vendor by typing and lands on its row", async ({ page }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
@@ -32,7 +33,9 @@ test.describe("search", () => {
     await expect(dialog(page)).toHaveCount(0);
   });
 
-  test("a few letters, a typo, and any case find the same household, marked where they matched", async ({ page }) => {
+  test("a few letters, a typo, and any case find the same household, marked where they matched", async ({
+    page,
+  }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
     await page.goto("/board");
     await page.waitForLoadState("networkidle");
@@ -66,14 +69,18 @@ test.describe("search", () => {
     await expect(dialog(page)).toHaveCount(0);
   });
 
-  test("a dollar amount offers Record a payment and lands with the amount filled", async ({ page }) => {
+  test("a dollar amount offers Record a payment and lands with the amount filled", async ({
+    page,
+  }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });
     await page.goto("/board");
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("ControlOrMeta+k");
     await dialog(page).getByRole("textbox").fill("$285.00");
     await expect(dialog(page).getByText("Shortcuts")).toBeVisible();
-    await dialog(page).getByRole("button", { name: /Record a payment of \$285\.00/ }).click();
+    await dialog(page)
+      .getByRole("button", { name: /Record a payment of \$285\.00/ })
+      .click();
     await page.waitForURL(/\/board\/vendors\?record=1/);
     await expect(page.getByRole("heading", { name: "Record a payment" })).toBeVisible();
     await expect(page.getByRole("spinbutton").first()).toHaveValue("285.00");
@@ -155,7 +162,9 @@ test.describe("search", () => {
     await expect(dialog(page).getByText(/You can search/)).toBeVisible();
   });
 
-  test("a resident finds their own request and nobody else's, and dues means Pay", async ({ page }) => {
+  test("a resident finds their own request and nobody else's, and dues means Pay", async ({
+    page,
+  }) => {
     await seedSession(page, { seat: SEATS.resident, view: "resident" });
     await page.goto("/resident");
     await page.waitForLoadState("networkidle");

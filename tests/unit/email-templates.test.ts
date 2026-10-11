@@ -127,7 +127,11 @@ describe("what people typed, in every template", () => {
       url: hostile.url,
       hasAccount: true,
     }),
-    announcement: announcementEmail({ ...hostile, title: typed("Pool"), body: `${typed("First line")}\n\nSecond.` }),
+    announcement: announcementEmail({
+      ...hostile,
+      title: typed("Pool"),
+      body: `${typed("First line")}\n\nSecond.`,
+    }),
     meeting: meetingNoticeEmail({
       ...hostile,
       title: typed("Annual meeting"),
@@ -138,7 +142,12 @@ describe("what people typed, in every template", () => {
       passcode: typed("1234"),
       agenda: [typed("Budget")],
     }),
-    ballot: ballotOpenEmail({ ...hostile, title: typed("Budget"), body: [typed("Details")], closesDate: "2026-11-01" }),
+    ballot: ballotOpenEmail({
+      ...hostile,
+      title: typed("Budget"),
+      body: [typed("Details")],
+      closesDate: "2026-11-01",
+    }),
     message: boardMessageEmail({
       ...hostile,
       subject: typed("About your fence"),
@@ -157,8 +166,8 @@ describe("what people typed, in every template", () => {
 
   it.each(Object.keys(built))("%s: no typed tag survives, and the one link is ours", (name) => {
     const { html } = built[name];
-    expect(html).not.toContain("evil.example\">");
-    expect(html).not.toContain("<a href=\"https://evil.example");
+    expect(html).not.toContain('evil.example">');
+    expect(html).not.toContain('<a href="https://evil.example');
     expect(html).not.toContain("& Sons");
     expect(html).toContain("&amp; Sons");
     expect(links(html)).toEqual([hostile.url]);
@@ -166,7 +175,10 @@ describe("what people typed, in every template", () => {
 
   it("escapes the header block every message shares: association name, preheader, button", () => {
     const { html } = built.assessment;
-    const header = html.slice(html.indexOf("text-transform:uppercase"), html.indexOf("</p>", html.indexOf("text-transform:uppercase")));
+    const header = html.slice(
+      html.indexOf("text-transform:uppercase"),
+      html.indexOf("</p>", html.indexOf("text-transform:uppercase")),
+    );
     expect(header).toContain("Smith &amp; Sons &lt;a href=");
     const preheader = html.slice(html.indexOf("display:none"), html.indexOf("</div>"));
     expect(preheader).toContain("12B &amp; Sons &lt;a href=");
@@ -201,14 +213,20 @@ describe("meetingNoticeEmail", () => {
   };
 
   it("offers one video link: a typed link is it, with no 'or dial'", () => {
-    const built = meetingNoticeEmail({ ...meeting, dialIn: undefined, videoUrl: "https://zoom.us/j/1" });
+    const built = meetingNoticeEmail({
+      ...meeting,
+      dialIn: undefined,
+      videoUrl: "https://zoom.us/j/1",
+    });
     expect(built.text).toContain("Join by video: https://zoom.us/j/1.");
     expect(built.text).not.toContain("dial");
   });
 
   it("puts the date in the subject and the agenda in the body", () => {
     const built = meetingNoticeEmail(meeting);
-    expect(built.subject).toBe("Notice of meeting: Annual meeting, October 14, 2026 at 7:00 PM · Maple Court HOA");
+    expect(built.subject).toBe(
+      "Notice of meeting: Annual meeting, October 14, 2026 at 7:00 PM · Maple Court HOA",
+    );
     expect(built.html).toContain("<li>Budget</li>");
     expect(built.html).toContain("<li>Elect two directors</li>");
     expect(built.html).toContain("passcode 1234");
@@ -297,7 +315,11 @@ describe("a notice to somebody with no account yet", () => {
   const seatless = { ...person, unsubscribeUrl: null, hasAccount: false };
 
   it("does not call an announcement something that cannot be turned off", () => {
-    const built = announcementEmail({ ...seatless, title: "Pool party Saturday", body: "Bring a towel." });
+    const built = announcementEmail({
+      ...seatless,
+      title: "Pool party Saturday",
+      body: "Bring a towel.",
+    });
     expect(built.html).not.toContain("cannot be turned off");
     expect(built.html).toContain("the board has this address on file");
     expect(built.html).toContain("Create your account to choose which emails you get.");
@@ -305,8 +327,20 @@ describe("a notice to somebody with no account yet", () => {
   });
 
   it("says the same on a note from the board and on a request update", () => {
-    const note = boardMessageEmail({ ...seatless, subject: "About your fence", body: "Thanks.", senderName: "Arya Mehr", statutory: false });
-    const update = requestUpdateEmail({ ...seatless, reference: "REQ-1", title: "Front door", status: "Approved", note: "Go ahead." });
+    const note = boardMessageEmail({
+      ...seatless,
+      subject: "About your fence",
+      body: "Thanks.",
+      senderName: "Arya Mehr",
+      statutory: false,
+    });
+    const update = requestUpdateEmail({
+      ...seatless,
+      reference: "REQ-1",
+      title: "Front door",
+      status: "Approved",
+      note: "Go ahead.",
+    });
     for (const built of [note, update]) {
       expect(built.html).not.toContain("cannot be turned off");
       expect(built.html).toContain("Create your account to choose which emails you get.");
@@ -314,28 +348,55 @@ describe("a notice to somebody with no account yet", () => {
   });
 
   it("still says a statutory notice cannot be turned off, with the reason", () => {
-    const built = boardMessageEmail({ ...seatless, subject: "Past due", body: "You owe $285.00.", senderName: "Dana Whitfield", statutory: true });
-    expect(built.html).toContain("This is a notice about your account. It is sent to every owner and cannot be turned off.");
+    const built = boardMessageEmail({
+      ...seatless,
+      subject: "Past due",
+      body: "You owe $285.00.",
+      senderName: "Dana Whitfield",
+      statutory: true,
+    });
+    expect(built.html).toContain(
+      "This is a notice about your account. It is sent to every owner and cannot be turned off.",
+    );
   });
 
   it("does not promise a sign-in the join page does not do", () => {
-    const built = announcementEmail({ ...seatless, title: "Pool party Saturday", body: "Bring a towel." });
+    const built = announcementEmail({
+      ...seatless,
+      title: "Pool party Saturday",
+      body: "Bring a towel.",
+    });
     expect(built.html).not.toContain("This link signs you in");
     // Somebody with an account does get a link that signs them in.
-    const member = announcementEmail({ ...person, title: "Pool party Saturday", body: "Bring a towel." });
+    const member = announcementEmail({
+      ...person,
+      title: "Pool party Saturday",
+      body: "Bring a towel.",
+    });
     expect(member.html).toContain("This link signs you in, so there is no password to remember.");
   });
 });
 
 describe("the line that says the link signs you in", () => {
   it("is left off the email that confirms a password just chosen", () => {
-    const built = confirmSignupEmail({ name: "Gwen Okafor", confirmUrl: "https://yourhoasis.com/auth/callback?token_hash=x" });
+    const built = confirmSignupEmail({
+      name: "Gwen Okafor",
+      confirmUrl: "https://yourhoasis.com/auth/callback?token_hash=x",
+    });
     expect(built.html).not.toContain("no password to remember");
   });
 
   it("is left off an invitation that asks the person to create an account", () => {
-    const invite = { kind: "invite" as const, associationName: "Maple Court HOA", ownerName: "Gwen Okafor", unitLabel: "12", url: person.url };
-    expect(inviteEmail({ ...invite, hasAccount: false }).html).not.toContain("no password to remember");
+    const invite = {
+      kind: "invite" as const,
+      associationName: "Maple Court HOA",
+      ownerName: "Gwen Okafor",
+      unitLabel: "12",
+      url: person.url,
+    };
+    expect(inviteEmail({ ...invite, hasAccount: false }).html).not.toContain(
+      "no password to remember",
+    );
     expect(inviteEmail({ ...invite, hasAccount: true }).html).toContain("no password to remember");
   });
 
@@ -407,6 +468,8 @@ describe("pastDueEmail wording", () => {
   });
 
   it("never tells an owner to reply in the first notice", () => {
-    expect(assessmentDueEmail({ ...dues, canReply: true }).html.toLowerCase()).not.toContain("reply");
+    expect(assessmentDueEmail({ ...dues, canReply: true }).html.toLowerCase()).not.toContain(
+      "reply",
+    );
   });
 });

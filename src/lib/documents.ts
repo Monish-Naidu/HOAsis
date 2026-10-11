@@ -32,7 +32,7 @@ const BY_EXTENSION: Record<string, { fileType: DocumentRecord["fileType"]; mime:
   },
 };
 
-export function extensionOf(name: string): string {
+function extensionOf(name: string): string {
   const dot = name.lastIndexOf(".");
   return dot < 0 ? "" : name.slice(dot + 1).toLowerCase();
 }
@@ -92,7 +92,11 @@ export function fromDbVisibility(visibility: string): DocumentRecord["visibility
  * segment because that is what the storage policy checks; the document's id
  * is the file name so two uploads called "minutes.pdf" cannot collide.
  */
-export function storagePathFor(associationId: string, documentId: string, fileName: string): string {
+export function storagePathFor(
+  associationId: string,
+  documentId: string,
+  fileName: string,
+): string {
   return `${associationId}/${documentId}.${extensionOf(fileName) || "pdf"}`;
 }
 

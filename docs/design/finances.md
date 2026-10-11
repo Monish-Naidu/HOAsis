@@ -11,14 +11,14 @@ new route is a `hidden: true` entry in `src/lib/board-routes.ts` gated on
 `finances`. Hidden because the control is the navigation; listed because
 listing is what gates it.
 
-| Tab | Route | What it answers | Selectors |
-| --- | --- | --- | --- |
-| Overview | `/board/money` | Where does the money stand today, and what is waiting on me | `cashPosition`, `insuranceExposure`, `compareYears`, `monthlyFlows`, `spendingByCategory`, `budgetVariance`, `duesCollection`, `agingBuckets`, `useReconciliation` |
-| Transactions | `/board/money/transactions` | Show me the lines, filtered, totalled, exportable | `periodRange`, `filterLedger`, `ledgerTotals`, `ledgerCategories`, `ledgerAttachment` |
-| Budget | `/board/money/budget` | Are we on pace, line by line | `budgetVariance` |
-| Trends | `/board/money/trends` | This year against last, and the run of years | `compareYears`, `yearSummary`, `netByYear` |
-| Collections | `/board/money/collections` | Who is behind, how far, what do we owe them next | `delinquency`, `agingBuckets`, `duesCollection`, `collectionsLadder` |
-| Reserves | `/board/reserves` | What wears out, when, what is set aside | unchanged |
+| Tab          | Route                       | What it answers                                             | Selectors                                                                                                                                                          |
+| ------------ | --------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Overview     | `/board/money`              | Where does the money stand today, and what is waiting on me | `cashPosition`, `insuranceExposure`, `compareYears`, `monthlyFlows`, `spendingByCategory`, `budgetVariance`, `duesCollection`, `agingBuckets`, `useReconciliation` |
+| Transactions | `/board/money/transactions` | Show me the lines, filtered, totalled, exportable           | `periodRange`, `filterLedger`, `ledgerTotals`, `ledgerCategories`, `ledgerAttachment`                                                                              |
+| Budget       | `/board/money/budget`       | Are we on pace, line by line                                | `budgetVariance`                                                                                                                                                   |
+| Trends       | `/board/money/trends`       | This year against last, and the run of years                | `compareYears`, `yearSummary`, `netByYear`                                                                                                                         |
+| Collections  | `/board/money/collections`  | Who is behind, how far, what do we owe them next            | `delinquency`, `agingBuckets`, `duesCollection`, `collectionsLadder`                                                                                               |
+| Reserves     | `/board/reserves`           | What wears out, when, what is set aside                     | unchanged                                                                                                                                                          |
 
 Shared pieces (a stat tile with a delta chip, the segmented control, the
 period picker, a quiet select, an inline bar) live in

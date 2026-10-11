@@ -125,33 +125,30 @@ const recoveryTemplate = `<h2>Reset your password</h2>
 <p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset">Choose a new password</a></p>
 <p>The link works once, in any browser. If you did not ask for this, ignore this message and nothing changes.</p>`;
 
-const response = await fetch(
-  `https://api.supabase.com/v1/projects/${projectRef}/config/auth`,
-  {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      smtp_host: "smtp.resend.com",
-      // 465 is implicit TLS. Supabase connects from its own network, so the
-      // submission port choice is about their client rather than about us.
-      // The API takes this as a string, not a number.
-      smtp_port: "465",
-      smtp_user: "resend",
-      smtp_pass: key,
-      smtp_admin_email: fromAddress,
-      smtp_sender_name: from.replace(/\s*<[^>]+>/, "").trim() || "Your HOAsis",
-      // The built in cap was two an hour, which is what made onboarding
-      // untestable. Resend's own limits apply beyond this.
-      rate_limit_email_sent: 100,
-      // A reset link that works in any browser. See recoveryTemplate above.
-      mailer_subjects_recovery: recoverySubject,
-      mailer_templates_recovery_content: recoveryTemplate,
-    }),
+const response = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/config/auth`, {
+  method: "PATCH",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
   },
-);
+  body: JSON.stringify({
+    smtp_host: "smtp.resend.com",
+    // 465 is implicit TLS. Supabase connects from its own network, so the
+    // submission port choice is about their client rather than about us.
+    // The API takes this as a string, not a number.
+    smtp_port: "465",
+    smtp_user: "resend",
+    smtp_pass: key,
+    smtp_admin_email: fromAddress,
+    smtp_sender_name: from.replace(/\s*<[^>]+>/, "").trim() || "Your HOAsis",
+    // The built in cap was two an hour, which is what made onboarding
+    // untestable. Resend's own limits apply beyond this.
+    rate_limit_email_sent: 100,
+    // A reset link that works in any browser. See recoveryTemplate above.
+    mailer_subjects_recovery: recoverySubject,
+    mailer_templates_recovery_content: recoveryTemplate,
+  }),
+});
 
 if (!response.ok) {
   console.error(`\nSupabase rejected the SMTP settings (${response.status})`);
@@ -161,10 +158,9 @@ if (!response.ok) {
 
 /* -------------------------------------------------- 3. read it back */
 
-const check = await fetch(
-  `https://api.supabase.com/v1/projects/${projectRef}/config/auth`,
-  { headers: { Authorization: `Bearer ${accessToken}` } },
-);
+const check = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/config/auth`, {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
 const config = await check.json();
 
 console.log("\nSupabase Auth now sends through:");
@@ -172,7 +168,9 @@ console.log(`  host          ${config.smtp_host}:${config.smtp_port}`);
 console.log(`  user          ${config.smtp_user}`);
 console.log(`  from          ${config.smtp_sender_name} <${config.smtp_admin_email}>`);
 console.log(`  rate limit    ${config.rate_limit_email_sent} an hour`);
-console.log(`  confirmation  ${config.mailer_autoconfirm ? "OFF, signups auto confirm" : "ON, a link is emailed"}`);
+console.log(
+  `  confirmation  ${config.mailer_autoconfirm ? "OFF, signups auto confirm" : "ON, a link is emailed"}`,
+);
 console.log(
   `  reset link    ${
     (config.mailer_templates_recovery_content ?? "").includes("token_hash={{ .TokenHash }}")
@@ -185,7 +183,7 @@ console.log(`  site url      ${config.site_url}  (the reset link is built on thi
 if (usingSharedSender) {
   console.log(
     "\nNote: the shared resend.dev sender only delivers to the address that owns\n" +
-    "the Resend account. Other recipients are accepted and dropped. Verify a\n" +
-    "domain and set EMAIL_FROM before inviting real residents.",
+      "the Resend account. Other recipients are accepted and dropped. Verify a\n" +
+      "domain and set EMAIL_FROM before inviting real residents.",
   );
 }

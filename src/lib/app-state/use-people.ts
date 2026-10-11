@@ -1,13 +1,37 @@
 import { useCallback } from "react";
 import { allCommunities } from "@/lib/data/communities";
-import { type AppDeps, destructive, isUuid, latest, logDemoActivity, newId, remoteWrite, sessionStore, sliceStore, ValidationError } from "./core";
-import { caps, DEFAULT_ROLE_CAPABILITIES, DEFAULT_ROLE_VIEWS, NO_CAPABILITIES } from "@/lib/data/accounts";
+import {
+  type AppDeps,
+  destructive,
+  isUuid,
+  latest,
+  logDemoActivity,
+  newId,
+  remoteWrite,
+  sessionStore,
+  sliceStore,
+  ValidationError,
+} from "./core";
+import {
+  caps,
+  DEFAULT_ROLE_CAPABILITIES,
+  DEFAULT_ROLE_VIEWS,
+  NO_CAPABILITIES,
+} from "@/lib/data/accounts";
 import { DUES_HIGH_MESSAGE, isEmail, MAX_DUES_CENTS } from "@/lib/input-checks";
 import { todayIsoDate } from "@/lib/utils";
 import { reportRemoteError, WRITE_TIMEOUT_MS } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
-import type { AccessLevel, AccountRole, Capabilities, Capability, HomeType, JoinRequest, Home } from "@/lib/types";
+import type {
+  AccessLevel,
+  AccountRole,
+  Capabilities,
+  Capability,
+  HomeType,
+  JoinRequest,
+  Home,
+} from "@/lib/types";
 import { placeLabel } from "@/lib/wording";
 import { activityWords } from "@/lib/activity";
 
@@ -338,9 +362,7 @@ export function usePeopleActions(deps: AppDeps) {
       homes.update((all) =>
         all.map((o) => (o.id === homeId ? { ...o, displayName: name, members: [name], email } : o)),
       );
-      accounts.update((all) =>
-        all.map((a) => (a.homeId === homeId ? { ...a, name, email } : a)),
-      );
+      accounts.update((all) => all.map((a) => (a.homeId === homeId ? { ...a, name, email } : a)));
       return true;
     },
     [communityId],
@@ -393,7 +415,10 @@ export function usePeopleActions(deps: AppDeps) {
             ...o,
             members,
             displayName: o.displayName === gone.name ? first : o.displayName,
-            email: o.email === gone.email ? (onHome.find((a) => a.id !== seatId)?.email ?? o.email) : o.email,
+            email:
+              o.email === gone.email
+                ? (onHome.find((a) => a.id !== seatId)?.email ?? o.email)
+                : o.email,
           };
         }),
       );
@@ -420,13 +445,22 @@ export function usePeopleActions(deps: AppDeps) {
           }),
         );
       }
-      const was = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId)?.email;
-      const home = sliceStore(communityId, "homes").getSnapshot().find((o) => o.id === homeId);
+      const was = sliceStore(communityId, "homes")
+        .getSnapshot()
+        .find((o) => o.id === homeId)?.email;
+      const home = sliceStore(communityId, "homes")
+        .getSnapshot()
+        .find((o) => o.id === homeId);
       if (home && was !== next) {
-        logDemoActivity(communityId, "seat", activityWords.email(home.unit, was ?? "no email", next), {
-          unit_id: homeId,
-          home: home.unit,
-        });
+        logDemoActivity(
+          communityId,
+          "seat",
+          activityWords.email(home.unit, was ?? "no email", next),
+          {
+            unit_id: homeId,
+            home: home.unit,
+          },
+        );
       }
       sliceStore(communityId, "homes").update((all) =>
         all.map((o) => (o.id === homeId ? { ...o, email: next } : o)),
@@ -484,23 +518,30 @@ export function usePeopleActions(deps: AppDeps) {
         return false;
       }
       if (remote.community) {
-        return remoteWrite("Saving dues", async () => {
-          const supabase = supabaseBrowser();
-          for (const { homeId, cents } of changes) {
-            const { error } = await supabase.rpc("set_home_dues", {
-              p_unit_id: homeId,
-              p_dues_cents: cents,
-            });
-            if (error) throw new Error(error.message);
-          }
-        }, { timeoutMs: WRITE_TIMEOUT_MS + changes.length * 1_000 });
+        return remoteWrite(
+          "Saving dues",
+          async () => {
+            const supabase = supabaseBrowser();
+            for (const { homeId, cents } of changes) {
+              const { error } = await supabase.rpc("set_home_dues", {
+                p_unit_id: homeId,
+                p_dues_cents: cents,
+              });
+              if (error) throw new Error(error.message);
+            }
+          },
+          { timeoutMs: WRITE_TIMEOUT_MS + changes.length * 1_000 },
+        );
       }
       const byHome = new Map(changes.map((c) => [c.homeId, c.cents]));
       for (const o of sliceStore(communityId, "homes").getSnapshot()) {
         if (!byHome.has(o.id)) continue;
         const next = byHome.get(o.id) || null;
         if (next === (o.duesCents ?? null)) continue;
-        logDemoActivity(communityId, "unit", activityWords.dues(o.unit, next), { unit_id: o.id, home: o.unit });
+        logDemoActivity(communityId, "unit", activityWords.dues(o.unit, next), {
+          unit_id: o.id,
+          home: o.unit,
+        });
       }
       sliceStore(communityId, "homes").update((all) =>
         all.map((o) => {
@@ -632,7 +673,9 @@ export function usePeopleActions(deps: AppDeps) {
             // The one refusal that can be seen coming, checked before any
             // money is written.
             if (home && input.closingDate < home.moveInDate) {
-              throw new Error("the closing date is before this owner took ownership. Check the date");
+              throw new Error(
+                "the closing date is before this owner took ownership. Check the date",
+              );
             }
             const { error } = await recordPayment();
             if (error) throw new Error(error.message);
@@ -904,7 +947,10 @@ export function usePeopleActions(deps: AppDeps) {
         p_note: input.note.trim(),
       });
       if (error || !data) {
-        return { ok: false as const, error: error?.message ?? "No association has that join code. Check it with your board." };
+        return {
+          ok: false as const,
+          error: error?.message ?? "No association has that join code. Check it with your board.",
+        };
       }
       return { ok: true as const, association: data };
     },

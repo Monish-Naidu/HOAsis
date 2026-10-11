@@ -49,8 +49,8 @@ export default function GlobalError({
                 Something went wrong
               </h1>
               <p className="mt-1.5 text-body leading-relaxed text-fg-muted">
-                The page could not be shown. Reload to try again. If it keeps happening, tell
-                us the reference below.
+                The page could not be shown. Reload to try again. If it keeps happening, tell us the
+                reference below.
               </p>
               <p className="mt-3 text-footnote text-fg-muted">
                 Reference{" "}

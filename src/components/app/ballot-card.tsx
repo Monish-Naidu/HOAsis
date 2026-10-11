@@ -14,7 +14,7 @@ import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
  * Votes in, when it ends, the result once it has one. The tally is derived
  * from the ballot itself so a vote cast a second ago is already counted.
  */
-export function tally(ballot: Ballot) {
+function tally(ballot: Ballot) {
   const votes = ballot.options.reduce((total, option) => total + option.votes, 0);
   // Quorum counts households that voted, not marks they made. A real
   // association counts them in the database; the demo's fixtures predate
@@ -45,7 +45,10 @@ export function resultLine(ballot: Ballot): string {
     if (last && ranked[seats] && ranked[seats].votes === last.votes) {
       return `Tied for the last place · ${t.cast} of ${ballot.eligible} ${who} voted`;
     }
-    const elected = ranked.slice(0, seats).filter((o) => o.votes > 0).map((o) => o.label);
+    const elected = ranked
+      .slice(0, seats)
+      .filter((o) => o.votes > 0)
+      .map((o) => o.label);
     return `${elected.join(" and ")} elected · ${t.cast} of ${ballot.eligible} ${who} voted`;
   }
   if (t.tied) return `Tied · ${t.cast} of ${ballot.eligible} ${who} voted`;

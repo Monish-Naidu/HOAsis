@@ -31,7 +31,7 @@ export interface HouseholdExtras {
 
 type WithBooks = CommunityDraft & { books?: Books };
 
-export function defaultBooks(today: string): Books {
+function defaultBooks(today: string): Books {
   return { fiscalYearStart: "01-01", billingStartsOn: null, openingAsOf: today };
 }
 
@@ -53,8 +53,18 @@ export function withExtras(household: DraftHousehold, extras: HouseholdExtras): 
 }
 
 export const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 /**
@@ -69,10 +79,14 @@ export { nextDueOnOrAfter } from "@/lib/utils";
  * Which homes need the follow-up call after founding: any with a phone or
  * an opening balance, keyed by the label create_association gave them.
  */
-export function householdsNeedingBooks(draft: CommunityDraft): (DraftHousehold & HouseholdExtras)[] {
+export function householdsNeedingBooks(
+  draft: CommunityDraft,
+): (DraftHousehold & HouseholdExtras)[] {
   return draft.households
     .map((h) => ({ ...h, ...extrasOf(h) }))
-    .filter((h) => h.unit.trim() && ((h.phone ?? "").trim() || h.openingBalanceCents !== undefined));
+    .filter(
+      (h) => h.unit.trim() && ((h.phone ?? "").trim() || h.openingBalanceCents !== undefined),
+    );
 }
 
 /**

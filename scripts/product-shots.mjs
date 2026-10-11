@@ -89,8 +89,17 @@ for (const shot of SHOTS.filter((s) => !only || s.file === only)) {
       localStorage.setItem(
         "hoasis:mehr-meadows:setup-skipped",
         JSON.stringify([
-          "roster", "bank", "invites", "documents", "budget", "board",
-          "insurance", "reserves", "vendors", "amenities", "photo",
+          "roster",
+          "bank",
+          "invites",
+          "documents",
+          "budget",
+          "board",
+          "insurance",
+          "reserves",
+          "vendors",
+          "amenities",
+          "photo",
         ]),
       );
       localStorage.setItem("hoasis-community", JSON.stringify("mehr-meadows"));

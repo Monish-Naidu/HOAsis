@@ -195,11 +195,7 @@ export function firstPhase(group = "Phase"): LotPhase {
 }
 
 /** The next one, numbered and starting where the last left off. */
-export function nextPhase(
-  phases: LotPhase[],
-  group = "Phase",
-  homeType?: HomeType,
-): LotPhase {
+export function nextPhase(phases: LotPhase[], group = "Phase", homeType?: HomeType): LotPhase {
   const highest = phases.reduce(
     (max, phase) => (lotsInPhase(phase) > 0 ? Math.max(max, phase.to) : max),
     0,

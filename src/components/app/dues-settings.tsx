@@ -51,8 +51,12 @@ export function DuesSettings() {
   // Kept as the text typed: a number state read "12e3" as 12,000 and
   // rounded a third decimal away.
   const [base, setBase] = useState(String(association.duesCents / 100));
-  const [byKind, setByKind] = useState(() =>
-    Object.fromEntries(Object.entries(initial()).map(([k, v]) => [k, String(v)])) as Record<HomeType, string>,
+  const [byKind, setByKind] = useState(
+    () =>
+      Object.fromEntries(Object.entries(initial()).map(([k, v]) => [k, String(v)])) as Record<
+        HomeType,
+        string
+      >,
   );
   const [charging, setCharging] = useState(false);
   const homes = community.homes.length;
@@ -69,12 +73,17 @@ export function DuesSettings() {
     : {};
   // The setup wizard's limits (duesTextProblem), and the database's: whole
   // cents, above $0, at most $100,000 a period.
-  const problemOf = (text: string | undefined) => (text?.trim() ? duesTextProblem(text) : "Enter dues above $0");
-  const valid = split ? kinds.every((k) => problemOf(byKind[k]) === null) : problemOf(base) === null;
+  const problemOf = (text: string | undefined) =>
+    text?.trim() ? duesTextProblem(text) : "Enter dues above $0";
+  const valid = split
+    ? kinds.every((k) => problemOf(byKind[k]) === null)
+    : problemOf(base) === null;
   const changed =
     nextBase !== association.duesCents ||
     JSON.stringify(nextByType) !==
-      JSON.stringify(split ? Object.fromEntries(kinds.map((k) => [k, duesFor(association, k)])) : {});
+      JSON.stringify(
+        split ? Object.fromEntries(kinds.map((k) => [k, duesFor(association, k)])) : {},
+      );
   const cadence =
     association.duesCadence === "monthly"
       ? "month"
@@ -86,7 +95,9 @@ export function DuesSettings() {
   function save() {
     if (!valid) return;
     updateAssociation({ duesCents: nextBase, duesByType: nextByType });
-    notify(`Saved. The next bill is ${money(projected, { cents: projected % 100 !== 0 })} across every home.`);
+    notify(
+      `Saved. The next bill is ${money(projected, { cents: projected % 100 !== 0 })} across every home.`,
+    );
   }
 
   return (
@@ -149,7 +160,10 @@ export function DuesSettings() {
 
         {ownCount > 0 ? (
           <p className="text-footnote text-fg-muted">
-            {ownCount === 1 ? "1 home pays its own amount" : `${ownCount} homes pay their own amount`}.{" "}
+            {ownCount === 1
+              ? "1 home pays its own amount"
+              : `${ownCount} homes pay their own amount`}
+            .{" "}
             <Link href="/board/homeowners" className="font-medium text-accent hover:underline">
               See them on Homeowners
             </Link>
@@ -158,7 +172,9 @@ export function DuesSettings() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="text-footnote text-fg-muted">
-            <span className="tnum font-semibold text-fg">{money(projected, { cents: projected % 100 !== 0 })}</span>{" "}
+            <span className="tnum font-semibold text-fg">
+              {money(projected, { cents: projected % 100 !== 0 })}
+            </span>{" "}
             per {cadence} across {community.homes.length} homes
           </p>
           <Button size="sm" disabled={!valid || !changed} onClick={save}>
@@ -181,7 +197,8 @@ export function DuesSettings() {
                 submitLabel={`Charge ${homes} ${homes === 1 ? "home" : "homes"}`}
                 onSave={(input) =>
                   Promise.resolve(addChargeToAll(input)).then((ok) => {
-                    if (ok) notify(`Charge added to ${homes} ${homes === 1 ? "home" : "homes"}.`, "ok");
+                    if (ok)
+                      notify(`Charge added to ${homes} ${homes === 1 ? "home" : "homes"}.`, "ok");
                     return ok;
                   })
                 }

@@ -118,7 +118,10 @@ describe("masking", () => {
   });
 
   it("masks emails inside values and inside errors", () => {
-    const out = scrubFields({ to: "bob@example.com", err: new Error("Could not send to carol@example.com") });
+    const out = scrubFields({
+      to: "bob@example.com",
+      err: new Error("Could not send to carol@example.com"),
+    });
     expect(out.to).toBe("b***@example.com");
     expect(out.err).toMatchObject({ name: "Error", message: "Could not send to c***@example.com" });
     expect((out.err as { stack?: string }).stack).not.toContain("carol@");
@@ -166,7 +169,10 @@ describe("logger", () => {
 
   it("answers an error body with the reference", () => {
     const log = logger("join/lookup", null, { requestId: "K7QM2X4P" });
-    expect(errorBody(log, "No such code")).toEqual({ error: "No such code", reference: "K7QM2X4P" });
+    expect(errorBody(log, "No such code")).toEqual({
+      error: "No such code",
+      reference: "K7QM2X4P",
+    });
   });
 
   it("never throws when the sink does", () => {

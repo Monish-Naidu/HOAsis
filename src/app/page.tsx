@@ -133,7 +133,6 @@ const POCKET: { icon: typeof Clock; tint: TintName; title: string; body: string 
   },
 ];
 
-
 /**
  * The five guides in the Knowledge Center card, in the deck's order: duties,
  * meetings, collections, budgets, reserves. Real articles, so every row opens.
@@ -176,7 +175,13 @@ function MonitorFrame({ src, alt }: { src: string; alt: string }) {
           className="h-auto w-full"
         />
         <div className="absolute left-[11.33%] top-[5.37%] h-[60.55%] w-[77.15%] overflow-hidden rounded-[2px] bg-surface">
-          <Image src={src} alt={alt} fill sizes="(max-width: 1024px) 78vw, 640px" className="object-cover object-top" />
+          <Image
+            src={src}
+            alt={alt}
+            fill
+            sizes="(max-width: 1024px) 78vw, 640px"
+            className="object-cover object-top"
+          />
         </div>
       </div>
       {/* The ground it sits on. */}
@@ -201,9 +206,19 @@ const PHONE_BASE_WIDTH = 340;
 // The matrix at 340px, as measured. Rendering wider is a uniform scale of
 // the output, so the linear and translation terms scale and the two
 // perspective terms stay put.
-const PHONE_MATRIX = [0.33193, -0.063114, -0.000153, -0.029395, 0.341345, -0.00008, 93.253766, 40.420067];
+const PHONE_MATRIX = [
+  0.33193, -0.063114, -0.000153, -0.029395, 0.341345, -0.00008, 93.253766, 40.420067,
+];
 
-function PhoneFrame({ src, alt, width = PHONE_BASE_WIDTH }: { src: string; alt: string; width?: number }) {
+function PhoneFrame({
+  src,
+  alt,
+  width = PHONE_BASE_WIDTH,
+}: {
+  src: string;
+  alt: string;
+  width?: number;
+}) {
   const k = width / PHONE_BASE_WIDTH;
   const [a, b, pa, c, d, pb, tx, ty] = PHONE_MATRIX;
   const transform = `matrix3d(${a * k}, ${b * k}, 0, ${pa}, ${c * k}, ${d * k}, 0, ${pb}, 0, 0, 1, 0, ${tx * k}, ${ty * k}, 0, 1)`;
@@ -396,9 +411,7 @@ function PaymentsMini() {
             <li key={kind} className="px-1 py-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="whitespace-nowrap text-[12px] font-semibold text-fg">{label}</p>
-                <span className="tnum text-[12px] text-fg-muted">
-                  {money(dues)}
-                </span>
+                <span className="tnum text-[12px] text-fg-muted">{money(dues)}</span>
               </div>
               <div className="mt-0.5 flex items-start justify-between gap-2">
                 {/* The schedule's own words, minus the hedge: "About 4
@@ -433,7 +446,9 @@ function KnowledgeMini() {
       <ul className="divide-y divide-border">
         {guides.map((guide) => (
           <li key={guide.slug} className="px-1 py-2">
-            <p className="line-clamp-2 text-[12px] font-semibold leading-tight text-fg">{guide.title}</p>
+            <p className="line-clamp-2 text-[12px] font-semibold leading-tight text-fg">
+              {guide.title}
+            </p>
             <p className="tnum mt-0.5 text-[11px] text-fg-muted">{guide.readMinutes} min read</p>
           </li>
         ))}
@@ -531,10 +546,7 @@ function Notice({
 }) {
   return (
     <div
-      className={cn(
-        "rounded-2xl border border-border bg-surface p-3.5 shadow-float",
-        className,
-      )}
+      className={cn("rounded-2xl border border-border bg-surface p-3.5 shadow-float", className)}
     >
       <div className="flex items-start gap-3">
         <IconTile icon={icon} tint={tint} size="sm" />
@@ -830,7 +842,10 @@ export default function MarketingHome() {
       {/* Hero, slide one. The header sits on this field with no bar of its
           own, which is why the section starts at the top of the page and the
           copy carries the top padding. */}
-      <section id="main" className="relative isolate -mt-[69px] overflow-hidden bg-hero-field pt-[69px]">
+      <section
+        id="main"
+        className="relative isolate -mt-[69px] overflow-hidden bg-hero-field pt-[69px]"
+      >
         {/* The field: a soft aurora behind the headline column, so the left
             half of the hero is not a flat wash next to a lit photograph. */}
         <div className="pointer-events-none absolute inset-0 -z-20 bg-aurora" aria-hidden />
@@ -911,8 +926,8 @@ export default function MarketingHome() {
                 </Link>
               </div>
               <p className="mt-4 text-[15px] font-medium text-fg-muted [text-shadow:0_0_16px_var(--hero-field),0_0_6px_var(--hero-field)]">
-                {money(PRICE_PER_HOME_CENTS, { cents: false })} per home a month after that. The demo
-                needs no account.
+                {money(PRICE_PER_HOME_CENTS, { cents: false })} per home a month after that. The
+                demo needs no account.
               </p>
             </Reveal>
           </div>
@@ -946,7 +961,10 @@ export default function MarketingHome() {
             that starts on the left and runs out. */}
         <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-4 gap-y-5 px-5 py-7 text-[14px] font-semibold sm:grid-cols-4 sm:text-[17px] sm:tracking-[-0.01em]">
           {ASSURANCES.map(({ icon, label, tint }) => (
-            <li key={label} className="flex items-center justify-start gap-2.5 leading-tight sm:justify-center sm:gap-3">
+            <li
+              key={label}
+              className="flex items-center justify-start gap-2.5 leading-tight sm:justify-center sm:gap-3"
+            >
               <IconTile icon={icon} tint={tint} size="md" />
               {label}
             </li>
@@ -968,7 +986,6 @@ export default function MarketingHome() {
                 <br />
                 Not another job.
               </h2>
-
             </div>
             <div>
               <ul className="mt-6 divide-y divide-border">
@@ -996,7 +1013,10 @@ export default function MarketingHome() {
 
       {/* Slide three. */}
       <section className="relative isolate overflow-hidden border-b border-border bg-hero-field">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-70" aria-hidden />
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-70"
+          aria-hidden
+        />
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <div>
             <div>
@@ -1031,16 +1051,16 @@ export default function MarketingHome() {
                 real person, because a render reads as fake to exactly the
                 people we are asking to trust us. */}
             <div>
-            <div className="overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
-              <Image
-                src="/marketing/eric-story.jpg"
-                alt="Eric at his kitchen table in a tan overshirt, glasses set down, one hand at his temple, a laptop, a notebook and a spread of printed reports in front of him"
-                width={1400}
-                height={933}
-                sizes="(max-width: 1024px) 100vw, 660px"
-                className="h-auto w-full"
-              />
-            </div>
+              <div className="overflow-hidden rounded-[1.25rem] border border-border bg-navy-950 shadow-float">
+                <Image
+                  src="/marketing/eric-story.jpg"
+                  alt="Eric at his kitchen table in a tan overshirt, glasses set down, one hand at his temple, a laptop, a notebook and a spread of printed reports in front of him"
+                  width={1400}
+                  height={933}
+                  sizes="(max-width: 1024px) 100vw, 660px"
+                  className="h-auto w-full"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1100,9 +1120,7 @@ export default function MarketingHome() {
               {/* One column per item, all the same width, so the row is evenly
                   spaced whatever the count. Under a laptop width it wraps to
                   three, then two. */}
-              <ul
-                className="grid grid-cols-2 gap-px bg-border/60 sm:grid-cols-3 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none"
-              >
+              <ul className="grid grid-cols-2 gap-px bg-border/60 sm:grid-cols-3 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none">
                 {EVERYTHING_ELSE.map(({ label, icon, tint }) => (
                   <li
                     key={label}
@@ -1123,7 +1141,10 @@ export default function MarketingHome() {
 
       {/* Slide five. */}
       <section className="relative isolate overflow-hidden border-b border-border bg-hero-field">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-70" aria-hidden />
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 bg-aurora opacity-70"
+          aria-hidden
+        />
         <div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-5 py-20 sm:py-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-10">
           <div>
             <div>
@@ -1214,7 +1235,9 @@ export default function MarketingHome() {
                 <h3 className="mt-5 text-[20px] font-semibold tracking-[-0.02em] text-fg">
                   {step.title}
                 </h3>
-                <p className="mt-2 max-w-sm text-[16px] leading-relaxed text-fg-muted">{step.body}</p>
+                <p className="mt-2 max-w-sm text-[16px] leading-relaxed text-fg-muted">
+                  {step.body}
+                </p>
               </li>
             ))}
           </ol>
@@ -1268,10 +1291,7 @@ export default function MarketingHome() {
           <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-center gap-x-9 gap-y-2 px-5 py-5 sm:justify-between">
             <p className="text-[14px] font-medium text-fg-subtle">Payments run on</p>
             {["Stripe", "ACH", "Visa", "Mastercard", "Apple Pay", "Google Pay"].map((rail) => (
-              <span
-                key={rail}
-                className="text-[17px] font-bold tracking-tight text-fg-subtle"
-              >
+              <span key={rail} className="text-[17px] font-bold tracking-tight text-fg-subtle">
                 {rail}
               </span>
             ))}
@@ -1319,7 +1339,13 @@ export default function MarketingHome() {
           the night illustration on 2026-10-04 and Monish asked for the
           photograph back the same evening: he likes it here. */}
       <section className="relative isolate overflow-hidden bg-navy-900 text-navy-50 dark:bg-navy-800">
-        <Image src="/marketing/aerial.jpg" alt="" fill sizes="100vw" className="-z-30 object-cover" />
+        <Image
+          src="/marketing/aerial.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="-z-30 object-cover"
+        />
         <div
           className="absolute inset-0 -z-20 bg-gradient-to-b from-navy-950/85 via-navy-950/75 to-navy-950/90"
           aria-hidden

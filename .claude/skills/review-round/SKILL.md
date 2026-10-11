@@ -70,6 +70,7 @@ time so far). A restyle waits for him to look at the preview: one he had
 not seen was rolled back on 2026-09-24.
 
 ## Traps that cost a round once
+
 - Monish merged a pull request minutes before the next commit was pushed to
   its branch (twice). Push everything before saying it is ready.
 - The local browser suite times out at random when the code indexer has

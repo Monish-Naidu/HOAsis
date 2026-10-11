@@ -15,7 +15,7 @@ export const OPS_WINDOW_DAYS = 7;
 /** A payment pending longer than this is stuck, not settling. */
 export const STUCK_PAYMENT_DAYS = 5;
 
-export interface AppErrorRow {
+interface AppErrorRow {
   id: string;
   created_at: string;
   reference: string;
@@ -28,7 +28,7 @@ export interface AppErrorRow {
   user_agent: string | null;
 }
 
-export interface ErrorGroup {
+interface ErrorGroup {
   message: string;
   count: number;
   latest: string;
@@ -36,7 +36,7 @@ export interface ErrorGroup {
   sources: string[];
 }
 
-export interface EmailFailureRow {
+interface EmailFailureRow {
   id: string;
   sent_at: string;
   association_id: string;
@@ -47,7 +47,7 @@ export interface EmailFailureRow {
   error: string | null;
 }
 
-export interface AutopayFailureRow {
+interface AutopayFailureRow {
   id: string;
   created_at: string;
   association_id: string;
@@ -57,7 +57,7 @@ export interface AutopayFailureRow {
   reason: string | null;
 }
 
-export interface StuckPaymentRow {
+interface StuckPaymentRow {
   id: string;
   created_at: string;
   association_id: string;
@@ -67,7 +67,7 @@ export interface StuckPaymentRow {
   stripe_payment_intent_id: string | null;
 }
 
-export interface CronRunRow {
+interface CronRunRow {
   job: string;
   started_at: string;
   finished_at: string;
@@ -77,7 +77,7 @@ export interface CronRunRow {
   summary: Record<string, unknown>;
 }
 
-export interface ActivityRow {
+interface ActivityRow {
   id: string;
   at: string;
   association_id: string;
@@ -108,7 +108,7 @@ export interface OpsReport {
 export const CRON_JOBS: CronJob[] = ["assessments", "billing-sweep", "autopay", "email-bills"];
 
 /** The rows with the same message, most frequent first. */
-export function groupErrors(rows: AppErrorRow[]): ErrorGroup[] {
+function groupErrors(rows: AppErrorRow[]): ErrorGroup[] {
   const groups = new Map<string, ErrorGroup>();
   for (const row of rows) {
     const key = row.message.slice(0, 160);
@@ -129,7 +129,7 @@ export function groupErrors(rows: AppErrorRow[]): ErrorGroup[] {
 }
 
 /** One row per job: the newest. Missing jobs are left out, and the page says so. */
-export function latestPerJob(rows: CronRunRow[]): CronRunRow[] {
+function latestPerJob(rows: CronRunRow[]): CronRunRow[] {
   const seen = new Map<string, CronRunRow>();
   for (const row of rows) {
     const current = seen.get(row.job);
@@ -170,7 +170,9 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
   const [errors, emails, autopay, payments, crons, activity] = await Promise.all([
     admin
       .from("app_errors")
-      .select("id, created_at, reference, level, source, route, message, association_id, profile_id, user_agent")
+      .select(
+        "id, created_at, reference, level, source, route, message, association_id, profile_id, user_agent",
+      )
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(200),
@@ -190,7 +192,9 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
       .limit(100),
     admin
       .from("payments")
-      .select("id, created_at, association_id, unit_id, amount_cents, rail, stripe_payment_intent_id")
+      .select(
+        "id, created_at, association_id, unit_id, amount_cents, rail, stripe_payment_intent_id",
+      )
       .eq("state", "pending")
       .lt("created_at", stuckBefore)
       .order("created_at", { ascending: true })
@@ -237,7 +241,10 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
   for (const r of activityRows) ids.add(r.association_id);
   const associationNames: Record<string, string> = {};
   if (ids.size > 0) {
-    const { data } = await admin.from("associations").select("id, name").in("id", [...ids]);
+    const { data } = await admin
+      .from("associations")
+      .select("id, name")
+      .in("id", [...ids]);
     for (const a of data ?? []) associationNames[a.id] = a.name;
   }
 

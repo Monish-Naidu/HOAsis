@@ -6,11 +6,7 @@ export function generateStaticParams() {
   return architecturalForms.map((form) => ({ formId: form.id }));
 }
 
-export default async function FormPage({
-  params,
-}: {
-  params: Promise<{ formId: string }>;
-}) {
+export default async function FormPage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = await params;
   return (
     <div className="animate-rise">

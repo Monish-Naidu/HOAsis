@@ -132,7 +132,14 @@ async function signInLink(
 
 export async function sendNotification(input: NotifyInput): Promise<NotifyResult> {
   const admin = supabaseAdmin();
-  const result: NotifyResult = { sent: 0, failed: 0, skipped: 0, errors: [], already: 0, remaining: 0 };
+  const result: NotifyResult = {
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    errors: [],
+    already: 0,
+    remaining: 0,
+  };
   const category = CATEGORY[input.kind];
   const statutory = category === "meeting" || category === "ballot" || category === "delinquency";
 
@@ -155,13 +162,16 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
   if (error) throw new Error(`Could not work out who to send this to: ${error.message}`);
 
   const wanted = content.unitIds ? new Set(content.unitIds) : null;
-  const people = ((recipients ?? []) as Recipient[]).filter((p) => p.email && (!wanted || wanted.has(p.unit_id)));
+  const people = ((recipients ?? []) as Recipient[]).filter(
+    (p) => p.email && (!wanted || wanted.has(p.unit_id)),
+  );
   if (wanted) result.skipped += wanted.size - new Set(people.map((p) => p.unit_id)).size;
 
   const key = resendKey();
   const client = input.dryRun ? null : key ? new Resend(key) : null;
   let path = LANDING[input.kind];
-  if (input.kind === "request" && content.reference) path = `/resident/requests/${content.reference}`;
+  if (input.kind === "request" && content.reference)
+    path = `/resident/requests/${content.reference}`;
 
   // Resend allows two requests a second, and the function has a time limit.
   // The pacer keeps under the first and stops the loop before the second
@@ -190,7 +200,9 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
       ownerName: person.full_name || "Neighbor",
       url,
       unsubscribeUrl:
-        statutory || !person.profile_id ? null : unsubscribeUrl(input.origin, person.profile_id, category),
+        statutory || !person.profile_id
+          ? null
+          : unsubscribeUrl(input.origin, person.profile_id, category),
       // Decides the line under the button and the footer for somebody the
       // board only has an address for: their link is the join page.
       hasAccount: Boolean(person.profile_id),
@@ -327,7 +339,10 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
         .maybeSingle();
       if (!data) return null;
       // A link the board typed is the video link; see meetingJoin.
-      const join = meetingJoin({ id: meetingId, dialIn: data.dial_in, passcode: data.passcode }, input.associationId);
+      const join = meetingJoin(
+        { id: meetingId, dialIn: data.dial_in, passcode: data.passcode },
+        input.associationId,
+      );
       return {
         build: (p) =>
           meetingNoticeEmail({
@@ -355,7 +370,12 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
       if (!data || data.audience !== "owners") return null;
       return {
         build: (p) =>
-          ballotOpenEmail({ ...p, title: data.title, body: data.body ?? [], closesDate: data.closes_on }),
+          ballotOpenEmail({
+            ...p,
+            title: data.title,
+            body: data.body ?? [],
+            closesDate: data.closes_on,
+          }),
       };
     }
     case "letter":
@@ -372,7 +392,14 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
       return {
         unitIds,
         build: (p) =>
-          boardMessageEmail({ ...p, subject, body, senderName, senderOffice, statutory: input.kind === "letter" }),
+          boardMessageEmail({
+            ...p,
+            subject,
+            body,
+            senderName,
+            senderOffice,
+            statutory: input.kind === "letter",
+          }),
       };
     }
     case "request": {
@@ -394,7 +421,9 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
             reference: data.reference,
             title: data.title,
             status,
-            note: (input.body ?? data.decided_note ?? "").trim() || `Status changed to ${status.toLowerCase()}.`,
+            note:
+              (input.body ?? data.decided_note ?? "").trim() ||
+              `Status changed to ${status.toLowerCase()}.`,
           }),
       };
     }

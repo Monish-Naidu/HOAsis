@@ -25,7 +25,10 @@ const PAGES: { path: string; view: "board" | "resident"; name: string }[] = [
 
 for (const screen of PAGES) {
   test(`${screen.name} has no serious accessibility problems`, async ({ page }) => {
-    await seedSession(page, { seat: screen.view === "board" ? SEATS.president : SEATS.resident, view: screen.view });
+    await seedSession(page, {
+      seat: screen.view === "board" ? SEATS.president : SEATS.resident,
+      view: screen.view,
+    });
     await page.goto(screen.path);
     await page.waitForLoadState("networkidle");
 
@@ -33,11 +36,20 @@ for (const screen of PAGES) {
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
 
-    const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+    const serious = results.violations.filter(
+      (v) => v.impact === "serious" || v.impact === "critical",
+    );
     const words = (list: typeof results.violations) =>
-      list.map((v) => `${v.id} (${v.impact}): ${v.help}; ${v.nodes.length} node(s), first: ${v.nodes[0]?.target.join(" ")}`).join("\n");
+      list
+        .map(
+          (v) =>
+            `${v.id} (${v.impact}): ${v.help}; ${v.nodes.length} node(s), first: ${v.nodes[0]?.target.join(" ")}`,
+        )
+        .join("\n");
     if (results.violations.length > serious.length) {
-      console.log(`${screen.name}, minor:\n${words(results.violations.filter((v) => !serious.includes(v)))}`);
+      console.log(
+        `${screen.name}, minor:\n${words(results.violations.filter((v) => !serious.includes(v)))}`,
+      );
     }
     expect(serious, `${screen.name}:\n${words(serious)}`).toEqual([]);
   });
