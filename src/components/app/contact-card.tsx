@@ -86,6 +86,7 @@ export function ContactCard() {
                 <input
                   type="tel"
                   autoComplete="tel"
+                  maxLength={25}
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value);
