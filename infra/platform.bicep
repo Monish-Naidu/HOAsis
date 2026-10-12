@@ -29,7 +29,7 @@ param budgetEmail string
 param budgetAmount int = 120
 
 @description('First day of the month the budget starts. Defaults to this month.')
-param budgetStart string = '${substring(utcNow(), 0, 7)}-01T00:00:00Z'
+param budgetStart string = '${utcNow('yyyy-MM')}-01T00:00:00Z'
 
 @description('GitHub repository allowed to deploy, as owner/name.')
 param githubRepo string = 'Monish-Naidu/HOAsis'
