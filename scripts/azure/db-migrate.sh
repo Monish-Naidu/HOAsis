@@ -20,16 +20,18 @@ image="$acr.azurecr.io/hoasis-dbtools:latest"
 
 # The auth and storage services run their own schema migrations when they
 # start, which would collide with the restore. Stop the app for the duration.
-stack_was_running=false
+stack_revision=""
 if az containerapp show -g "$AZ_RG" -n "$AZ_SUPABASE_APP" -o none 2>/dev/null; then
-  echo "== stopping $AZ_SUPABASE_APP for the copy"
-  az containerapp stop -g "$AZ_RG" -n "$AZ_SUPABASE_APP" --only-show-errors -o none
-  stack_was_running=true
+  stack_revision=$(az containerapp revision list -g "$AZ_RG" -n "$AZ_SUPABASE_APP" --query "[?properties.active].name | [0]" -o tsv)
+  if [ -n "$stack_revision" ]; then
+    echo "== taking $AZ_SUPABASE_APP offline for the copy (revision $stack_revision)"
+    az containerapp revision deactivate -g "$AZ_RG" -n "$AZ_SUPABASE_APP" --revision "$stack_revision" --only-show-errors -o none
+  fi
 fi
 restart_stack() {
-  if [ "$stack_was_running" = true ]; then
-    echo "== starting $AZ_SUPABASE_APP"
-    az containerapp start -g "$AZ_RG" -n "$AZ_SUPABASE_APP" --only-show-errors -o none
+  if [ -n "$stack_revision" ]; then
+    echo "== bringing $AZ_SUPABASE_APP back"
+    az containerapp revision activate -g "$AZ_RG" -n "$AZ_SUPABASE_APP" --revision "$stack_revision" --only-show-errors -o none
   fi
 }
 trap restart_stack EXIT
