@@ -156,7 +156,7 @@ cp .env.azure.example .env.azure           # fill it in; see the notes in the fi
 WITH_SUPABASE_STACK=false scripts/azure/provision.sh
 ```
 
-The script creates the resource group `rg-hoasis-prod` in `westus` (the
+The script creates the resource group `rg-hoasis` in `westus` (the
 Visual Studio subscription is barred from Postgres Flexible Server in
 `westus2`, `eastus`, `eastus2` and `southcentralus`; the first attempt found
 that out), the
@@ -176,7 +176,7 @@ prints the web app's address and the three values for GitHub. Then:
    as well as Vercel.
 6. Cloudflare: `staging` CNAME to the web app's address, DNS only (grey
    cloud); then
-   `az containerapp hostname add -g rg-hoasis-prod -n ca-hoasis-web --hostname staging.yourhoasis.com`
+   `az containerapp hostname add -g rg-hoasis -n ca-hoasis-web --hostname staging.yourhoasis.com`
    and `az containerapp hostname bind ... --environment cae-hoasis --validation-method CNAME`
    for the managed certificate. Set `NEXT_PUBLIC_SITE_HOST=staging.yourhoasis.com`
    in `.env.azure` and run `provision.sh` again (it only changes what differs).
@@ -235,7 +235,7 @@ delete the Vercel project after that.
 
 ## Operating it
 
-- **Logs.** `az containerapp logs show -g rg-hoasis-prod -n ca-hoasis-web --tail 200`
+- **Logs.** `az containerapp logs show -g rg-hoasis -n ca-hoasis-web --tail 200`
   for the app; `-n ca-hoasis-supabase --container auth` (or `rest`,
   `storage`, `gateway`) for the services. Everything is in Log Analytics
   for 30 days; the request id on an error screen is a `grep`.
