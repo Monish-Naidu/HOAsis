@@ -87,7 +87,7 @@ build_args=(
   --build-arg "NEXT_PUBLIC_SENTRY_DSN=$(read_env NEXT_PUBLIC_SENTRY_DSN)"
   --build-arg "NEXT_PUBLIC_SITE_HOST=$(read_env NEXT_PUBLIC_SITE_HOST)"
   --build-arg "NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)"
-  --build-arg "NEXT_PUBLIC_TEST_LOGINS=$(read_env NEXT_PUBLIC_TEST_LOGINS)"
+  --build-arg "NEXT_PUBLIC_TEST_LOGINS_B64=$(read_env NEXT_PUBLIC_TEST_LOGINS | base64 | tr -d '\n')"
   --build-arg "NEXT_PUBLIC_APP_ENV=$(read_env APP_ENV)"
 )
 az acr build --registry "$acr" --image "hoasis-web:$tag" --file "$ROOT/Dockerfile" "${build_args[@]}" "$ROOT" --only-show-errors -o none

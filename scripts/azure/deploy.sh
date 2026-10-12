@@ -19,7 +19,12 @@ for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_S
             NEXT_PUBLIC_SENTRY_DSN NEXT_PUBLIC_SITE_HOST NEXT_PUBLIC_AUTH_COOKIE_DOMAIN NEXT_PUBLIC_TEST_LOGINS NEXT_PUBLIC_APP_ENV; do
   value=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" \
     --query "properties.template.containers[0].env[?name=='$name'].value | [0]" -o tsv)
-  args+=(--build-arg "$name=$value")
+  if [ "$name" = NEXT_PUBLIC_TEST_LOGINS ]; then
+    # JSON with spaces; the Dockerfile decodes it.
+    args+=(--build-arg "NEXT_PUBLIC_TEST_LOGINS_B64=$(printf %s "$value" | base64 | tr -d '\n')")
+  else
+    args+=(--build-arg "$name=$value")
+  fi
 done
 
 echo "Building $image"
