@@ -9,7 +9,7 @@
 
 targetScope = 'resourceGroup'
 
-@description('Region. westus2 sits next to the Supabase project (us-west-2).')
+@description('Region. Visual Studio subscriptions are barred from Flexible Server in some regions (westus2 is one); provision.sh picks one that answers.')
 param location string = resourceGroup().location
 
 @description('Short product name used in every resource name.')
@@ -29,7 +29,7 @@ param budgetEmail string
 param budgetAmount int = 120
 
 @description('First day of the month the budget starts. Defaults to this month.')
-param budgetStart string = '${substring(utcNow(), 0, 7)}-01'
+param budgetStart string = '${substring(utcNow(), 0, 7)}-01T00:00:00Z'
 
 @description('GitHub repository allowed to deploy, as owner/name.')
 param githubRepo string = 'Monish-Naidu/HOAsis'

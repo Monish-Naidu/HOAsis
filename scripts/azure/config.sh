@@ -3,7 +3,7 @@
 # Globally unique names (registry, vault, server) are derived in Bicep and
 # looked up here by tag, so nothing has to be copied between files.
 export AZ_RG="${AZ_RG:-rg-hoasis-prod}"
-export AZ_LOCATION="${AZ_LOCATION:-westus2}"
+export AZ_LOCATION="${AZ_LOCATION:-westus}"
 export AZ_BASE="hoasis"
 export AZ_WEB_APP="ca-${AZ_BASE}-web"
 export AZ_SUPABASE_APP="ca-${AZ_BASE}-supabase"

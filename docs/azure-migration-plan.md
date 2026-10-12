@@ -37,7 +37,7 @@ sign-in to the work tenant is Monish's to do (see "What Monish does").
 | Images     | Vercel builds                       | Container Registry `crhoasis…`, built in the registry (`az acr build`, no Docker needed)    | `scripts/azure/deploy.sh`                   |
 | Deploys    | Vercel git integration              | GitHub Actions `deploy to azure`, after `check` passes on `main`                            | `.github/workflows/deploy-azure.yml`        |
 | Secrets    | Vercel env                          | Key Vault `kv-hoasis-…`, read by the app identity                                           | `scripts/azure/secrets.sh`                  |
-| Postgres   | Supabase (us-west-2)                | Flexible Server `psql-hoasis-…`, PG 17, B1ms, 32 GiB, 7 day backups, westus2                | `infra/platform.bicep`                      |
+| Postgres   | Supabase (us-west-2)                | Flexible Server `psql-hoasis-…`, PG 17, B1ms, 32 GiB, 7 day backups, westus                 | `infra/platform.bicep`                      |
 | Sign-in    | Supabase Auth                       | GoTrue `v2.196.0`, the same server Supabase runs, with the hosted project's settings copied | `infra/apps.bicep`, container `auth`        |
 | Data API   | Supabase PostgREST                  | PostgREST `v14.17`                                                                          | container `rest`                            |
 | Files      | Supabase Storage (3 buckets)        | storage-api `v1.74.0`, files on an Azure Files share                                        | container `storage`, `infra/platform.bicep` |
@@ -100,7 +100,7 @@ and push on the registry. It cannot read a secret value.
 
 ## What it costs
 
-List prices for westus2, October 2026, for the month. The two Container
+List prices for westus, October 2026, for the month. The two Container
 Apps run one replica each all the time; Container Apps bills a replica
 that is not serving requests at a lower idle rate, and a pre-revenue
 product is idle most of the time. The subscription's free grant (180,000
@@ -156,7 +156,10 @@ cp .env.azure.example .env.azure           # fill it in; see the notes in the fi
 WITH_SUPABASE_STACK=false scripts/azure/provision.sh
 ```
 
-The script creates the resource group `rg-hoasis-prod` in `westus2`, the
+The script creates the resource group `rg-hoasis-prod` in `westus` (the
+Visual Studio subscription is barred from Postgres Flexible Server in
+`westus2`, `eastus`, `eastus2` and `southcentralus`; the first attempt found
+that out), the
 platform, the secrets, both images, the web app and the five jobs, and
 prints the web app's address and the three values for GitHub. Then:
 
