@@ -13,7 +13,7 @@ RUN npm install -g pnpm@11.9.0
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # HUSKY=0 skips the git hook install (`prepare`), there is no .git here.
 RUN HUSKY=0 pnpm install --frozen-lockfile
 
