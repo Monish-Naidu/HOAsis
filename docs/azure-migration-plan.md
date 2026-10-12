@@ -70,9 +70,9 @@ of operating three small services. This is what Supabase documents as
 self-hosting; the pieces not needed (Realtime, Studio, Kong, imgproxy,
 edge runtime) are left out.
 
-**One Container App for the three services.** They share `localhost`, scale
-as one, and cost one replica. A hosted Supabase project is one instance
-too.
+**One Container App for the services.** Gateway, auth, data API, storage
+and the storage proxy share `localhost`, scale as one, and cost one
+replica. A hosted Supabase project is one instance too.
 
 **Flexible Server with a public endpoint behind the firewall.** This is
 how Supabase exposes Postgres today. A private network (VNet integration
@@ -110,12 +110,12 @@ vCPU-seconds, 360,000 GiB-seconds a month) is taken off first.
 | Item                                                      | Idle month | Busy month |
 | --------------------------------------------------------- | ---------- | ---------- |
 | Web app, 0.5 vCPU, 1 GiB, one replica                     | $8         | $34        |
-| Supabase services, 0.75 vCPU, 1.5 GiB, one replica        | $12        | $50        |
+| Supabase services, 1 vCPU, 2 GiB, one replica             | $16        | $66        |
 | Five jobs, a few seconds a day                            | $0         | $0         |
 | Postgres Flexible Server B1ms, 32 GiB, 7 day backups      | $17        | $17        |
 | Container Registry Basic                                  | $5         | $5         |
 | Log Analytics (first 5 GB a month free), Key Vault, Files | $2         | $5         |
-| **Total**                                                 | **$44**    | **$111**   |
+| **Total**                                                 | **$48**    | **$127**   |
 
 Both fit under $150. The budget alerts at $60, $96 and a forecast over
 $120 so an unusual month is noticed before the credit runs out. Supabase
@@ -272,6 +272,12 @@ all of it is in the scripts now.
   index: every upload failed with Postgres error 42P10. Pin each service at
   or above the hosted version (`/storage/v1/version`, `/auth/v1/health`)
   before the copy.
+- **Files cannot live on an Azure Files share.** The storage service's
+  file backend keeps each object's metadata in extended attributes, and
+  SMB has none: every upload failed with "options has an unsupported bit
+  set". The files are in a blob container instead, reached through
+  s3proxy (an S3 front for Azure Blob) running beside the service. Blob is
+  the right home anyway: soft delete, lifecycle rules, cheaper.
 - **The standalone trace** under pnpm misses the ESM half of
   `@swc/helpers`; `outputFileTracingIncludes` carries the whole package.
 

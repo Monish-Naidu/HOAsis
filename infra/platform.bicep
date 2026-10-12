@@ -211,8 +211,10 @@ resource pgExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@
 
 // ---------------------------------------------------------- file storage
 
-// Where the self-hosted storage service keeps uploaded files (its "file"
-// backend), as an Azure Files share mounted into the container.
+// Where the self-hosted storage service keeps uploaded files: a blob
+// container, reached through an S3-compatible proxy beside the service
+// (apps.bicep). Not an Azure Files share: the service's file backend keeps
+// metadata in extended attributes, which SMB does not have.
 resource files 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'st${baseName}${suffix}'
   location: location
@@ -226,15 +228,19 @@ resource files 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2023-05-01' = {
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
   parent: files
   name: 'default'
+  properties: {
+    deleteRetentionPolicy: { enabled: true, days: 30 }
+    containerDeleteRetentionPolicy: { enabled: true, days: 30 }
+  }
 }
 
-resource fileShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01' = {
-  parent: fileService
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
   name: 'supabase-storage'
-  properties: { shareQuota: 10, enabledProtocols: 'SMB' }
+  properties: { publicAccess: 'None' }
 }
 
 // ------------------------------------------------------- container apps env
@@ -253,19 +259,6 @@ resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
     }
     workloadProfiles: [ { name: 'Consumption', workloadProfileType: 'Consumption' } ]
     zoneRedundant: false
-  }
-}
-
-resource envFiles 'Microsoft.App/managedEnvironments/storages@2024-03-01' = {
-  parent: env
-  name: 'supabase-files'
-  properties: {
-    azureFile: {
-      accountName: files.name
-      accountKey: files.listKeys().keys[0].value
-      shareName: fileShare.name
-      accessMode: 'ReadWrite'
-    }
   }
 }
 

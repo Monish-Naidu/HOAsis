@@ -16,6 +16,7 @@ param environmentName string
 param keyVaultName string
 param appIdentityName string
 param acrLoginServer string
+param storageAccountName string
 
 @description('The web image, registry/repository:tag.')
 param webImage string
@@ -53,6 +54,7 @@ var tags = { product: baseName, managedBy: 'bicep' }
 resource env 'Microsoft.App/managedEnvironments@2024-03-01' existing = { name: environmentName }
 resource kv 'Microsoft.KeyVault/vaults@2023-07-01' existing = { name: keyVaultName }
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = { name: appIdentityName }
+resource files 'Microsoft.Storage/storageAccounts@2023-05-01' existing = { name: storageAccountName }
 
 var vault = kv.properties.vaultUri
 var supabaseAppName = 'ca-${baseName}-supabase'
@@ -136,8 +138,8 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
 
 // ------------------------------------------------------- supabase services
 
-// One app, four containers sharing localhost: the gateway, auth (GoTrue),
-// the data API (PostgREST) and file storage. They scale as one and there is
+// One app, five containers sharing localhost: the gateway, auth (GoTrue),
+// the data API (PostgREST), file storage and its S3-to-Blob proxy. They scale as one and there is
 // one replica, which is what a hosted Supabase project gives too.
 resource supabase 'Microsoft.App/containerApps@2024-03-01' = if (deploySupabaseStack) {
   name: supabaseAppName
@@ -163,12 +165,13 @@ resource supabase 'Microsoft.App/containerApps@2024-03-01' = if (deploySupabaseS
         kvSecret(vault, identity.id, 'storage-db-url')
         kvSecret(vault, identity.id, 'resend-api-key')
         kvSecret(vault, identity.id, 'supabase-service-role-key')
+        kvSecret(vault, identity.id, 's3proxy-secret')
+        { name: 'blob-account-key', value: files.listKeys().keys[0].value }
       ]
     }
     template: {
       volumes: [
         { name: 'caddy-config', storageType: 'Secret', secrets: [ { secretRef: 'caddyfile', path: 'Caddyfile' } ] }
-        { name: 'files', storageType: 'AzureFile', storageName: 'supabase-files' }
       ]
       containers: [
         {
@@ -258,15 +261,38 @@ resource supabase 'Microsoft.App/containerApps@2024-03-01' = if (deploySupabaseS
             { name: 'DB_INSTALL_ROLES', value: 'false' }
             { name: 'POSTGREST_URL', value: 'http://localhost:3000' }
             { name: 'FILE_SIZE_LIMIT', value: '52428800' }
-            { name: 'STORAGE_BACKEND', value: 'file' }
-            { name: 'FILE_STORAGE_BACKEND_PATH', value: '/var/lib/storage' }
+            // Files go to the blob container through the proxy on localhost.
+            { name: 'STORAGE_BACKEND', value: 's3' }
+            { name: 'GLOBAL_S3_BUCKET', value: 'supabase-storage' }
+            { name: 'GLOBAL_S3_ENDPOINT', value: 'http://localhost:8080' }
+            { name: 'GLOBAL_S3_PROTOCOL', value: 'http' }
+            { name: 'GLOBAL_S3_FORCE_PATH_STYLE', value: 'true' }
+            { name: 'AWS_ACCESS_KEY_ID', value: 'hoasis-storage' }
+            { name: 'AWS_SECRET_ACCESS_KEY', secretRef: 's3proxy-secret' }
+            { name: 'REGION', value: 'us-east-1' }
             { name: 'TENANT_ID', value: 'stub' }
-            { name: 'REGION', value: 'stub' }
-            { name: 'GLOBAL_S3_BUCKET', value: 'stub' }
             { name: 'ENABLE_IMAGE_TRANSFORMATION', value: 'false' }
             { name: 'REQUEST_ALLOW_X_FORWARDED_PATH', value: 'true' }
           ]
-          volumeMounts: [ { volumeName: 'files', mountPath: '/var/lib/storage' } ]
+        }
+        {
+          // S3 in, Azure Blob out. The storage service speaks S3 or local
+          // files and nothing else; this is the smallest honest bridge.
+          name: 's3proxy'
+          image: 'docker.io/andrewgaul/s3proxy:sha-f892634'
+          resources: { cpu: json('0.25'), memory: '0.5Gi' }
+          env: [
+            { name: 'S3PROXY_ENDPOINT', value: 'http://0.0.0.0:8080' }
+            { name: 'S3PROXY_AUTHORIZATION', value: 'aws-v2-or-v4' }
+            { name: 'S3PROXY_IDENTITY', value: 'hoasis-storage' }
+            { name: 'S3PROXY_CREDENTIAL', secretRef: 's3proxy-secret' }
+            { name: 'JCLOUDS_PROVIDER', value: 'azureblob' }
+            { name: 'JCLOUDS_AZUREBLOB_AUTH', value: 'azureKey' }
+            { name: 'JCLOUDS_IDENTITY', value: files.name }
+            { name: 'JCLOUDS_CREDENTIAL', secretRef: 'blob-account-key' }
+            { name: 'JCLOUDS_ENDPOINT', value: 'https://${files.name}.blob.${environment().suffixes.storage}' }
+            { name: 'JCLOUDS_REGION', value: 'us-east-1' }
+          ]
         }
       ]
       scale: { minReplicas: 1, maxReplicas: 1 }

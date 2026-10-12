@@ -39,6 +39,10 @@ if [ -z "$services_password" ]; then
   put pg-services-password "$services_password"
 fi
 admin_password=$(az keyvault secret show --vault-name "$kv" --name pg-admin-password --query value -o tsv)
+# The credential the storage service presents to its S3 proxy; internal to one replica.
+if ! az keyvault secret show --vault-name "$kv" --name s3proxy-secret -o none 2>/dev/null; then
+  put s3proxy-secret "$(openssl rand -base64 36 | tr -d '/+=' | cut -c1-40)"
+fi
 
 put supabase-service-role-key "$(read_env SUPABASE_SERVICE_ROLE_KEY)"
 put stripe-secret-key "$(read_env STRIPE_SECRET_KEY)"

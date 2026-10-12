@@ -62,6 +62,7 @@ acr=$(out "$work/platform-out.json" acrName)
 kv=$(out "$work/platform-out.json" keyVaultName)
 env_domain=$(out "$work/platform-out.json" environmentDomain)
 github_client=$(out "$work/platform-out.json" githubClientId)
+storage_account=$(out "$work/platform-out.json" storageAccountName)
 echo "   registry $acr, vault $kv, environment domain $env_domain"
 
 # The vault is in RBAC mode, which means even the subscription owner needs a
@@ -98,7 +99,7 @@ az acr build --registry "$acr" --image "hoasis-web:$tag" --file "$ROOT/Dockerfil
 
 echo "== 4. apps and jobs"
 params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentityName="id-$AZ_BASE-app" \
-  acrLoginServer="$acr.azurecr.io" webImage="$acr.azurecr.io/hoasis-web:$tag" \
+  acrLoginServer="$acr.azurecr.io" storageAccountName="$storage_account" webImage="$acr.azurecr.io/hoasis-web:$tag" \
   deploySupabaseStack="$with_stack" appEnv="$(read_env APP_ENV)" \
   supabaseUrl="$supabase_url" stackUrl="$stack_url" supabaseAnonKey="$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)" \
   stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" sentryDsn="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
