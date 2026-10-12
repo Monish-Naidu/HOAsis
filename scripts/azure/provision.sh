@@ -81,6 +81,13 @@ az acr build --registry "$acr" --image "hoasis-dbtools:$tag" --image "hoasis-dbt
 # environment's domain. The web app keeps talking to the hosted project until
 # WEB_ON_AZURE_DB=true, which is the switch flipped after the data has moved.
 stack_url="https://$AZ_SUPABASE_APP.$env_domain"
+web_url="https://$AZ_WEB_APP.$env_domain"
+# Where the auth service may send a person after a magic link or a reset:
+# the product's domain, this deployment's own address, the site host if
+# one is set, and a laptop.
+site_host="$(read_env NEXT_PUBLIC_SITE_HOST)"
+allow_list="https://yourhoasis.com/**,https://www.yourhoasis.com/**,$web_url/**,http://localhost:3000/**"
+[ -n "$site_host" ] && allow_list="https://$site_host/**,$allow_list"
 supabase_url="$(read_env NEXT_PUBLIC_SUPABASE_URL)"
 if [ "$with_stack" = "true" ] && [ "${WEB_ON_AZURE_DB:-false}" = "true" ]; then
   supabase_url="$stack_url"
@@ -101,7 +108,7 @@ echo "== 4. apps and jobs"
 params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentityName="id-$AZ_BASE-app" \
   acrLoginServer="$acr.azurecr.io" storageAccountName="$storage_account" webImage="$acr.azurecr.io/hoasis-web:$tag" \
   deploySupabaseStack="$with_stack" appEnv="$(read_env APP_ENV)" \
-  supabaseUrl="$supabase_url" stackUrl="$stack_url" supabaseAnonKey="$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)" \
+  supabaseUrl="$supabase_url" stackUrl="$stack_url" gotrueUriAllowList="$allow_list" supabaseAnonKey="$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)" \
   stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" sentryDsn="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
   siteHost="$(read_env NEXT_PUBLIC_SITE_HOST)" authCookieDomain="$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)" \
   emailFrom="$(read_env EMAIL_FROM)" platformOwnerEmails="$(read_env PLATFORM_OWNER_EMAILS)" \
