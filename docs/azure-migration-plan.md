@@ -277,10 +277,20 @@ all of it is in the scripts now.
   for 30 days; the request id on an error screen is a `grep`.
 - **A migration.** `supabase db push --db-url "$(az keyvault secret show --vault-name <kv> --name migrate-target-url --query value -o tsv)"`
   applies new files in `supabase/migrations/` and records them in
-  `supabase_migrations`, as before. Then
-  `psql ... -c "notify pgrst, 'reload schema'"` or restart the services
-  app, because the hosted project's "reload on DDL" trigger needs
-  superuser and does not exist here.
+  `supabase_migrations`, as before. Then tell the data API, because the
+  hosted project's "reload on DDL" trigger needs superuser and does not
+  exist here:
+
+  ```bash
+  az containerapp job start -g rg-hoasis -n caj-hoasis-migrate --command sql \
+    --image crhoasislnitot.azurecr.io/hoasis-dbtools:latest \
+    --env-vars TARGET_URL=secretref:target "SQL_B64=$(printf %s "notify pgrst, 'reload schema'" | base64 | tr -d '\n')"
+  ```
+
+  The same recipe runs any one statement against the Azure server from
+  inside Azure (`infra/dbtools/sql.sh`); there is no `psql` on the laptop
+  and the server's firewall does not need to know it.
+
 - **Deploy.** Merge to `main`; or `scripts/azure/deploy.sh`.
 - **A secret.** Change it in `.env.azure`, run `scripts/azure/secrets.sh`,
   then `scripts/azure/deploy.sh` (a new revision reads the new version).
