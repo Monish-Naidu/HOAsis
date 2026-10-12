@@ -1,6 +1,6 @@
 /**
  * Registers the two webhook endpoints Stripe has to know about, and writes
- * their signing secrets into .env.local.
+ * their signing secrets into .env.local (or ENV_FILE).
  *
  * Two endpoints, because they are two different things:
  *
@@ -75,7 +75,11 @@ const WANTED = [
 ];
 
 const existing = await stripe.webhookEndpoints.list({ limit: 100 });
-const envPath = path.join(process.cwd(), ".env.local");
+// The same file loadEnv read: .env.local, or ENV_FILE (relative to scripts/)
+// so the Azure deployment's .env.azure can hold its own endpoints' secrets.
+const envPath = process.env.ENV_FILE
+  ? new URL(process.env.ENV_FILE, import.meta.url)
+  : path.join(process.cwd(), ".env.local");
 let envText = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
 
 function setEnv(name, value) {
@@ -141,7 +145,8 @@ if (!env.CRON_SECRET) {
  * comes back as-is, and validate() asks Stripe to look at the file again.
  *
  * Hosts: the origin given on the command line, NEXT_PUBLIC_SITE_HOST when
- * set, and yourhoasis.com. localhost and *.vercel.app are skipped.
+ * set, and yourhoasis.com. localhost, *.vercel.app and *.azurecontainerapps.io
+ * are skipped: wallets need a real domain.
  */
 const hosts = [
   ...new Set(
@@ -153,7 +158,13 @@ const hosts = [
           .replace(/^https?:\/\//, "")
           .replace(/\/.*$/, ""),
       )
-      .filter((h) => h && !h.includes("localhost") && !h.endsWith(".vercel.app")),
+      .filter(
+        (h) =>
+          h &&
+          !h.includes("localhost") &&
+          !h.endsWith(".vercel.app") &&
+          !h.endsWith(".azurecontainerapps.io"),
+      ),
   ),
 ];
 
