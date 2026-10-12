@@ -21,7 +21,14 @@ for i in $(seq 1 16); do
 done
 
 put() { # name value
-  if [ -z "$2" ]; then echo "  skip  $1 (empty)"; return; fi
+  if [ -z "$2" ]; then
+    # The app references every secret by name at start, so an empty one still
+    # needs a version to resolve. The placeholder fails any check that uses it
+    # (a webhook signature, say), which is the right outcome until it is set.
+    if az keyvault secret show --vault-name "$kv" --name "$1" -o none 2>/dev/null; then echo "  keep  $1 (empty here, already in the vault)"; return; fi
+    az keyvault secret set --vault-name "$kv" --name "$1" --value "unset" --content-type "placeholder, not yet set" --only-show-errors --query name -o tsv | sed 's/^/  blank /'
+    return
+  fi
   az keyvault secret set --vault-name "$kv" --name "$1" --value "$2" --only-show-errors --query name -o tsv | sed 's/^/  set   /'
 }
 
