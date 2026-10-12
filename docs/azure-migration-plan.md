@@ -205,9 +205,11 @@ container, one downloaded through both stacks byte for byte; every
 database suite green against the stack (the one red check is the Resend
 domain, go-live item 1, which is not Azure's); a real sign-in through the
 Azure auth service with the treasurer test login, after which row level
-security showed only that person's rows; and the Azure web app pointed
-at the stack, `/api/health` green, the stack address in the browser
-bundle and the hosted one gone.
+security showed only that person's rows; the Azure web app pointed at
+the stack, `/api/health` green, the stack address in the browser bundle
+and the hosted one gone; the browser suite green against it (144 passed,
+10 skipped); and a sign-in in a real browser with the treasurer test login
+landing on the Mehr Meadows dashboard with its real numbers.
 
 The Azure copy is a snapshot from the rehearsal. Writes on
 `yourhoasis.com` still go to the hosted project; the night below takes a
@@ -298,6 +300,16 @@ all of it is in the scripts now.
   set". The files are in a blob container instead, reached through
   s3proxy (an S3 front for Azure Blob) running beside the service. Blob is
   the right home anyway: soft delete, lifecycle rules, cheaper.
+- **CORS is the gateway's job.** A browser on the web app's host calls
+  the stack's host, and Kong answered every preflight on a hosted project.
+  Of the three services, auth answers a preflight without an allow-origin
+  and storage with a 404, so the sign-in form said "Failed to fetch" while
+  curl worked. The Caddyfile answers preflights and stamps the headers for
+  all three routes now.
+- **A changed secret volume needs a revision restart** (`az containerapp
+revision restart`); the running replica keeps the old file. `APPS_ONLY=true
+scripts/azure/provision.sh` is the clean way: a new revision from the
+  templates with the image already running.
 - **The standalone trace** under pnpm misses the ESM half of
   `@swc/helpers`; `outputFileTracingIncludes` carries the whole package.
 
