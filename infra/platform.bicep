@@ -32,7 +32,7 @@ param budgetAmount int = 120
 param budgetStart string = '${substring(utcNow(), 0, 7)}-01'
 
 @description('GitHub repository allowed to deploy, as owner/name.')
-param githubRepo string = 'Monish-Naidu/expresshoa'
+param githubRepo string = 'Monish-Naidu/HOAsis'
 
 @description('Branch whose pushes may deploy.')
 param githubBranch string = 'main'
