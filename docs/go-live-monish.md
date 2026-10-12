@@ -86,6 +86,13 @@ above, in the order they matter:
     Point-in-Time Recovery is the add-on that makes "undo the last hour"
     possible. Until then, `pg_dump` by hand before anything risky.
 
+17. **Azure.** The hosting, jobs, secrets and database are written to move
+    to the Azure credit from work; nothing is created until you sign in.
+    `az login --use-device-code`, fill `.env.azure` from `.env.azure.example`,
+    then `WITH_SUPABASE_STACK=false scripts/azure/provision.sh`. The order,
+    the cut-over night and the credit's dev/test terms are in
+    `docs/azure-migration-plan.md`.
+
 ## Deploy, then check
 
 10. Push `main` and let Vercel deploy. Then:

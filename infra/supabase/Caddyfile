@@ -1,0 +1,26 @@
+# The front door of the self-hosted Supabase services, standing in for Kong.
+# supabase-js appends /auth/v1, /rest/v1 and /storage/v1 to one base URL;
+# each prefix is stripped and handed to the service beside this container.
+# Each service checks the JWT itself, so the gateway checks nothing.
+{
+	auto_https off
+	admin off
+}
+
+:8000 {
+	handle_path /auth/v1/* {
+		reverse_proxy localhost:9999
+	}
+	handle_path /rest/v1/* {
+		reverse_proxy localhost:3000
+	}
+	handle_path /storage/v1/* {
+		reverse_proxy localhost:5000
+	}
+	handle /health {
+		respond "ok" 200
+	}
+	handle {
+		respond "Not here" 404
+	}
+}

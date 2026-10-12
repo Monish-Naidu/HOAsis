@@ -12,6 +12,8 @@
  * once rather than failing silently for every resident.
  */
 
+import { isProduction } from "@/lib/deploy-env";
+
 const SHARED_SENDER = "Your HOAsis <onboarding@resend.dev>";
 
 let warned = false;
@@ -19,7 +21,7 @@ let warned = false;
 export function emailSender(): string {
   const configured = (process.env.EMAIL_FROM ?? "").trim();
   const from = configured || SHARED_SENDER;
-  if (isSharedSender(from) && process.env.VERCEL_ENV === "production" && !warned) {
+  if (isSharedSender(from) && isProduction() && !warned) {
     warned = true;
     console.error(
       "[hoasis] EMAIL_FROM is the shared resend.dev sender in production. " +

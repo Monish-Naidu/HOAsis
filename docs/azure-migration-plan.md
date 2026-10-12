@@ -1,117 +1,296 @@
-# Moving Your HOAsis to Azure: the plan
+# Moving Your HOAsis to Azure
 
-Written 2026-10-06 for Monish, who asked for a migration plan. It says what
-runs where today, what each piece would become on Azure, in what order, what
-it would cost in time and money, and whether to do it. Prices are the
-published list prices as I know them; check the Azure pricing calculator
-before committing, they change.
+Written 2026-10-06 as a plan; rewritten 2026-10-11 as the plan and the
+runbook, when Monish said to use the $150 a month of Azure credit from
+work for hosting, the database and everything else. Everything below is in
+the repo and compiles; nothing has been created in Azure yet, because the
+sign-in to the work tenant is Monish's to do (see "What Monish does").
 
-## Where things run today
+## The short version
 
-| Piece                | Today                                                                             | What it does                                                                                       |
-| -------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| The site and app     | Vercel (Next.js, one project, `main` deploys itself)                              | Pages, the API routes, the three daily jobs (dues, autopay, billing sweep) run as Vercel cron      |
-| Database and sign-in | Supabase (Postgres with row level security, Supabase Auth, one free-tier project) | Every table, every policy, every SQL function in `supabase/migrations/`, magic links and passwords |
-| Payments             | Stripe (Connect for the associations' money, Billing for ours)                    | Unchanged by any of this                                                                           |
-| Email                | Resend (domain not yet verified)                                                  | Unchanged by any of this                                                                           |
-| Errors               | Sentry, plus our own `app_errors` table and `/admin`                              | See `docs/telemetry.md`                                                                            |
-| DNS                  | Cloudflare                                                                        | yourhoasis.com                                                                                     |
+- The app moves to **Azure Container Apps**, built from the `Dockerfile`
+  into **Azure Container Registry**, deployed by GitHub Actions on every
+  merge to `main` with no stored credential (OIDC to a managed identity).
+- The five daily jobs become **Container Apps jobs** on the same UTC
+  schedule, calling the same routes with the same `CRON_SECRET`.
+- Secrets live in **Key Vault** and reach the containers as references; no
+  secret value is in Bicep, a parameter, a workflow or a log.
+- The database moves to **Azure Database for PostgreSQL Flexible Server**
+  (Postgres 17, the version Supabase runs). The three Supabase services the
+  code depends on (auth, the data API, file storage) are the open-source
+  images Supabase itself ships, run beside the app in one Container App.
+  **Every migration, policy and SQL function stays as it is.** The JWT
+  secret is reused, so the anon and service keys do not change and nobody
+  is signed out.
+- Stripe, Resend, Sentry and Cloudflare stay. Stripe gets new webhook
+  endpoints for the new host; Resend gets nothing new.
+- Two phases, each reversible: the app first (database still hosted by
+  Supabase), the database second. Azure is staging until the cut-over
+  night; Vercel keeps serving `yourhoasis.com` until DNS is flipped.
 
-Two of those six would move. Stripe, Resend, Sentry and Cloudflare stay
-whatever we do.
+## What runs where
 
-## What each piece becomes
+| Piece      | Today                               | On Azure                                                                                    | In the repo                                 |
+| ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| The site   | Vercel                              | Container App `ca-hoasis-web`, 0.5 vCPU, 1 GiB, one to three replicas                       | `Dockerfile`, `infra/apps.bicep`            |
+| Daily jobs | Vercel cron (`vercel.json`)         | Five Container Apps jobs `caj-hoasis-*`, a curl each                                        | `infra/apps.bicep`                          |
+| Images     | Vercel builds                       | Container Registry `crhoasis…`, built in the registry (`az acr build`, no Docker needed)    | `scripts/azure/deploy.sh`                   |
+| Deploys    | Vercel git integration              | GitHub Actions `deploy to azure`, after `check` passes on `main`                            | `.github/workflows/deploy-azure.yml`        |
+| Secrets    | Vercel env                          | Key Vault `kv-hoasis-…`, read by the app identity                                           | `scripts/azure/secrets.sh`                  |
+| Postgres   | Supabase (us-west-2)                | Flexible Server `psql-hoasis-…`, PG 17, B1ms, 32 GiB, 7 day backups, westus2                | `infra/platform.bicep`                      |
+| Sign-in    | Supabase Auth                       | GoTrue `v2.196.0`, the same server Supabase runs, with the hosted project's settings copied | `infra/apps.bicep`, container `auth`        |
+| Data API   | Supabase PostgREST                  | PostgREST `v14.17`                                                                          | container `rest`                            |
+| Files      | Supabase Storage (3 buckets)        | storage-api `v1.74.0`, files on an Azure Files share                                        | container `storage`, `infra/platform.bicep` |
+| Front door | Supabase's Kong                     | Caddy, routing `/auth/v1`, `/rest/v1`, `/storage/v1` to the three above                     | `infra/supabase/Caddyfile`                  |
+| Logs       | Vercel logs (1 hour), Supabase logs | Log Analytics `log-hoasis`, 30 days, every container and job                                | `infra/platform.bicep`                      |
+| Spend      | nothing                             | A budget with emails at 50%, 80% and a forecast past 100% of $120                           | `infra/platform.bicep`                      |
+| DNS        | Cloudflare                          | Cloudflare, records changed by hand on the night                                            | below                                       |
 
-### The app: Vercel to Azure
+Not moved because not used: Supabase Realtime, Edge Functions, the
+dashboard. Not moved because it is not ours: Stripe, Resend, Sentry.
 
-Three ways to run Next.js on Azure. One fits.
+## Why these choices
 
-| Option                                 | Fit            | Why                                                                                                                                                                                                                                                                                                          |
-| -------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Azure Container Apps** (recommended) | Good           | Runs the app as a container built from the repo's `Dockerfile` (to be added; Next.js has a standalone output mode for exactly this). Scales to zero when nobody is on it, so a quiet night costs nearly nothing. Has its own cron ("jobs") for the three daily runs. HTTPS and a custom domain are built in. |
-| Azure Static Web Apps                  | Poor           | Meant for mostly static sites; its Next.js support runs the server parts as Azure Functions with limits that bite (request size, run time, no cron of its own). Our app is mostly server routes and signed-in pages.                                                                                         |
-| Azure App Service                      | Fine, costlier | A plain Linux web app running `next start`. Simpler than containers, but it never scales to zero, so the cheapest always-on plan is about $13 a month before we have a customer.                                                                                                                             |
+**Container Apps over App Service or Static Web Apps.** Static Web Apps
+runs Next's server parts as Functions with limits that bite (run time, no
+scheduler of its own) and trails Next versions; we are on 16. App Service
+is fine but never idles and has no job runner. Container Apps runs the
+standalone Next server as it is, bills idle replicas at a reduced rate,
+has scheduled jobs, HTTPS and custom domains built in, and shares one
+environment with the Supabase services.
 
-Cost on Container Apps at our size: the consumption plan gives a monthly
-free grant (the first 180,000 vCPU-seconds and 360,000 GiB-seconds, and
-two million requests), which a pre-launch product does not exhaust. Expect
-$0 to $15 a month until there is real traffic. Vercel's hobby plan is $0
-today and would be $20 a month on Pro once we need a team or more than the
-hobby limits.
+**Self-hosted Supabase services over rewriting sign-in.** The migrations
+use `auth.uid()` 125 times and `auth.role()` 36 times; the app calls 75
+SQL functions through the Supabase client and Supabase Storage for photos,
+documents and attachments. Replacing Supabase Auth with Entra External ID
+and PostgREST with our own routes is a month of work and a second proof of
+every policy. Running Supabase's own images keeps all of it, at the cost
+of operating three small services. This is what Supabase documents as
+self-hosting; the pieces not needed (Realtime, Studio, Kong, imgproxy,
+edge runtime) are left out.
 
-### The database and sign-in: Supabase to Azure
+**One Container App for the three services.** They share `localhost`, scale
+as one, and cost one replica. A hosted Supabase project is one instance
+too.
 
-This is the hard half, and the reason to think twice.
+**Flexible Server with a public endpoint behind the firewall.** This is
+how Supabase exposes Postgres today. A private network (VNet integration
+for the environment and the server) is the next hardening step; it adds
+no cost but does add a subnet plan and a private DNS zone, and it would
+make the migration job the only way to reach the database. Do it after
+the move, not during.
 
-| Piece                                                                        | Becomes                                                                                                                                                                                         | Effort                                                                                                                                                                                                                                                                                                                                                    |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Postgres, every table and policy                                             | **Azure Database for PostgreSQL, Flexible Server**                                                                                                                                              | Low. It is the same Postgres. The 99 migrations apply as they are, minus the Supabase-only parts below. Cheapest burstable tier is about $13 a month plus storage; a production tier with high availability is $100 or more. Supabase free is $0 and Pro is $25.                                                                                          |
-| Supabase Auth (sign-up, magic links, password reset, the `auth.users` table) | One of: keep Supabase Auth as a hosted service; or **Microsoft Entra External ID** (Azure's customer sign-in); or run the open-source Supabase Auth server (GoTrue) ourselves in Container Apps | Medium to high. Our SQL leans on `auth.uid()` and `auth.role()` in every policy and function, and on triggers on `auth.users` (0003, 0090). Entra would mean replacing those with a JWT claim mapping and rewriting the sign-in, join, invite and email-change flows. Running GoTrue ourselves keeps every policy as it is but adds a service to operate. |
-| PostgREST (the browser talks to the database through it)                     | Keep the open-source PostgREST in a container, or move every browser read and write behind our own API routes                                                                                   | Medium. The app's data layer (`src/lib/data/remote.ts`, `src/lib/app-state.tsx`) uses the Supabase client everywhere. Self-hosting PostgREST keeps that code; dropping it is a rewrite.                                                                                                                                                                   |
-| Realtime, storage                                                            | Not used                                                                                                                                                                                        | None.                                                                                                                                                                                                                                                                                                                                                     |
+**Postgres 17.** It matches the source, and on Flexible Server a
+non-superuser administrator can create a role with `BYPASSRLS` from
+Postgres 16 on, which `service_role` needs. On 15 it cannot, and the
+server-side key would stop working.
 
-The honest shape of it: **moving the app is a day; moving the database is a
-week if we keep the Supabase pieces running in containers, and a month if
-we replace them.** Supabase is open source, so "Supabase on Azure" is a real
-option: Postgres on Flexible Server, GoTrue and PostgREST in Container Apps,
-our app beside them. Everything in the repo would work unchanged.
+**The administrator is named `postgres`.** The dump's grants and default
+privileges name that role; restoring under the same name means they apply
+as written.
 
-## The order, if we do it
+**Build in the registry.** `az acr build` builds the image in Azure from
+the repo checkout, so neither the laptop nor the GitHub runner needs
+Docker, and the image never crosses the network.
 
-1. **Prepare, no move yet (1 to 2 days).** Add `output: "standalone"` and a
-   `Dockerfile`. Make the three cron routes callable from a job runner (they
-   already take `CRON_SECRET`). Put every environment variable in one list
-   (`docs/go-live-monish.md` has most). Add a health route.
-2. **App on Azure, database stays on Supabase (half a day).** Container
-   Apps environment, the app as one container, the three jobs on Container
-   Apps jobs with cron triggers, secrets in the environment, custom domain
-   `staging.yourhoasis.com` pointed at it from Cloudflare. The app talks to
-   Supabase exactly as now. Run the browser suite against it. This is a
-   complete, reversible step on its own: it proves the hosting and costs
-   nothing to undo.
-3. **Decide the database.** Three paths, in order of my preference:
-   a. **Stay on Supabase** for the database and sign-in, app on Azure.
-   Cheapest and least risky. Supabase Pro at $25 a month is what we
-   would pay for backups and no pausing anyway.
-   b. **Supabase on Azure:** Flexible Server plus GoTrue and PostgREST in
-   containers. Keeps the code, adds operations. One to two weeks
-   including the data move, a rehearsal and a cut-over night.
-   c. **Replace sign-in with Entra External ID** and put PostgREST behind
-   our API. A month. Only worth it if Azure sign-in is required for a
-   reason outside the product (an enterprise customer, a credit program
-   that demands it).
-4. **Cut over (one evening).** Freeze writes (the billing gate can show
-   "back in an hour"), `pg_dump` from Supabase, restore to Flexible Server,
-   point the app's environment at it, run `pnpm db:verify` against it,
-   flip DNS. Keep Supabase for thirty days as the fallback.
+**OIDC for GitHub.** The workflow signs in as a user-assigned identity
+through a federated credential for `refs/heads/main`; there is no client
+secret to rotate or leak. Its rights are Contributor on the resource group
+and push on the registry. It cannot read a secret value.
 
-## What does not change
+## What it costs
 
-Stripe (Connect accounts, webhooks, the subscription), Resend, Sentry,
-Cloudflare, GitHub Actions, the repo, the migrations, the tests. Stripe's
-webhook URL and Resend's sending domain would be re-pointed, that is all.
+List prices for westus2, October 2026, for the month. The two Container
+Apps run one replica each all the time; Container Apps bills a replica
+that is not serving requests at a lower idle rate, and a pre-revenue
+product is idle most of the time. The subscription's free grant (180,000
+vCPU-seconds, 360,000 GiB-seconds a month) is taken off first.
+
+| Item                                                      | Idle month | Busy month |
+| --------------------------------------------------------- | ---------- | ---------- |
+| Web app, 0.5 vCPU, 1 GiB, one replica                     | $8         | $34        |
+| Supabase services, 0.75 vCPU, 1.5 GiB, one replica        | $12        | $50        |
+| Five jobs, a few seconds a day                            | $0         | $0         |
+| Postgres Flexible Server B1ms, 32 GiB, 7 day backups      | $17        | $17        |
+| Container Registry Basic                                  | $5         | $5         |
+| Log Analytics (first 5 GB a month free), Key Vault, Files | $2         | $5         |
+| **Total**                                                 | **$44**    | **$111**   |
+
+Both fit under $150. The budget alerts at $60, $96 and a forecast over
+$120 so an unusual month is noticed before the credit runs out. Supabase
+Pro, which the go-live list had as the next step, is $25 a month and stays
+unpaid.
+
+**About the credit.** $150 a month is the Visual Studio Enterprise
+subscriber benefit. Two things to know before relying on it: Microsoft's
+terms say it is for individual development and test, not production, and
+the subscription has a spending limit that **stops every resource for the
+rest of the month** when the credit is spent, rather than charging a card.
+The budget emails are the warning; the spending limit is the backstop.
+When the first association pays, move the resource group to a
+pay-as-you-go subscription (`az resource move`, the same templates) and
+take the limit question away. Until then it is a staging and soft-launch
+environment that happens to be free.
+
+## The order
+
+### Phase 0: in the repo (done 2026-10-11, this pull request)
+
+- `output: "standalone"` when `BUILD_STANDALONE=1`; `Dockerfile` and
+  `.dockerignore`. The standalone server was started locally and served
+  `/`, `/pricing`, the CSS and `/api/health`.
+- `src/lib/deploy-env.ts`: `APP_ENV` beside `VERCEL_ENV`, so the shared
+  sender warning and the test tools' refusal work on Azure. Unit tested.
+- Apple Pay domains skip `*.azurecontainerapps.io` as they skip
+  `*.vercel.app`.
+- `infra/platform.bicep`, `infra/apps.bicep` (both compile with
+  `az bicep build`), the Caddyfile, the migration SQL and the `dbtools`
+  job image, five scripts under `scripts/azure/`, the deploy workflow
+  (inert until three repository variables exist), `.env.azure.example`.
+
+### Phase 1: the app on Azure, database still on Supabase (half a day)
+
+```bash
+az login --use-device-code                 # the work account, once
+cp .env.azure.example .env.azure           # fill it in; see the notes in the file
+WITH_SUPABASE_STACK=false scripts/azure/provision.sh
+```
+
+The script creates the resource group `rg-hoasis-prod` in `westus2`, the
+platform, the secrets, both images, the web app and the five jobs, and
+prints the web app's address and the three values for GitHub. Then:
+
+1. Open `https://<web>.azurecontainerapps.io/api/health`: every check `ok`.
+2. Sign in with a test login; it talks to the hosted Supabase as before.
+3. `pnpm stripe:setup https://<web host>` registers webhook endpoints for
+   the new host; put the two new secrets in `.env.azure` and run
+   `scripts/azure/secrets.sh`, then `scripts/azure/deploy.sh` so the app
+   picks them up.
+4. `E2E_BASE=https://<web host> pnpm e2e`.
+5. GitHub: Settings, Secrets and variables, Actions, Variables:
+   `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` from the
+   script's output. From then on every merge to `main` deploys to Azure
+   as well as Vercel.
+6. Cloudflare: `staging` CNAME to the web app's address, DNS only (grey
+   cloud); then
+   `az containerapp hostname add -g rg-hoasis-prod -n ca-hoasis-web --hostname staging.yourhoasis.com`
+   and `az containerapp hostname bind ... --environment cae-hoasis --validation-method CNAME`
+   for the managed certificate. Set `NEXT_PUBLIC_SITE_HOST=staging.yourhoasis.com`
+   in `.env.azure` and run `provision.sh` again (it only changes what differs).
+
+### Phase 2: the database on Azure (a rehearsal, then a night)
+
+```bash
+scripts/azure/provision.sh              # adds the Supabase services app
+DUMP_ONLY=1 scripts/azure/db-migrate.sh # proves the dump through the pooler
+scripts/azure/db-migrate.sh             # rehearsal: fills the Azure server
+node scripts/azure/copy-storage.mjs https://lhplcojgoysfnltqlgfx.supabase.co https://<supabase app>.azurecontainerapps.io
+ENV_FILE=../.env.azure node scripts/verify-all.mjs   # every database suite against Azure
+```
+
+The migrate job runs inside Azure from the `dbtools` image: it creates
+the roles and schemas Supabase's image creates at birth
+(`infra/supabase/sql/01-roles.sql`), dumps `public`, `auth`, `storage` and
+`supabase_migrations` from the hosted project through its pooler (session
+mode; the direct host is IPv6 only), restores with `--no-owner`, hands the
+`auth` and `storage` schemas to the two services that own them
+(`02-after-restore.sql`), and prints row counts from both sides
+(`03-check.sql`). The storage files are copied separately through the two
+storage APIs, which is what writes the `storage.objects` rows on the new
+side. `RESET=1` empties the Azure server for a second rehearsal.
+
+Then point the web app at the new stack: in `.env.azure` set
+`NEXT_PUBLIC_SUPABASE_URL` to the Supabase app's address (the script does
+this itself when the stack is on) and run `provision.sh`. Sign in, pay
+with a test card, upload a document, change an email: the four flows that
+cross all three services.
+
+### The cut-over night (one evening, with a rollback that is one DNS change)
+
+1. Announce a window. Set the app to read-only or show the maintenance
+   notice (the billing gate can say "back in an hour").
+2. `RESET=1 scripts/azure/db-migrate.sh` and `copy-storage.mjs` again, so
+   the copy is of that minute. Row counts match, or stop.
+3. Supabase dashboard, Authentication, URL configuration: nothing to do;
+   the allow list is in GoTrue's env already.
+4. Stripe: switch the webhook endpoints to `yourhoasis.com` (they exist
+   for the staging host from phase 1; `pnpm stripe:setup https://yourhoasis.com`
+   again, new secrets into the vault, redeploy).
+5. Cloudflare: apex `A 76.76.21.21` and `www CNAME cname.vercel-dns.com`
+   become `CNAME` to the web app's address (Cloudflare flattens the apex),
+   DNS only. Bind `yourhoasis.com` and `www.yourhoasis.com` to the app
+   as in phase 1 step 6. Set `APP_ENV=production`,
+   `NEXT_PUBLIC_SITE_HOST=yourhoasis.com` and run `provision.sh`.
+6. `/api/health` on `yourhoasis.com`, a sign-in, a test payment, the
+   `/admin` page. Done.
+7. Leave Vercel and Supabase as they are for thirty days. Rolling back is
+   the two DNS records and the Stripe endpoints; the data written on
+   Azure in between would need the same copy the other way.
+
+Pause the Supabase project (dashboard) once the thirty days are up;
+delete the Vercel project after that.
+
+## Operating it
+
+- **Logs.** `az containerapp logs show -g rg-hoasis-prod -n ca-hoasis-web --tail 200`
+  for the app; `-n ca-hoasis-supabase --container auth` (or `rest`,
+  `storage`, `gateway`) for the services. Everything is in Log Analytics
+  for 30 days; the request id on an error screen is a `grep`.
+- **A migration.** `supabase db push --db-url "$(az keyvault secret show --vault-name <kv> --name migrate-target-url --query value -o tsv)"`
+  applies new files in `supabase/migrations/` and records them in
+  `supabase_migrations`, as before. Then
+  `psql ... -c "notify pgrst, 'reload schema'"` or restart the services
+  app, because the hosted project's "reload on DDL" trigger needs
+  superuser and does not exist here.
+- **Deploy.** Merge to `main`; or `scripts/azure/deploy.sh`.
+- **A secret.** Change it in `.env.azure`, run `scripts/azure/secrets.sh`,
+  then `scripts/azure/deploy.sh` (a new revision reads the new version).
+- **A setting.** Change `.env.azure`, run `scripts/azure/provision.sh`.
+- **Backups.** Automatic, 7 days, point-in-time restore from the portal or
+  `az postgres flexible-server restore`. Test one restore in the first
+  month.
+- **Service versions.** Pinned in `infra/apps.bicep`. Move GoTrue,
+  PostgREST and storage-api together to the versions in Supabase's own
+  `docker/docker-compose.yml`, on staging first; GoTrue and storage run
+  their schema migrations at start.
+- **Auth emails.** Sent by GoTrue over Resend's SMTP, as the hosted
+  project does today, from the shared `onboarding@resend.dev` until the
+  domain is verified (go-live item 1). Templates are GoTrue's defaults,
+  which are what the hosted project uses.
 
 ## Risks, plainly
 
-- **Sign-in is the one thing that can lock everybody out.** Any path that
-  changes it needs a rehearsal with real accounts on staging first.
-- **Row level security is the product's security model.** It survives
-  paths a and b untouched; path c has to prove every policy again.
-- **The free tiers differ.** Supabase free pauses after a week idle (it has
-  bitten us once, 2026-09-19); Azure does not pause but does bill.
-- **Two clouds for a while.** Step 2 leaves the app on Azure and the data
-  on Supabase; that is fine (they talk over HTTPS as now) but it is two
-  dashboards to watch.
+- **A Supabase-only thing hidden in 110 migrations.** The dump carries
+  everything in `public`, `auth` and `storage`; what it cannot carry is a
+  `supabase_admin`-owned default privilege or an extension outside the
+  allow list. The rehearsal plus `pnpm db:verify` is the net. Expect a
+  handful of restore errors about grants to roles that own nothing here;
+  the job prints and counts them.
+- **`service_role` and row level security.** If Flexible Server refuses
+  `BYPASSRLS` after all, the webhook and the crons would be denied by
+  every policy. The role creation is the first statement of the migrate
+  job, so this fails in the first minute of the rehearsal, not on the
+  night.
+- **Sign-in.** Same JWT secret, same keys, same `auth` tables, so sessions
+  survive. Still: rehearse a magic link, a password reset and an email
+  change on staging with a real inbox before the night.
+- **Two clouds for a while.** Phase 1 leaves the app on Azure and the data
+  on Supabase; it works (HTTPS as now) and it is two dashboards.
+- **The credit.** Dev/test terms and a hard stop at $150. Written above.
+- **Cold starts.** Both apps keep one replica; nothing scales to zero.
+- **The `/api/health` probe.** Container Apps uses a TCP probe by default,
+  on purpose: an HTTP probe on `/api/health` would restart the app when
+  Supabase was the thing that was down.
 
-## My recommendation
+## What Monish does
 
-Do step 1 now (it is good hygiene regardless) and step 2 when there is a
-reason: Azure credits, a customer who asks, or Vercel's limits. Leave the
-database on Supabase and pay for Pro when the first real association signs
-up. Revisit the database question when there are more than a few
-associations or when a compliance need (data residency, a signed BAA, an
-auditor) names a requirement Supabase cannot meet.
-
-If the reason is Azure credits, note that Flexible Server, Container Apps
-and Entra External ID all draw on them, so path b becomes nearly free in
-cash and costs mostly time.
+1. `az login --use-device-code` with the work account, then
+   `az account set --subscription <the one with the credit>`. Nothing
+   below runs without it.
+2. Read `.env.azure.example`, create `.env.azure`. The JWT secret is in
+   the Supabase dashboard under Settings, API; everything else is in
+   `.env.local` already.
+3. Phase 1, as above. Half a day including the browser suite.
+4. Say when to rehearse phase 2 and when the night is.
+5. Decide what to do about the credit's terms before the first paying
+   association.
