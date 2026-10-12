@@ -30,6 +30,9 @@ json.dump({"$schema": "https://schema.management.azure.com/schemas/2019-04-01/de
 PY
 }
 
+# One output of a deployment, from the file its outputs were written to.
+out() { python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]]["value"])' "$1" "$2"; }
+
 with_stack="${WITH_SUPABASE_STACK:-true}"
 budget_email="$(read_env BUDGET_EMAIL)"
 [ -n "$budget_email" ] || { echo "BUDGET_EMAIL is empty in $ENV_FILE" >&2; exit 1; }
@@ -54,10 +57,10 @@ work=$(mktemp -d)
 params "$work/platform.json" postgresAdminPassword="$pg_password" clientIp="$client_ip" budgetEmail="$budget_email"
 az deployment group create -g "$AZ_RG" -n platform --template-file "$ROOT/infra/platform.bicep" \
   --parameters "@$work/platform.json" --only-show-errors --query "properties.outputs" -o json > "$work/platform-out.json"
-acr=$(python3 -c 'import json;print(json.load(open("$work/platform-out.json"))["acrName"]["value"])')
-kv=$(python3 -c 'import json;print(json.load(open("$work/platform-out.json"))["keyVaultName"]["value"])')
-env_domain=$(python3 -c 'import json;print(json.load(open("$work/platform-out.json"))["environmentDomain"]["value"])')
-github_client=$(python3 -c 'import json;print(json.load(open("$work/platform-out.json"))["githubClientId"]["value"])')
+acr=$(out "$work/platform-out.json" acrName)
+kv=$(out "$work/platform-out.json" keyVaultName)
+env_domain=$(out "$work/platform-out.json" environmentDomain)
+github_client=$(out "$work/platform-out.json" githubClientId)
 echo "   registry $acr, vault $kv, environment domain $env_domain"
 
 echo "== 2. secrets"
@@ -94,7 +97,7 @@ params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentit
   testLogins="$(read_env NEXT_PUBLIC_TEST_LOGINS)"
 az deployment group create -g "$AZ_RG" -n apps --template-file "$ROOT/infra/apps.bicep" \
   --parameters "@$work/apps.json" --only-show-errors --query "properties.outputs" -o json > "$work/apps-out.json"
-web=$(python3 -c 'import json;print(json.load(open("$work/apps-out.json"))["webFqdn"]["value"])')
+web=$(out "$work/apps-out.json" webFqdn)
 
 rm -rf "$work"
 cat <<DONE
