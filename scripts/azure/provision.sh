@@ -63,6 +63,12 @@ env_domain=$(out "$work/platform-out.json" environmentDomain)
 github_client=$(out "$work/platform-out.json" githubClientId)
 echo "   registry $acr, vault $kv, environment domain $env_domain"
 
+# The vault is in RBAC mode, which means even the subscription owner needs a
+# data-plane role to write a secret. Grant it to whoever is running this.
+me=$(az ad signed-in-user show --query id -o tsv 2>/dev/null || az account show --query user.name -o tsv)
+kv_id=$(az keyvault show -n "$kv" -g "$AZ_RG" --query id -o tsv)
+az role assignment create --assignee "$me" --role "Key Vault Secrets Officer" --scope "$kv_id" --only-show-errors -o none 2>/dev/null || true
+
 echo "== 2. secrets"
 "$ROOT/scripts/azure/secrets.sh"
 

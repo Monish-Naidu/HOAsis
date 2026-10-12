@@ -13,6 +13,13 @@ kv="$(kv_name)"
 pg="$(pg_host)"
 [ -n "$kv" ] && [ -n "$pg" ] || { echo "Run provision.sh first." >&2; exit 1; }
 
+# A role granted a moment ago takes up to a few minutes to apply.
+for i in $(seq 1 16); do
+  if az keyvault secret list --vault-name "$kv" --only-show-errors -o none 2>/dev/null; then break; fi
+  [ "$i" = 16 ] && { echo "No access to $kv after four minutes; is Key Vault Secrets Officer granted?" >&2; exit 1; }
+  echo "  waiting for vault access ($i)"; sleep 15
+done
+
 put() { # name value
   if [ -z "$2" ]; then echo "  skip  $1 (empty)"; return; fi
   az keyvault secret set --vault-name "$kv" --name "$1" --value "$2" --only-show-errors --query name -o tsv | sed 's/^/  set   /'
