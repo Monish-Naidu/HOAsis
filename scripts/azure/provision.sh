@@ -9,6 +9,7 @@
 #   WITH_SUPABASE_STACK=false scripts/azure/provision.sh   # phase 1: app only, database stays hosted
 #   scripts/azure/provision.sh                              # phase 2: adds the Supabase services; web app still on the hosted database
 #   WEB_ON_AZURE_DB=true scripts/azure/provision.sh         # after the data has moved: web app on the Azure stack
+#   APPS_ONLY=true scripts/azure/provision.sh               # a settings or gateway change: apps and jobs only, same image
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 require_login
@@ -38,6 +39,22 @@ with_stack="${WITH_SUPABASE_STACK:-true}"
 budget_email="$(read_env BUDGET_EMAIL)"
 [ -n "$budget_email" ] || { echo "BUDGET_EMAIL is empty in $ENV_FILE" >&2; exit 1; }
 
+# APPS_ONLY=true redeploys the apps and jobs from the templates with the
+# image already running: for a change to a setting, the gateway's config or
+# a service version, without the platform pass, the secrets or a build.
+if [ "${APPS_ONLY:-false}" = "true" ]; then
+  work=$(mktemp -d)
+  az deployment group show -g "$AZ_RG" -n platform --query "properties.outputs" -o json > "$work/platform-out.json"
+  acr=$(out "$work/platform-out.json" acrName)
+  kv=$(out "$work/platform-out.json" keyVaultName)
+  env_domain=$(out "$work/platform-out.json" environmentDomain)
+  github_client=$(out "$work/platform-out.json" githubClientId)
+  storage_account=$(out "$work/platform-out.json" storageAccountName)
+  web_image=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" --query "properties.template.containers[0].image" -o tsv)
+  echo "== apps and jobs only, web image $web_image"
+fi
+
+if [ "${APPS_ONLY:-false}" != "true" ]; then
 echo "== 1. platform in $AZ_RG ($AZ_LOCATION)"
 az group create -n "$AZ_RG" -l "$AZ_LOCATION" --tags product=$AZ_BASE --only-show-errors -o none
 for ns in Microsoft.App Microsoft.OperationalInsights Microsoft.ContainerRegistry Microsoft.KeyVault \
@@ -77,6 +94,20 @@ echo "== 2. secrets"
 echo "== 3. images"
 tag=$(git -C "$ROOT" rev-parse --short HEAD)
 az acr build --registry "$acr" --image "hoasis-dbtools:$tag" --image "hoasis-dbtools:latest" --file "$ROOT/infra/dbtools/Dockerfile" "$ROOT/infra" --only-show-errors -o none
+build_args=(
+  --build-arg "NEXT_PUBLIC_SUPABASE_URL=$supabase_url"
+  --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)"
+  --build-arg "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)"
+  --build-arg "NEXT_PUBLIC_SENTRY_DSN=$(read_env NEXT_PUBLIC_SENTRY_DSN)"
+  --build-arg "NEXT_PUBLIC_SITE_HOST=$(read_env NEXT_PUBLIC_SITE_HOST)"
+  --build-arg "NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)"
+  --build-arg "NEXT_PUBLIC_TEST_LOGINS_B64=$(read_env NEXT_PUBLIC_TEST_LOGINS | base64 | tr -d '\n')"
+  --build-arg "NEXT_PUBLIC_APP_ENV=$(read_env APP_ENV)"
+)
+az acr build --registry "$acr" --image "hoasis-web:$tag" --file "$ROOT/Dockerfile" "${build_args[@]}" "$ROOT" --only-show-errors -o none
+web_image="$acr.azurecr.io/hoasis-web:$tag"
+fi
+
 # The stack's own address is known before it exists: app name plus the
 # environment's domain. The web app keeps talking to the hosted project until
 # WEB_ON_AZURE_DB=true, which is the switch flipped after the data has moved.
@@ -92,21 +123,10 @@ supabase_url="$(read_env NEXT_PUBLIC_SUPABASE_URL)"
 if [ "$with_stack" = "true" ] && [ "${WEB_ON_AZURE_DB:-false}" = "true" ]; then
   supabase_url="$stack_url"
 fi
-build_args=(
-  --build-arg "NEXT_PUBLIC_SUPABASE_URL=$supabase_url"
-  --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)"
-  --build-arg "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)"
-  --build-arg "NEXT_PUBLIC_SENTRY_DSN=$(read_env NEXT_PUBLIC_SENTRY_DSN)"
-  --build-arg "NEXT_PUBLIC_SITE_HOST=$(read_env NEXT_PUBLIC_SITE_HOST)"
-  --build-arg "NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)"
-  --build-arg "NEXT_PUBLIC_TEST_LOGINS_B64=$(read_env NEXT_PUBLIC_TEST_LOGINS | base64 | tr -d '\n')"
-  --build-arg "NEXT_PUBLIC_APP_ENV=$(read_env APP_ENV)"
-)
-az acr build --registry "$acr" --image "hoasis-web:$tag" --file "$ROOT/Dockerfile" "${build_args[@]}" "$ROOT" --only-show-errors -o none
 
 echo "== 4. apps and jobs"
 params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentityName="id-$AZ_BASE-app" \
-  acrLoginServer="$acr.azurecr.io" storageAccountName="$storage_account" webImage="$acr.azurecr.io/hoasis-web:$tag" \
+  acrLoginServer="$acr.azurecr.io" storageAccountName="$storage_account" webImage="$web_image" \
   deploySupabaseStack="$with_stack" appEnv="$(read_env APP_ENV)" \
   supabaseUrl="$supabase_url" stackUrl="$stack_url" gotrueUriAllowList="$allow_list" supabaseAnonKey="$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)" \
   stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" sentryDsn="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
