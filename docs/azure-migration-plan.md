@@ -193,7 +193,27 @@ prints the web app's address and the three values for GitHub. Then:
    for the managed certificate. Set `NEXT_PUBLIC_SITE_HOST=staging.yourhoasis.com`
    in `.env.azure` and run `provision.sh` again (it only changes what differs).
 
-### Phase 2: the database on Azure (a rehearsal, then a night)
+### Phase 2: the database on Azure (rehearsed 2026-10-12; the night is still to come)
+
+What exists: the Supabase services app at
+`https://ca-hoasis-supabase.yellowwater-f911a709.westus.azurecontainerapps.io`
+(GoTrue 2.196.0, PostgREST 14.17, storage-api 1.80.2 with s3proxy to the
+blob container, Caddy in front); the Azure Postgres filled three times by
+the migrate job, row counts matching on every table (7,278 payments, 84
+profiles, 155 units, 124 documents); 117 files copied into the blob
+container, one downloaded through both stacks byte for byte; every
+database suite green against the stack (the one red check is the Resend
+domain, go-live item 1, which is not Azure's); a real sign-in through the
+Azure auth service with the treasurer test login, after which row level
+security showed only that person's rows; and the Azure web app pointed
+at the stack, `/api/health` green, the stack address in the browser
+bundle and the hosted one gone.
+
+The Azure copy is a snapshot from the rehearsal. Writes on
+`yourhoasis.com` still go to the hosted project; the night below takes a
+fresh copy.
+
+The commands, for the record:
 
 ```bash
 scripts/azure/provision.sh              # adds the Supabase services app; the web app stays on the hosted database
