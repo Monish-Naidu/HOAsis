@@ -18,6 +18,22 @@ vault_uri=$(az keyvault show -n "$kv" --query properties.vaultUri -o tsv)
 identity_id=$(az identity show -g "$AZ_RG" -n "id-$AZ_BASE-app" --query id -o tsv)
 image="$acr.azurecr.io/hoasis-dbtools:latest"
 
+# The auth and storage services run their own schema migrations when they
+# start, which would collide with the restore. Stop the app for the duration.
+stack_was_running=false
+if az containerapp show -g "$AZ_RG" -n "$AZ_SUPABASE_APP" -o none 2>/dev/null; then
+  echo "== stopping $AZ_SUPABASE_APP for the copy"
+  az containerapp stop -g "$AZ_RG" -n "$AZ_SUPABASE_APP" --only-show-errors -o none
+  stack_was_running=true
+fi
+restart_stack() {
+  if [ "$stack_was_running" = true ]; then
+    echo "== starting $AZ_SUPABASE_APP"
+    az containerapp start -g "$AZ_RG" -n "$AZ_SUPABASE_APP" --only-show-errors -o none
+  fi
+}
+trap restart_stack EXIT
+
 echo "== job $AZ_MIGRATE_JOB"
 if ! az containerapp job show -g "$AZ_RG" -n "$AZ_MIGRATE_JOB" -o none 2>/dev/null; then
   az containerapp job create -g "$AZ_RG" -n "$AZ_MIGRATE_JOB" --environment "$AZ_ENV" \
