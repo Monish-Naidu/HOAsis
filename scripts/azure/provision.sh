@@ -74,7 +74,7 @@ echo "== 2. secrets"
 
 echo "== 3. images"
 tag=$(git -C "$ROOT" rev-parse --short HEAD)
-az acr build --registry "$acr" --image "hoasis-dbtools:$tag" --image "hoasis-dbtools:latest" "$ROOT/infra/dbtools" --only-show-errors -o none
+az acr build --registry "$acr" --image "hoasis-dbtools:$tag" --image "hoasis-dbtools:latest" --file "$ROOT/infra/dbtools/Dockerfile" "$ROOT/infra" --only-show-errors -o none
 supabase_url="$(read_env NEXT_PUBLIC_SUPABASE_URL)"
 if [ "$with_stack" = "true" ]; then
   # The stack's own address, known before it exists: app name plus the environment's domain.
