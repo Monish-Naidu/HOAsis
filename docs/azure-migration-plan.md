@@ -2,9 +2,10 @@
 
 Written 2026-10-06 as a plan; rewritten 2026-10-11 as the plan and the
 runbook, when Monish said to use the $150 a month of Azure credit from
-work for hosting, the database and everything else. Everything below is in
-the repo and compiles; nothing has been created in Azure yet, because the
-sign-in to the work tenant is Monish's to do (see "What Monish does").
+work for hosting, the database and everything else. **Phase 1 ran on the
+night of 2026-10-11 to 12**: the app is on Azure and healthy, the database
+is still the hosted Supabase project, Vercel still serves `yourhoasis.com`.
+What phase 1 found is under "What the first run taught".
 
 ## The short version
 
@@ -148,7 +149,18 @@ environment that happens to be free.
   job image, five scripts under `scripts/azure/`, the deploy workflow
   (inert until three repository variables exist), `.env.azure.example`.
 
-### Phase 1: the app on Azure, database still on Supabase (half a day)
+### Phase 1: the app on Azure, database still on Supabase (done 2026-10-12)
+
+What exists: resource group `rg-hoasis` in `westus`; the web app at
+`https://ca-hoasis-web.yellowwater-f911a709.westus.azurecontainerapps.io`
+(one replica, healthy, `/api/health` all green against the hosted
+database); the five jobs; Postgres 17 `psql-hoasis-lnitot` (empty);
+registry `crhoasislnitot`; vault `kv-hoasis-lnitot` with every secret; the
+budget. Stripe has webhook endpoints for the Azure host. The browser suite
+ran against it: 144 passed, 10 skipped, none failed. GitHub's three
+variables are set, so a merge to `main` deploys to Azure as well as Vercel.
+
+The commands, for the record or for a second environment:
 
 ```bash
 az login --use-device-code                 # the work account, once
@@ -184,7 +196,7 @@ prints the web app's address and the three values for GitHub. Then:
 ### Phase 2: the database on Azure (a rehearsal, then a night)
 
 ```bash
-scripts/azure/provision.sh              # adds the Supabase services app
+scripts/azure/provision.sh              # adds the Supabase services app; the web app stays on the hosted database
 DUMP_ONLY=1 scripts/azure/db-migrate.sh # proves the dump through the pooler
 scripts/azure/db-migrate.sh             # rehearsal: fills the Azure server
 node scripts/azure/copy-storage.mjs https://lhplcojgoysfnltqlgfx.supabase.co https://<supabase app>.azurecontainerapps.io
@@ -202,11 +214,9 @@ mode; the direct host is IPv6 only), restores with `--no-owner`, hands the
 storage APIs, which is what writes the `storage.objects` rows on the new
 side. `RESET=1` empties the Azure server for a second rehearsal.
 
-Then point the web app at the new stack: in `.env.azure` set
-`NEXT_PUBLIC_SUPABASE_URL` to the Supabase app's address (the script does
-this itself when the stack is on) and run `provision.sh`. Sign in, pay
-with a test card, upload a document, change an email: the four flows that
-cross all three services.
+Then point the web app at the new stack: `WEB_ON_AZURE_DB=true
+scripts/azure/provision.sh`. Sign in, pay with a test card, upload a
+document, change an email: the four flows that cross all three services.
 
 ### The cut-over night (one evening, with a rollback that is one DNS change)
 
@@ -232,6 +242,32 @@ cross all three services.
 
 Pause the Supabase project (dashboard) once the thirty days are up;
 delete the Vercel project after that.
+
+## What the first run taught
+
+Ten provisioning runs on the night of 2026-10-11, each fixing one thing;
+all of it is in the scripts now.
+
+- **Regions.** The Visual Studio subscription may not create Flexible
+  Server in `westus2`, `eastus`, `eastus2` or `southcentralus` ("subscriptions
+  are restricted from provisioning in this region"). `westus`, `westus3`
+  and `centralus` allow Postgres 17 on B1ms. A Container Apps environment
+  in `westus2` failed too and then took half an hour to delete, which is
+  why the group is `rg-hoasis` and not the first name.
+- **The vault.** RBAC mode means the subscription owner has no data-plane
+  rights by default; `provision.sh` grants Key Vault Secrets Officer to
+  whoever runs it and `secrets.sh` waits for the role to apply. An empty
+  secret still needs a version or the app's reference fails, so an empty
+  value becomes the placeholder `unset`.
+- **The registry's build runner** splits a build argument on spaces, so
+  the test logins (JSON) travel base64-encoded and the Dockerfile decodes
+  them.
+- **pnpm** decides which dependencies may run build scripts in
+  `pnpm-workspace.yaml`; the Dockerfile has to copy it or the install fails.
+- **Bicep.** `utcNow()` without a format is the compact form; the budget
+  wants `yyyy-MM-01T00:00:00Z`.
+- **The standalone trace** under pnpm misses the ESM half of
+  `@swc/helpers`; `outputFileTracingIncludes` carries the whole package.
 
 ## Operating it
 

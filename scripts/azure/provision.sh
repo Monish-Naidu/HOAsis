@@ -6,8 +6,9 @@
 #   4. the apps and jobs
 # Safe to run again; Bicep only changes what differs. Needs: az login first.
 #
-#   scripts/azure/provision.sh            # with the Supabase services (database on Azure)
-#   WITH_SUPABASE_STACK=false scripts/azure/provision.sh   # app only, database stays hosted
+#   WITH_SUPABASE_STACK=false scripts/azure/provision.sh   # phase 1: app only, database stays hosted
+#   scripts/azure/provision.sh                              # phase 2: adds the Supabase services; web app still on the hosted database
+#   WEB_ON_AZURE_DB=true scripts/azure/provision.sh         # after the data has moved: web app on the Azure stack
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 require_login
@@ -75,10 +76,13 @@ echo "== 2. secrets"
 echo "== 3. images"
 tag=$(git -C "$ROOT" rev-parse --short HEAD)
 az acr build --registry "$acr" --image "hoasis-dbtools:$tag" --image "hoasis-dbtools:latest" --file "$ROOT/infra/dbtools/Dockerfile" "$ROOT/infra" --only-show-errors -o none
+# The stack's own address is known before it exists: app name plus the
+# environment's domain. The web app keeps talking to the hosted project until
+# WEB_ON_AZURE_DB=true, which is the switch flipped after the data has moved.
+stack_url="https://$AZ_SUPABASE_APP.$env_domain"
 supabase_url="$(read_env NEXT_PUBLIC_SUPABASE_URL)"
-if [ "$with_stack" = "true" ]; then
-  # The stack's own address, known before it exists: app name plus the environment's domain.
-  supabase_url="https://$AZ_SUPABASE_APP.$env_domain"
+if [ "$with_stack" = "true" ] && [ "${WEB_ON_AZURE_DB:-false}" = "true" ]; then
+  supabase_url="$stack_url"
 fi
 build_args=(
   --build-arg "NEXT_PUBLIC_SUPABASE_URL=$supabase_url"
@@ -96,7 +100,7 @@ echo "== 4. apps and jobs"
 params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentityName="id-$AZ_BASE-app" \
   acrLoginServer="$acr.azurecr.io" webImage="$acr.azurecr.io/hoasis-web:$tag" \
   deploySupabaseStack="$with_stack" appEnv="$(read_env APP_ENV)" \
-  supabaseUrl="$supabase_url" supabaseAnonKey="$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)" \
+  supabaseUrl="$supabase_url" stackUrl="$stack_url" supabaseAnonKey="$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)" \
   stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" sentryDsn="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
   siteHost="$(read_env NEXT_PUBLIC_SITE_HOST)" authCookieDomain="$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)" \
   emailFrom="$(read_env EMAIL_FROM)" platformOwnerEmails="$(read_env PLATFORM_OWNER_EMAILS)" \
@@ -110,7 +114,8 @@ cat <<DONE
 
 Done.
   web        https://$web
-  supabase   $supabase_url
+  web's db   $supabase_url
+  stack      $stack_url
   registry   $acr
   vault      $kv
 

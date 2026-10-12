@@ -28,7 +28,11 @@ param appEnv string = 'staging'
 
 // Public configuration of the web app. NEXT_PUBLIC_* values are also compiled
 // into the browser bundle by deploy.sh, which reads them from this app.
+// supabaseUrl is what the web app talks to: the hosted project until the data
+// has moved, then stackUrl. stackUrl is the Supabase services app's own
+// address, which its auth service needs to know regardless.
 param supabaseUrl string
+param stackUrl string = ''
 param supabaseAnonKey string
 param stripePublishableKey string = ''
 param sentryDsn string = ''
@@ -180,7 +184,7 @@ resource supabase 'Microsoft.App/containerApps@2024-03-01' = if (deploySupabaseS
           env: [
             { name: 'GOTRUE_API_HOST', value: '0.0.0.0' }
             { name: 'GOTRUE_API_PORT', value: '9999' }
-            { name: 'API_EXTERNAL_URL', value: '${supabaseUrl}/auth/v1' }
+            { name: 'API_EXTERNAL_URL', value: '${stackUrl}/auth/v1' }
             { name: 'GOTRUE_DB_DRIVER', value: 'postgres' }
             { name: 'GOTRUE_DB_DATABASE_URL', secretRef: 'auth-db-url' }
             { name: 'GOTRUE_SITE_URL', value: gotrueSiteUrl }
@@ -191,7 +195,7 @@ resource supabase 'Microsoft.App/containerApps@2024-03-01' = if (deploySupabaseS
             { name: 'GOTRUE_JWT_DEFAULT_GROUP_NAME', value: 'authenticated' }
             { name: 'GOTRUE_JWT_EXP', value: '3600' }
             { name: 'GOTRUE_JWT_SECRET', secretRef: 'jwt-secret' }
-            { name: 'GOTRUE_JWT_ISSUER', value: '${supabaseUrl}/auth/v1' }
+            { name: 'GOTRUE_JWT_ISSUER', value: '${stackUrl}/auth/v1' }
             { name: 'GOTRUE_EXTERNAL_EMAIL_ENABLED', value: 'true' }
             { name: 'GOTRUE_EXTERNAL_PHONE_ENABLED', value: 'false' }
             { name: 'GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED', value: 'false' }
