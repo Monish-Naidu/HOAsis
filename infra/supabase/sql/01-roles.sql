@@ -48,6 +48,9 @@ alter role supabase_auth_admin password :'services_password';
 alter role supabase_storage_admin password :'services_password';
 
 grant anon, authenticated, service_role to authenticator;
+-- The storage service signs in as its admin and then switches to the
+-- request's role for row level security, so it must be a member of each.
+grant anon, authenticated, service_role to supabase_storage_admin;
 -- The administrator must be a member to reassign ownership after the restore.
 grant anon, authenticated, service_role, authenticator, supabase_auth_admin, supabase_storage_admin,
   supabase_admin, dashboard_user, supabase_read_only_user to postgres;
