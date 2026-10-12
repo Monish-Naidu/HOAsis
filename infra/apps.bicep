@@ -246,7 +246,7 @@ resource supabase 'Microsoft.App/containerApps@2024-03-01' = if (deploySupabaseS
         }
         {
           name: 'storage'
-          image: 'docker.io/supabase/storage-api:v1.74.0'
+          image: 'docker.io/supabase/storage-api:v1.80.2'
           resources: { cpu: json('0.25'), memory: '0.5Gi' }
           env: [
             { name: 'SERVER_PORT', value: '5000' }

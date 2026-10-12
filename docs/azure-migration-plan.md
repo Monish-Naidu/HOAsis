@@ -266,6 +266,12 @@ all of it is in the scripts now.
   `pnpm-workspace.yaml`; the Dockerfile has to copy it or the install fails.
 - **Bicep.** `utcNow()` without a format is the compact form; the budget
   wants `yyyy-MM-01T00:00:00Z`.
+- **Service versions must not trail the hosted project's.** The restored
+  `storage` schema carries the hosted service's migrations (1.80.2, whose
+  last step drops an index), and storage-api 1.74.0 still upserted on that
+  index: every upload failed with Postgres error 42P10. Pin each service at
+  or above the hosted version (`/storage/v1/version`, `/auth/v1/health`)
+  before the copy.
 - **The standalone trace** under pnpm misses the ESM half of
   `@swc/helpers`; `outputFileTracingIncludes` carries the whole package.
 
