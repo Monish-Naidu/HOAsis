@@ -693,7 +693,7 @@ site's health and the last four cron runs on Azure, the billing sweep by
 hand, and the live site signed in as the test owner.
 
 Nothing crashed and no page was blank. What was wrong, most serious
-first, with what was done about it the same day (pull request #58; the
+first, with what was done about it the same day (pull request #62; the
 database changes are migrations 0119 to 0125, each applied in order with
 its suite, and `pnpm db:verify` green afterwards):
 
