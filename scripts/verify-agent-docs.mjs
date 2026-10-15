@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,9 +43,38 @@ for (const relativePath of docs) {
   }
 }
 
+// Claude Code reads .claude/ and Factory reads .factory/, so each agent and
+// skill exists twice. The frontmatter differs (tool names), the instructions
+// must not: one set of rules, two loaders.
+const mirrors = [
+  [".claude/agents", ".factory/droids", (name) => name.endsWith(".md") && name],
+  [".claude/skills", ".factory/skills", (name) => !name.includes(".") && `${name}/SKILL.md`],
+];
+const body = (file) => readFileSync(file, "utf8").replace(/^---\n[\s\S]*?\n---\n/, "");
+let mirrored = 0;
+for (const [left, right, entry] of mirrors) {
+  const names = (dir) =>
+    existsSync(path.join(root, dir))
+      ? readdirSync(path.join(root, dir)).map(entry).filter(Boolean)
+      : [];
+  for (const name of new Set([...names(left), ...names(right)])) {
+    const a = path.join(root, left, name);
+    const b = path.join(root, right, name);
+    if (!existsSync(a) || !existsSync(b)) {
+      errors.push(`${existsSync(a) ? right : left}/${name} is missing; the two folders mirror`);
+    } else if (body(a) !== body(b)) {
+      errors.push(`${left}/${name} and ${right}/${name} differ below the frontmatter`);
+    } else {
+      mirrored += 1;
+    }
+  }
+}
+
 if (errors.length) {
   console.error(errors.map((error) => `- ${error}`).join("\n"));
   process.exitCode = 1;
 } else {
-  console.log(`Checked ${docs.join(", ")}: script references and local links are valid.`);
+  console.log(
+    `Checked ${docs.join(", ")}: script references and local links are valid; ${mirrored} agents and skills match between .claude and .factory.`,
+  );
 }

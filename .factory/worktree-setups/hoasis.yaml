@@ -1,0 +1,10 @@
+name: Your HOAsis
+# No .worktreeinclude on purpose: the signed-out demo needs no keys, and
+# copying .env.local would put production keys in every worktree.
+script: |
+  set -euo pipefail
+  pnpm install --frozen-lockfile
+initial_prompt: >-
+  Read AGENTS.md and CLAUDE.md before starting. This worktree has no
+  .env.local, so only the signed-out demo runs here. Start servers on a free
+  port, never 3000, and finish every change with the ship-change skill.
