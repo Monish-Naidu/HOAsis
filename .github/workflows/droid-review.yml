@@ -9,8 +9,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  droid-review:
+  # FACTORY_API_KEY is a repository secret Monish has not set yet, and the
+  # action fails hard without it, which put a red Droid Auto Review on every
+  # pull request. This job asks only whether the key exists; the review below
+  # is skipped, cleanly, until the secret is added.
+  has-key:
     if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - id: check
+        run: echo "present=${{ secrets.FACTORY_API_KEY != '' }}" >> "$GITHUB_OUTPUT"
+  droid-review:
+    needs: has-key
+    if: needs.has-key.outputs.present == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

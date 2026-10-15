@@ -146,6 +146,16 @@ export function duesProblem(cents: number | undefined): string | null {
   return null;
 }
 
+/**
+ * What to store for a home's dues: its own amount, or null to use the
+ * standard rate. Typing the standard rate back into the field means "no
+ * longer its own amount", not "its own amount, which happens to match";
+ * stored as an override it would stay behind when the rate changed.
+ */
+export function homeDuesToStore(cents: number, standardCents: number): number | null {
+  return cents === standardCents ? null : cents;
+}
+
 /** The same, for the text of a dues field, so "0" and "-4" are caught where "" is not. */
 export function duesTextProblem(raw: string): string | null {
   if (!raw.trim()) return null;
@@ -189,16 +199,20 @@ export const MAX_EMAIL_LENGTH = 254;
 /**
  * Whether the text has the shape of an email address: exactly one @,
  * something on both sides, and a dot after it with something around the dot.
- * Does not trim; callers trim first when they mean to.
+ * Does not trim; callers trim first when they mean to. Longer than the SMTP
+ * limit is refused before the pattern runs, so a caller holding a pasted
+ * spreadsheet cell or a request body cannot hand the pattern an unbounded
+ * string, and an address that long is not valid anyway.
  */
 export function isEmail(value: string): boolean {
+  if (value.length > MAX_EMAIL_LENGTH) return false;
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
 }
 
 /** The founder's email, with the same shape check the account email change uses. */
 export function emailProblem(raw: string): string | null {
   const email = raw.trim();
-  return email && email.length <= MAX_EMAIL_LENGTH && isEmail(email) ? null : EMAIL_MESSAGE;
+  return email && isEmail(email) ? null : EMAIL_MESSAGE;
 }
 
 export const MAX_ASSOCIATION_NAME = 80;
