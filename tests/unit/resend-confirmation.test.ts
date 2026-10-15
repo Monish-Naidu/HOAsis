@@ -97,7 +97,7 @@ describe("resendConfirmation", () => {
   });
 
   it("says ok when the route sent it, and carries the refusal when it did not", async () => {
-    const { resendConfirmation } = await import("@/app/join/resend");
+    const { resendConfirmation } = await import("@/components/app/resend-confirmation");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 

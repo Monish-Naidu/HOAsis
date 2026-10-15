@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { Button, ButtonLink, Card } from "@/components/ui/primitives";
+import { ResendLine } from "@/components/app/resend-line";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,9 @@ export function SignInPanel() {
       ? { tone: "danger", text: readableLinkError(params.get("error")!, params.get("next")) }
       : null,
   );
+  // Set when creating an account left a confirmation email to open. The
+  // notice that says so is where the way to send it again belongs.
+  const [confirmingEmail, setConfirmingEmail] = useState<string | null>(null);
 
   function enter(accountId: string) {
     signIn(accountId);
@@ -140,6 +144,7 @@ export function SignInPanel() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setNotice(null);
+    setConfirmingEmail(null);
 
     if (!hasSupabase) {
       const match = accounts.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());
@@ -160,6 +165,7 @@ export function SignInPanel() {
     }
     if (result.message) {
       setNotice({ tone: "ok", text: result.message });
+      if (mode === "create") setConfirmingEmail(email.trim());
       return;
     }
 
@@ -251,6 +257,7 @@ export function SignInPanel() {
               {notice.text}
             </p>
           ) : null}
+          {confirmingEmail && notice?.tone === "ok" ? <ResendLine email={confirmingEmail} /> : null}
           <Button
             variant="primary"
             size="lg"
@@ -268,6 +275,7 @@ export function SignInPanel() {
                 className="hover:text-fg"
                 disabled={busy}
                 onClick={async () => {
+                  setConfirmingEmail(null);
                   if (!email.trim()) {
                     setNotice({
                       tone: "danger",

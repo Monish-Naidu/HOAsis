@@ -883,10 +883,11 @@ export function usePeopleActions(deps: AppDeps) {
         );
         if (!seated) return false;
         const decided = await decideJoin(requestId, "approved");
-        // The note that says "you're in" goes to every address on the home,
-        // so a second owner is not sent one: it would reach the first owner
-        // too. They find the home on their next sign in or Check again.
-        if (decided && !second) {
+        // The note that says "you're in" goes to the person who asked, second
+        // owner or not: onlyEmail has the invite route send to that one
+        // address among the home's members, so the first owner is not told
+        // they are in a second time.
+        if (decided) {
           void fetch("/api/email/invite", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -894,6 +895,7 @@ export function usePeopleActions(deps: AppDeps) {
               associationId: remote.community.id,
               unitIds: [homeId],
               kind: "welcome",
+              onlyEmail: request.email,
             }),
           }).catch(() => undefined); // The roster is right already; the server logs a failed email.
         }
@@ -952,6 +954,15 @@ export function usePeopleActions(deps: AppDeps) {
           error: error?.message ?? "No association has that join code. Check it with your board.",
         };
       }
+      // The board is told somebody is at the door. Asked for on every
+      // submit, because the browser cannot tell a retry from the first ask;
+      // the route claims the request in the database, so a second submit
+      // sends nothing (src/lib/email/join-request.ts).
+      void fetch("/api/join/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, email }),
+      }).catch(() => undefined); // The request is on record; the server logs a failed notice.
       return { ok: true as const, association: data };
     },
     [],

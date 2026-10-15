@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Mail } from "lucide-react";
 import { Button, Callout, fieldClass } from "@/components/ui/primitives";
+import { ResendLine } from "@/components/app/resend-line";
 import { signUp } from "@/lib/auth";
 import { hasSupabase } from "@/lib/supabase/env";
 import { unitCount, type CommunityDraft } from "@/lib/data";
@@ -97,6 +98,7 @@ export function AccountStep({
           Continue
           <ArrowRight className="size-4" />
         </Button>
+        <ResendLine email={email} />
       </div>
     );
   }
@@ -230,6 +232,7 @@ export function CheckEmailPanel({ draft, email }: { draft: CommunityDraft; email
         Your setup is saved on this device, including {pluralHomes(unitCount(draft))}. You will not
         be asked to type it again.
       </Callout>
+      <ResendLine email={email} />
     </div>
   );
 }

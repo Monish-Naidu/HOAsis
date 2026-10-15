@@ -777,7 +777,7 @@ describe("letting somebody in on a home already on the register", () => {
     expect(fetched.map((f) => f.url)).toEqual(["/api/email/invite"]);
   });
 
-  it("as a second owner sends no welcome, which would reach the first owner too", async () => {
+  it("as a second owner sends the welcome to the newcomer alone", async () => {
     const { result } = renderApp();
     await act(async () => {
       await result.current.seatJoinRequest(request().id, plainHome().id, true);
@@ -785,7 +785,19 @@ describe("letting somebody in on a home already on the register", () => {
 
     expect((writes()[0].values as { p_as_second: boolean }).p_as_second).toBe(true);
     expect(targets()).toEqual(["rpc:seat_join_request", "update join_requests"]);
-    expect(fetched).toEqual([]);
+    // onlyEmail keeps the note from reaching the first owner, who would
+    // otherwise be told they are in a second time.
+    expect(fetched).toEqual([
+      {
+        url: "/api/email/invite",
+        body: {
+          associationId: ASSOCIATION,
+          unitIds: [plainHome().id],
+          kind: "welcome",
+          onlyEmail: request().email,
+        },
+      },
+    ]);
   });
 
   it("leaves the request waiting when the database says the home has an owner", async () => {
@@ -835,6 +847,57 @@ describe("letting somebody in on a home already on the register", () => {
       p_old_email: target.email,
       p_new_email: "fixed@example.com",
     });
+  });
+});
+
+describe("asking to join", () => {
+  // A code no demo association carries, so the ask reaches the database.
+  const ask = (result: ReturnType<typeof renderApp>["result"]) =>
+    result.current.requestToJoin({
+      code: " pine12 ",
+      name: " Nadia Bell ",
+      email: " nadia@example.com ",
+      unit: " 115 ",
+      note: " Closed last week ",
+    });
+
+  it("asks the database, then asks for the board to be told", async () => {
+    db.answer = (s) => (s.target === "rpc:request_to_join" ? { data: "Maple Ridge" } : undefined);
+    const { result } = renderApp();
+    let outcome: Awaited<ReturnType<typeof ask>> | undefined;
+    await act(async () => {
+      outcome = await ask(result);
+    });
+
+    expect(outcome).toEqual({ ok: true, association: "Maple Ridge" });
+    expect(writes()[0].values).toEqual({
+      p_code: "PINE12",
+      p_name: "Nadia Bell",
+      p_email: "nadia@example.com",
+      p_unit: "115",
+      p_note: "Closed last week",
+    });
+    // Fire and forget: the notice is asked for on every submit, and the
+    // once-per-request rule is kept by the route, which claims the request
+    // in the database before anybody is written to.
+    expect(fetched).toEqual([
+      { url: "/api/join/notify", body: { code: "PINE12", email: "nadia@example.com" } },
+    ]);
+  });
+
+  it("does not ask for the board to be told when the ask itself was refused", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:request_to_join"
+        ? { error: { message: "No association has that code" } }
+        : undefined;
+    const { result } = renderApp();
+    let outcome: Awaited<ReturnType<typeof ask>> | undefined;
+    await act(async () => {
+      outcome = await ask(result);
+    });
+
+    expect(outcome).toEqual({ ok: false, error: "No association has that code" });
+    expect(fetched).toEqual([]);
   });
 });
 
