@@ -21,14 +21,6 @@ title = "yourhoasis"
 useDefault = true
 
 [allowlist]
-description = "A public id is not a credential, and neither is the scrubber test's fake Stripe key."
+description = "A bare lowercase GUID is a public id, not a credential."
 regexTarget = "secret"
-regexes = [
-  '''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$''',
-  # The log scrubber's unit test holds this exact fake Stripe key to prove an
-  # innocent field name does not save a key-shaped value. A pull request scan
-  # only reads its own commits, so the file sat quiet until the scheduled scan
-  # and a hand-started run read every commit ever written. This is the whole
-  # literal, not a pattern: any other sk_live_ value stays a finding.
-  '''^sk_live_abcdefghijklmnop$''',
-]
+regexes = ['''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$''']
