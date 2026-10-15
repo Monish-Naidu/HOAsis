@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/primitives";
 import { checkNewEmail } from "@/lib/email-change";
 import { DangerZone } from "@/components/app/danger-zone";
+import { RecordsExportCard } from "@/components/app/records-export-card";
 import { SameNameNote } from "@/components/app/same-name-note";
 import { BillingRow } from "@/components/app/billing-row";
 import { DisplaySettings } from "@/components/app/display-settings";
@@ -888,6 +889,8 @@ export function SettingsScreen() {
                   <ActivityList rows={community.activity ?? []} />
                 </Card>
               ) : null}
+
+              <RecordsExportCard />
             </section>
 
             <section id="amenities" className="scroll-mt-32 space-y-4 lg:scroll-mt-24">

@@ -30,12 +30,14 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppState, useVendorGaps } from "@/lib/app-state";
 import { InvoiceInbox } from "@/components/app/invoice-inbox";
+import { TaxFormsCard } from "@/components/app/tax-forms-card";
 import { RecordPayment, VENDOR_PAYMENT_CATEGORIES } from "@/components/app/record-payment";
 import { useToast } from "@/components/app/toast";
 import type { LedgerCategory, Payout } from "@/lib/types";
 import { cn, daysFromToday, formatDate, money, relativeDays } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 import { vendorDecisions, vendorPaidThisYear } from "@/lib/metrics";
+import { TAX_FORM_THRESHOLD_CENTS } from "@/lib/records/vendor-tax";
 
 const PAYOUT_STATUS = {
   paid: { label: "Paid", tone: "ok" },
@@ -257,9 +259,9 @@ export function VendorsScreen() {
         >
           {(() => {
             const paid = vendorPaidThisYear(community, gaps.missingW9[0]);
-            return paid >= 60_000
-              ? `Paid ${money(paid)} this year, past the $600 line for a 1099-NEC. Without the W-9 you cannot file it correctly.`
-              : `Paid ${money(paid)} this year. At $600 it needs a 1099-NEC, and you cannot file it correctly without the W-9.`;
+            return paid >= TAX_FORM_THRESHOLD_CENTS
+              ? `Paid ${money(paid)} this year, past the ${money(TAX_FORM_THRESHOLD_CENTS)} line for a 1099-NEC. Without the W-9 you cannot file it correctly.`
+              : `Paid ${money(paid)} this year. At ${money(TAX_FORM_THRESHOLD_CENTS)} it needs a 1099-NEC, and you cannot file it correctly without the W-9.`;
           })()}
         </Callout>
       ) : null}
@@ -396,6 +398,11 @@ export function VendorsScreen() {
             </>
           )}
         </Card>
+
+        {/* Who to file a 1099 for, and whose W-9 is still missing. Full width
+            under the two cards above, because the list is names and amounts
+            and a narrow column cuts the names in half. */}
+        {moduleOn("vendor-tax-forms") ? <TaxFormsCard className="lg:col-span-5" /> : null}
       </div>
     </>
   );

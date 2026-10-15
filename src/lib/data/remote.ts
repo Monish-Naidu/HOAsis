@@ -10,16 +10,25 @@ import type {
   ChargeLine,
   CommunityHistory,
   CommunitySettings,
-  LedgerEntry,
+  EmailLogEntry,
   Home,
+  HomeType,
+  LedgerEntry,
   Office,
   Payout,
 } from "@/lib/types";
+import type {
+  CompleteRecords,
+  OnlinePaymentRow,
+  StatementLineRow,
+  YearRecords,
+} from "@/lib/records/rows";
+import { accessWords } from "@/lib/records/rows";
 import { caps } from "./accounts";
 import { architecturalForms } from "./settings";
 import { messageTemplates } from "./templates";
 import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/documents";
-import { duesFor } from "@/lib/home-types";
+import { duesFor, HOME_TYPE_LABEL } from "@/lib/home-types";
 import { withReversals } from "@/lib/ledger-corrections";
 import { compareStatement } from "@/lib/statement";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
@@ -1522,5 +1531,341 @@ export async function loadCommunity(
     boardTerms,
     activity,
     fiscalYears,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Records exports                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The rows behind a records export, read under the person's own session.
+ *
+ * A records request asks for all of a year, or all of everything, and the
+ * association screens load a window on purpose: two years of lines, three
+ * hundred emails, a hundred board actions. So the export reads its own rows,
+ * paged, and row level security decides what this person may have. Nobody is
+ * given a service role to make an export look complete: a seat that cannot
+ * read the email log gets an empty file and the README says why.
+ *
+ * The tables read here are the ones whose length is the point. Everything
+ * else the export holds (homes, seats, ballots, meetings, requests, vendors,
+ * documents) already comes down whole with the association.
+ */
+
+/** Every unit, retired ones included: a records export lists the homes the
+ * register has stopped carrying, because their bills are still on file. */
+async function recordsUnits(supabase: SupabaseClient, associationId: string) {
+  const { data, error } = await everyRow((from, to) =>
+    supabase
+      .from("units")
+      .select("*")
+      .eq("association_id", associationId)
+      .order("label")
+      .order("id")
+      .range(from, to),
+  );
+  if (error) throw new Error(`Could not load the homes for the export: ${error.message}`);
+  return data ?? [];
+}
+
+/** The homes' labels by id, so a line from three years ago names its home. */
+function labelsOf(units: { id: string; label: string }[]): Map<string, string> {
+  return new Map(units.map((unit) => [unit.id, unit.label]));
+}
+
+/** A charge row as the export's statement line. */
+function recordsStatementLine(row: ChargeRow): StatementLineRow {
+  return {
+    homeId: row.unit_id,
+    date: row.due_on,
+    label: row.label,
+    kind: row.kind,
+    ...(row.category ? { category: row.category } : {}),
+    amountCents: row.amount_cents,
+  };
+}
+
+/** A board action row as the export's row. */
+function recordsActivity(row: {
+  id: string;
+  at: string;
+  actor_id: string | null;
+  actor_name: string;
+  subject_kind: string;
+  subject_id: string | null;
+  summary: string;
+  details: unknown;
+}): Activity {
+  return {
+    id: row.id,
+    at: row.at,
+    actorId: row.actor_id ?? undefined,
+    actorName: row.actor_name,
+    subjectKind: row.subject_kind,
+    subjectId: row.subject_id ?? undefined,
+    summary: row.summary,
+    details: (row.details ?? {}) as Record<string, unknown>,
+  };
+}
+
+/** One email row as the export's row, with the home's label rather than an id. */
+function recordsEmail(
+  row: {
+    id: string;
+    to_email: string;
+    unit_id: string | null;
+    category: string;
+    subject: string;
+    sent_at: string;
+    status: string | null;
+    error: string | null;
+  },
+  units: { id: string; label: string }[],
+): EmailLogEntry {
+  return {
+    id: row.id,
+    to: row.to_email,
+    unit: row.unit_id ? units.find((u) => u.id === row.unit_id)?.label : undefined,
+    category: row.category,
+    subject: row.subject,
+    sentAt: row.sent_at,
+    status: (row.status as EmailLogEntry["status"]) ?? undefined,
+    error: row.error ?? undefined,
+  };
+}
+
+/**
+ * One fiscal year of every record that is not already in the bundle: the
+ * statements, the books, what was emailed and what the board did.
+ */
+export async function loadAnnualRecords(
+  supabase: SupabaseClient,
+  associationId: string,
+  window: { from: string; to: string },
+): Promise<YearRecords> {
+  const dayAfter = addDays(window.to, 1);
+  const [units, charges, ledger, email, activity] = await Promise.all([
+    recordsUnits(supabase, associationId),
+    everyRow((from, to) =>
+      supabase
+        .from("charges")
+        .select("*")
+        .eq("association_id", associationId)
+        .gte("due_on", window.from)
+        .lte("due_on", window.to)
+        .order("due_on", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+    everyRow((from, to) =>
+      supabase
+        .from("ledger_entries")
+        .select("*")
+        .eq("association_id", associationId)
+        .gte("occurred_on", window.from)
+        .lte("occurred_on", window.to)
+        .order("occurred_on", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+    everyRow((from, to) =>
+      supabase
+        .from("email_log")
+        .select("*")
+        .eq("association_id", associationId)
+        .gte("sent_at", window.from)
+        // The window's last day is a day, not a midnight: an email sent at
+        // 4pm on the last day of the year belongs to that year.
+        .lt("sent_at", dayAfter)
+        .order("sent_at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+    everyRow((from, to) =>
+      supabase
+        .from("activity")
+        .select("*")
+        .eq("association_id", associationId)
+        .gte("at", window.from)
+        .lt("at", dayAfter)
+        .order("at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+  ]);
+  if (charges.error) throw new Error(`Could not load the year's charges: ${charges.error.message}`);
+  if (ledger.error) throw new Error(`Could not load the year's books: ${ledger.error.message}`);
+  if (email.error) throw new Error(`Could not load the year's emails: ${email.error.message}`);
+  if (activity.error)
+    throw new Error(`Could not load the year's activity: ${activity.error.message}`);
+
+  const unitRows = units;
+  return {
+    labels: labelsOf(unitRows),
+    statement: (charges.data ?? []).map(recordsStatementLine),
+    ledger: withReversals((ledger.data ?? []).map(ledgerLine)),
+    emailLog: (email.data ?? []).map((row) => recordsEmail(row, unitRows)),
+    activity: (activity.data ?? []).map(recordsActivity),
+  };
+}
+
+/** One payment row as the export's row, refunds included. */
+function recordsPayment(row: {
+  unit_id: string;
+  amount_cents: number;
+  processor_fee_cents: number;
+  platform_fee_cents: number;
+  refunded_cents?: number | null;
+  rail: string;
+  state: string;
+  created_at: string;
+  settled_at: string | null;
+}): OnlinePaymentRow {
+  return {
+    homeId: row.unit_id,
+    amountCents: row.amount_cents,
+    processorFeeCents: row.processor_fee_cents,
+    platformFeeCents: row.platform_fee_cents,
+    refundedCents: row.refunded_cents ?? 0,
+    rail: row.rail,
+    state: row.state,
+    createdAt: row.created_at,
+    settledAt: row.settled_at ?? undefined,
+  };
+}
+
+/**
+ * Everything the complete export reads beyond the year's collections: the
+ * register with its retired homes, every seat including the closed ones,
+ * every payment the association took, and each levy it made.
+ */
+export async function loadCompleteRecords(
+  supabase: SupabaseClient,
+  associationId: string,
+): Promise<CompleteRecords> {
+  const [units, seats, charges, ledger, email, activity, payments, assessments] = await Promise.all(
+    [
+      recordsUnits(supabase, associationId),
+      everyRow((from, to) =>
+        supabase
+          .from("memberships")
+          .select("*")
+          .eq("association_id", associationId)
+          .order("starts_on")
+          .order("id")
+          .range(from, to),
+      ),
+      everyRow((from, to) =>
+        supabase
+          .from("charges")
+          .select("*")
+          .eq("association_id", associationId)
+          .order("due_on", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
+      everyRow((from, to) =>
+        supabase
+          .from("ledger_entries")
+          .select("*")
+          .eq("association_id", associationId)
+          .order("occurred_on", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
+      everyRow((from, to) =>
+        supabase
+          .from("email_log")
+          .select("*")
+          .eq("association_id", associationId)
+          .order("sent_at", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
+      everyRow((from, to) =>
+        supabase
+          .from("activity")
+          .select("*")
+          .eq("association_id", associationId)
+          .order("at", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
+      everyRow((from, to) =>
+        supabase
+          .from("payments")
+          .select("*")
+          .eq("association_id", associationId)
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
+      everyRow((from, to) =>
+        supabase
+          .from("special_assessments")
+          .select("*")
+          .eq("association_id", associationId)
+          .order("first_due_on", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
+    ],
+  );
+  if (seats.error)
+    throw new Error(`Could not load the seats for the export: ${seats.error.message}`);
+  if (charges.error) throw new Error(`Could not load every charge: ${charges.error.message}`);
+  if (ledger.error) throw new Error(`Could not load the whole books: ${ledger.error.message}`);
+  if (email.error) throw new Error(`Could not load the whole email log: ${email.error.message}`);
+  if (activity.error)
+    throw new Error(`Could not load the whole activity log: ${activity.error.message}`);
+  if (payments.error) throw new Error(`Could not load the payments: ${payments.error.message}`);
+  if (assessments.error)
+    throw new Error(`Could not load the special assessments: ${assessments.error.message}`);
+
+  const unitRows = units;
+  return {
+    labels: labelsOf(unitRows),
+    homes: unitRows.map((unit) => ({
+      id: unit.id,
+      unit: unit.label,
+      address: unit.address,
+      ...(unit.home_type ? { homeType: HOME_TYPE_LABEL[unit.home_type as HomeType].short } : {}),
+      ...(unit.dues_cents ? { duesCents: unit.dues_cents } : {}),
+      ...(unit.retired_on ? { retiredOn: unit.retired_on } : {}),
+    })),
+    seats: (seats.data ?? []).map((seat) => ({
+      homeId: seat.unit_id,
+      name: seat.full_name ?? "",
+      email: seat.invited_email ?? "",
+      ...(seat.phone ? { phone: seat.phone } : {}),
+      role: seat.role,
+      access: accessWords({
+        capabilities: (seat.capabilities ?? []) as string[],
+        views: (seat.views ?? []) as string[],
+      }),
+      startsOn: seat.starts_on,
+      ...(seat.ends_on ? { endsOn: seat.ends_on } : {}),
+    })),
+    statement: (charges.data ?? []).map(recordsStatementLine),
+    onlinePayments: (payments.data ?? []).map(recordsPayment),
+    ledger: withReversals((ledger.data ?? []).map(ledgerLine)),
+    emailLog: (email.data ?? []).map((row) => recordsEmail(row, unitRows)),
+    activity: (activity.data ?? []).map(recordsActivity),
+    // A levy is proposed until the board levies it, and active from then on.
+    // Whether every home has finished paying it is a statement question, not
+    // a fact about the levy, so it is not claimed here.
+    specialAssessments: (assessments.data ?? []).map((a) => ({
+      id: a.id,
+      title: a.title,
+      reason: a.reason,
+      totalCents: Number(a.total_cents),
+      allocation: a.allocation,
+      installments: a.installments,
+      firstDueOn: a.first_due_on,
+      ...(a.ballot_id ? { ballotId: a.ballot_id } : {}),
+      collectedCents: 0,
+      status: a.levied_at ? ("active" as const) : ("proposed" as const),
+    })),
   };
 }

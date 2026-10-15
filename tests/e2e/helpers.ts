@@ -215,7 +215,15 @@ export const BOARD_SECTION_TABS: Record<string, { row: string; tabs: string[] }>
   // the tab was hidden and the step linked straight to the page.
   "/board/money": {
     row: "Finances",
-    tabs: ["Overview", "Transactions", "Past due", "Reserves", "Budget", "Statements"],
+    tabs: [
+      "Overview",
+      "Transactions",
+      "Past due",
+      "Reserves",
+      "Budget",
+      "Statements",
+      "Annual records",
+    ],
   },
   "/board/requests": { row: "Requests", tabs: ["Requests", "Notices"] },
   "/board/communications": { row: "Messages", tabs: ["Inbox", "Announcements", "Community"] },
