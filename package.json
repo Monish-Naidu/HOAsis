@@ -33,6 +33,7 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "db:playground": "node scripts/seed-playground.mjs",
+    "db:export": "node scripts/export-association.mjs",
     "stripe:setup": "node scripts/setup-stripe.mjs && node scripts/setup-stripe-portal.mjs",
     "prepare": "husky"
   },
