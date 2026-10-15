@@ -517,6 +517,7 @@ export type Database = {
           id: string;
           label: string;
           position: number;
+          unit_id: string | null;
         };
         Insert: {
           ballot_id: string;
@@ -524,6 +525,7 @@ export type Database = {
           id?: string;
           label: string;
           position?: number;
+          unit_id?: string | null;
         };
         Update: {
           ballot_id?: string;
@@ -531,6 +533,7 @@ export type Database = {
           id?: string;
           label?: string;
           position?: number;
+          unit_id?: string | null;
         };
         Relationships: [
           {
@@ -568,6 +571,11 @@ export type Database = {
           status: Database["public"]["Enums"]["ballot_status"];
           threshold_label: string;
           title: string;
+          dues_current_required: boolean;
+          results_emailed_at: string | null;
+          winners_seated: Json | null;
+          winners_seated_by: string | null;
+          winners_seated_on: string | null;
         };
         Insert: {
           association_id: string;
@@ -587,6 +595,11 @@ export type Database = {
           status?: Database["public"]["Enums"]["ballot_status"];
           threshold_label?: string;
           title: string;
+          dues_current_required?: boolean;
+          results_emailed_at?: string | null;
+          winners_seated?: Json | null;
+          winners_seated_by?: string | null;
+          winners_seated_on?: string | null;
         };
         Update: {
           association_id?: string;
@@ -606,6 +619,11 @@ export type Database = {
           status?: Database["public"]["Enums"]["ballot_status"];
           threshold_label?: string;
           title?: string;
+          dues_current_required?: boolean;
+          results_emailed_at?: string | null;
+          winners_seated?: Json | null;
+          winners_seated_by?: string | null;
+          winners_seated_on?: string | null;
         };
         Relationships: [
           {
@@ -2653,6 +2671,10 @@ export type Database = {
           option_id: string;
           receipt: string;
           unit_id: string;
+          entered_by: string | null;
+          entered_by_name: string | null;
+          method: string;
+          proxy_holder: string | null;
         };
         Insert: {
           ballot_id: string;
@@ -2660,6 +2682,10 @@ export type Database = {
           option_id: string;
           receipt: string;
           unit_id: string;
+          entered_by?: string | null;
+          entered_by_name?: string | null;
+          method?: string;
+          proxy_holder?: string | null;
         };
         Update: {
           ballot_id?: string;
@@ -2667,6 +2693,10 @@ export type Database = {
           option_id?: string;
           receipt?: string;
           unit_id?: string;
+          entered_by?: string | null;
+          entered_by_name?: string | null;
+          method?: string;
+          proxy_holder?: string | null;
         };
         Relationships: [
           {
@@ -2739,12 +2769,27 @@ export type Database = {
           },
         ];
       };
+      ballot_entered_votes: {
+        Row: {
+          association_id: string | null;
+          ballot_id: string | null;
+          entered_by_name: string | null;
+          entered_on: string | null;
+          method: string | null;
+          proxy_holder: string | null;
+          unit_id: string | null;
+          unit_label: string | null;
+        };
+        Relationships: [];
+      };
       ballot_turnout: {
         Row: {
           association_id: string | null;
           ballot_id: string | null;
           homes_voted: number | null;
           quorum_required: number | null;
+          paper_homes: number | null;
+          proxy_homes: number | null;
         };
         Relationships: [
           {
@@ -2908,10 +2953,22 @@ export type Database = {
         Args: { p_ballot_id: string; p_option_id: string };
         Returns: string;
       };
+      begin_results_email: { Args: { p_ballot_id: string }; Returns: boolean };
       cast_votes: {
         Args: { p_ballot_id: string; p_option_ids: string[] };
         Returns: string;
       };
+      enter_paper_vote: {
+        Args: {
+          p_ballot_id: string;
+          p_method: string;
+          p_option_ids: string[];
+          p_proxy_holder: string | null;
+          p_unit_id: string;
+        };
+        Returns: string;
+      };
+      seat_election_winners: { Args: { p_ballot_id: string; p_offices: Json }; Returns: Json };
       change_owner_email: {
         Args: { p_new_email: string; p_old_email: string; p_unit_id: string };
         Returns: string;

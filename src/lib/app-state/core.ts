@@ -48,7 +48,8 @@ export function latest(rc: Community): Community {
   return now && now.id === rc.id ? now : rc;
 }
 
-export type NoticeKind = "announcement" | "meeting" | "ballot" | "letter" | "message" | "request";
+export type NoticeKind =
+  "announcement" | "meeting" | "ballot" | "letter" | "message" | "request" | "results";
 
 /** What a send that fell short is called in its toast. */
 const NOTICE_LABEL: Record<NoticeKind, string> = {
@@ -58,6 +59,7 @@ const NOTICE_LABEL: Record<NoticeKind, string> = {
   letter: "Emailing the letter",
   message: "Emailing the message",
   request: "Emailing the update",
+  results: "Emailing the results",
 };
 
 /** Where the thing still lives when its email did not go. */
@@ -68,6 +70,7 @@ const SAVED_WHERE: Record<NoticeKind, string> = {
   letter: "The letter is saved on the home",
   message: "The message is saved in Messages",
   request: "The update is saved on the request",
+  results: "The result is on Voting",
 };
 
 /**

@@ -29,6 +29,7 @@ import { useRequestsActions } from "./use-requests";
 import { useSessionActions } from "./use-session";
 import { useSettingsActions } from "./use-settings";
 import { useVendorsActions } from "./use-vendors";
+import { useVotingActions } from "./use-voting";
 
 const Ctx = createContext<AppState | null>(null);
 
@@ -256,6 +257,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     useRequestsActions(deps);
 
   const { markW9Requested, addVendor, removeVendor } = useVendorsActions(deps);
+
+  const { enterPaperVote, seatWinners, emailResults } = useVotingActions(deps);
 
   const { uploadDocuments, addGoverningArticles, setDocumentVisibility, removeDocument } =
     useDocumentsActions(deps);
@@ -488,6 +491,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addCityNotice,
     addNotice,
     closeBallot,
+    enterPaperVote,
+    seatWinners,
+    emailResults,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

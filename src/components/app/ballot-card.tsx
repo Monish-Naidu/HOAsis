@@ -1,12 +1,21 @@
 "use client";
 
 import { Check, Clock, Lock, Users } from "lucide-react";
+import type { ReactNode } from "react";
 import { Badge, Button, Card, Meter } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { homeCount } from "@/lib/metrics";
 import { ballotPhase } from "@/lib/phases";
 import type { Ballot } from "@/lib/types";
 import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
+import { placeLabel } from "@/lib/wording";
+import {
+  ballotTurnout,
+  electionWinners,
+  enteredLine,
+  quorumLine,
+  resultHeadline,
+} from "@/lib/voting";
 
 /**
  * Where a ballot stands, for the board.
@@ -16,17 +25,13 @@ import { daysFromToday, formatDate, relativeDays } from "@/lib/utils";
  */
 function tally(ballot: Ballot) {
   const votes = ballot.options.reduce((total, option) => total + option.votes, 0);
-  // Quorum counts households that voted, not marks they made. A real
-  // association counts them in the database; the demo's fixtures predate
-  // that and divide the marks back down by the seats.
-  const cast = ballot.homesVoted ?? Math.round(votes / Math.max(1, ballot.seats ?? 1));
-  const leading = [...ballot.options].sort((a, b) => b.votes - a.votes)[0];
-  const tied = ballot.options.filter((o) => o.votes === leading?.votes).length > 1;
+  const { winners, tied } = electionWinners(ballot);
+  const winnerIds = new Set(winners.map((w) => w.id));
   return {
     votes,
-    cast,
-    leading,
+    cast: ballotTurnout(ballot),
     tied,
+    winning: (id: string) => winnerIds.has(id),
     share: (optionVotes: number) => (votes ? optionVotes / votes : 0),
     daysLeft: daysFromToday(ballot.closesDate),
   };
@@ -34,33 +39,20 @@ function tally(ballot: Ballot) {
 
 /** "Yes won, 41 of 60 homes voted", or why there is no winner yet. */
 export function resultLine(ballot: Ballot): string {
-  const t = tally(ballot);
+  if (ballotTurnout(ballot) === 0) return "Nobody voted";
   const who = ballot.audience === "board" ? "board members" : "homes";
-  if (t.cast === 0) return "Nobody voted";
-  const seats = Math.max(1, ballot.seats ?? 1);
-  if (seats > 1) {
-    // As many winners as seats, and a tie only where it decides the last one.
-    const ranked = [...ballot.options].sort((a, b) => b.votes - a.votes);
-    const last = ranked[seats - 1];
-    if (last && ranked[seats] && ranked[seats].votes === last.votes) {
-      return `Tied for the last place · ${t.cast} of ${ballot.eligible} ${who} voted`;
-    }
-    const elected = ranked
-      .slice(0, seats)
-      .filter((o) => o.votes > 0)
-      .map((o) => o.label);
-    return `${elected.join(" and ")} elected · ${t.cast} of ${ballot.eligible} ${who} voted`;
-  }
-  if (t.tied) return `Tied · ${t.cast} of ${ballot.eligible} ${who} voted`;
-  return `${t.leading.label} won · ${t.cast} of ${ballot.eligible} ${who} voted`;
+  return `${resultHeadline(ballot) ?? "Tied"} · ${ballotTurnout(ballot)} of ${ballot.eligible} ${who} voted`;
 }
 
 export function BallotCard({
   ballot,
   onClose,
   sealedNote = true,
+  children,
 }: {
   ballot: Ballot;
+  /** The board's own work on this ballot, inside the card above its footer. */
+  children?: ReactNode;
   /** Ends voting now. Absent on a closed ballot. */
   onClose?: (ballot: Ballot) => void;
   /**
@@ -71,6 +63,7 @@ export function BallotCard({
 }) {
   const { settings, community } = useAppState();
   const t = tally(ballot);
+  const quorum = quorumLine(ballot);
   // The phase, so a card never says Open, or offers Close now, on a ballot
   // whose closing date has passed.
   const phase = ballotPhase(ballot);
@@ -110,6 +103,8 @@ export function BallotCard({
             Counted against the {ballot.eligible} homes on the register when voting opened.
           </p>
         ) : null}
+        {/* The quorum, live while homes vote and final once it ends. */}
+        {quorum ? <p className="mt-1 text-caption text-fg-subtle">{quorum}</p> : null}
         <h3 className="mt-1.5 text-headline font-semibold leading-snug tracking-[-0.015em] text-fg">
           {ballot.title}
         </h3>
@@ -124,7 +119,7 @@ export function BallotCard({
         <div className="space-y-2.5 border-t border-border px-5 py-4">
           {ballot.options.map((o) => {
             const share = t.share(o.votes);
-            const winning = !open && !t.tied && o.id === t.leading.id;
+            const winning = !open && !t.tied && t.winning(o.id);
             return (
               <div key={o.id}>
                 <div className="mb-1 flex items-baseline justify-between gap-3">
@@ -147,6 +142,29 @@ export function BallotCard({
         </div>
       ) : null}
 
+      {/* What the board typed in, per home: how it arrived and who entered
+          it. Which choice it was is the tally's business, not this list's. */}
+      {(ballot.entered?.length ?? 0) > 0 ? (
+        <div className="border-t border-border px-5 py-3">
+          <details>
+            <summary className="cursor-pointer text-footnote font-medium text-fg-muted">
+              {enteredLine(ballot)}
+            </summary>
+            <ul className="mt-2 space-y-1">
+              {(ballot.entered ?? []).map((e) => (
+                <li key={e.homeId} className="text-footnote text-fg-muted">
+                  {placeLabel(e.unit)},{" "}
+                  {e.method === "proxy"
+                    ? `proxy held by ${e.proxyHolder ?? "the board"}`
+                    : "paper ballot"}
+                  , entered by {e.enteredBy} on {formatDate(e.enteredDate)}.
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      ) : null}
+
       {open && !showResults && sealedNote ? (
         <div className="flex items-start gap-2 border-t border-border px-5 py-3">
           <Lock className="mt-px size-3.5 shrink-0 text-fg-subtle" />
@@ -155,6 +173,8 @@ export function BallotCard({
           </p>
         </div>
       ) : null}
+
+      {children ? <div className="border-t border-border px-5 py-3">{children}</div> : null}
 
       {open && onClose ? (
         <div className="mt-auto flex items-center justify-between gap-3 border-t border-border bg-surface-2 px-5 py-2.5">

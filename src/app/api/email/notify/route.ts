@@ -41,7 +41,15 @@ function refuse(error: string, status: number) {
   return NextResponse.json({ error, ...NOTHING_SENT }, { status });
 }
 
-const KINDS: NotifyKind[] = ["announcement", "meeting", "ballot", "letter", "message", "request"];
+const KINDS: NotifyKind[] = [
+  "announcement",
+  "meeting",
+  "ballot",
+  "letter",
+  "message",
+  "request",
+  "results",
+];
 
 /**
  * Which capabilities may send which kind. Any one of them will do.
@@ -58,6 +66,7 @@ const ALLOWED: Record<NotifyKind, ("communications" | "finances" | "requests" | 
   letter: ["communications", "finances"],
   message: ["communications", "finances"],
   request: ["communications", "requests"],
+  results: ["communications", "voting"],
 };
 
 export async function POST(request: NextRequest) {

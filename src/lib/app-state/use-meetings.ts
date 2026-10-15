@@ -21,6 +21,7 @@ import type { ActionItem, MeetingAttendee } from "@/lib/types";
 import { meetingPhase } from "@/lib/phases";
 import { activityWords } from "@/lib/activity";
 import { noticeToast } from "@/lib/email/plain-error";
+import { ownerVoteNotice } from "@/lib/voting";
 import type { useCommunicationsActions } from "./use-communications";
 
 /**
@@ -30,7 +31,7 @@ import type { useCommunicationsActions } from "./use-communications";
 export function useMeetingsActions(
   deps: AppDeps & Pick<ReturnType<typeof useCommunicationsActions>, "addAnnouncement">,
 ) {
-  const { remote, communityId, associationRow, meetingList, addAnnouncement } = deps;
+  const { remote, communityId, associationRow, meetingList, addAnnouncement, mySeats } = deps;
 
   const closeBallot = useCallback(
     (ballotId: string) => {
@@ -248,6 +249,7 @@ export function useMeetingsActions(
             seats: ballot.seats ?? 1,
             quorum_required: ballot.quorumRequired,
             threshold_label: ballot.thresholdLabel,
+            dues_current_required: ballot.duesCurrentRequired ?? false,
             meeting_id: isUuid(ballot.meetingId ?? "") ? ballot.meetingId : null,
             live_results_visible: ballot.liveResultsVisible,
           });
@@ -257,6 +259,7 @@ export function useMeetingsActions(
               ballot_id: id,
               label: option.label,
               detail: option.detail ?? null,
+              unit_id: option.homeId ?? null,
               position,
             })),
           );
@@ -463,6 +466,38 @@ export function useMeetingsActions(
       const existing = store.getSnapshot().find((b) => b.id === ballotId);
       const receipt = existing?.myVoteReceipt ?? voteReceipt(ballotId, picks[0]);
 
+      // The dues rule and a vote the board entered keep a home from voting,
+      // exactly as cast_votes (0118) refuses it. The demo walks the same
+      // edge cases so the two paths cannot drift apart.
+      const myHomes = sliceStore(communityId, "homes")
+        .getSnapshot()
+        .filter((h) => mySeats.some((s) => s.homeId === h.id));
+      let votingFor = myHomes.map((h) => h.id);
+      if (existing && myHomes.length > 0) {
+        const mine = new Set(myHomes.map((h) => h.id));
+        const enteredForMe = (existing.entered ?? []).filter((e) => mine.has(e.homeId));
+        const notice = ownerVoteNotice(
+          existing,
+          myHomes,
+          enteredForMe.map((e) => ({ homeId: e.homeId, method: e.method })),
+        );
+        if (!notice.canVote) {
+          throw new ValidationError(notice.line ?? "You cannot vote on this ballot.", {
+            ballotId,
+          });
+        }
+        votingFor = notice.homeIds;
+      }
+
+      // The homes this vote is for, so a paper vote cannot be entered for
+      // one of them afterwards. A changed vote adds no home to the count.
+      const before = new Set(existing?.votedHomeIds ?? []);
+      const fresh =
+        existing?.myVoteOptionIds?.length || existing?.myVoteOptionId
+          ? 0
+          : votingFor.filter((id) => !before.has(id)).length;
+      const counted = [...new Set([...before, ...votingFor])];
+
       store.update((all) =>
         all.map((ballot) => {
           if (ballot.id !== ballotId) return ballot;
@@ -478,6 +513,8 @@ export function useMeetingsActions(
             myVoteOptionId: picks[0],
             myVoteOptionIds: picks,
             myVoteReceipt: receipt,
+            homesVoted: ballot.homesVoted === undefined ? undefined : ballot.homesVoted + fresh,
+            votedHomeIds: counted,
             options: ballot.options.map((option) => {
               const was = previous.has(option.id);
               const is = next.has(option.id);
@@ -491,7 +528,7 @@ export function useMeetingsActions(
 
       return receipt;
     },
-    [remote.community, communityId],
+    [remote.community, communityId, mySeats],
   );
 
   return {
