@@ -58,10 +58,10 @@ export default function PrivacyPage() {
 
           <Section title="2. Where it lives">
             <p>
-              The database and file storage are hosted by Supabase in the United States (US East).
-              The website runs on Vercel. Payments run on Stripe. Email is sent through Resend.
-              Errors are reported to Sentry without personal details. Each of these providers holds
-              only what it needs for its part.
+              The database, file storage and the website run on Microsoft Azure in the United States
+              (West US). Payments run on Stripe. Email is sent through Resend. Errors are reported
+              to Sentry without personal details. Each of these providers holds only what it needs
+              for its part.
             </p>
           </Section>
 
