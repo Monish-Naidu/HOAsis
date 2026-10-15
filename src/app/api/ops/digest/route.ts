@@ -8,7 +8,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/log";
 
 /**
- * The daily digest, after the three money jobs have run (vercel.json).
+ * The daily digest, after the three money jobs have run (infra/apps.bicep).
  *
  * Reads the same report /admin shows and emails the platform owners when
  * there is something in it. Authorised the way the other crons are, with

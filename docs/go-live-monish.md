@@ -10,7 +10,7 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
    `resend._domainkey`) into Cloudflare → yourhoasis.com → DNS, proxy off.
    Click Verify in Resend. Until this is done every email except yours is
    silently dropped: sign-up confirmations, invites, bills, receipts.
-   `EMAIL_FROM` is already set in Vercel to `Your HOAsis <hello@yourhoasis.com>`.
+   `EMAIL_FROM` is set in `.env.azure` to `Your HOAsis <hello@yourhoasis.com>`.
 2. **Support mailbox.** Cloudflare → Email → Email Routing → route
    `support@yourhoasis.com` to your inbox. The Help item in every account
    menu, the error page, and the Terms and Privacy pages already point at it.
@@ -18,8 +18,8 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
    Developers → API keys. Then, from the repo:
    `pnpm stripe:setup https://yourhoasis.com` with the live secret key in
    `.env.local`. Replace `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`,
-   `STRIPE_WEBHOOK_SECRET`, `STRIPE_BILLING_WEBHOOK_SECRET` in Vercel
-   (Production). Redeploy. The script also registers `yourhoasis.com` for
+   `STRIPE_WEBHOOK_SECRET`, `STRIPE_BILLING_WEBHOOK_SECRET` in `.env.azure`,
+   then `scripts/azure/secrets.sh` and `scripts/azure/deploy.sh`. The script also registers `yourhoasis.com` for
    Apple Pay and Google Pay on every connected account.
 4. **Stripe Connect platform review.** Stripe asks before the first live
    payout: a live site with pricing (`/pricing`), terms (`/terms`), privacy
@@ -32,12 +32,10 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
 6. **Supabase plan.** supabase.com → project → Settings → Billing → Pro,
    and add Point-in-Time Recovery. The free tier pauses when idle and has no
    usable backups. It paused once already, on 2026-09-19.
-7. **Vercel plan and env.** Hobby is non-commercial and keeps logs an hour;
-   move to Pro before the first paying HOA. Environment variables still to
-   add: `NEXT_PUBLIC_SENTRY_DSN` and `SENTRY_DSN` after creating a Sentry
-   project (free tier) and installing the Vercel Sentry integration.
-   Already set: `EMAIL_FROM`, `PLATFORM_OWNER_EMAILS`,
-   `NEXT_PUBLIC_TEST_LOGIN_EMAIL`, `NEXT_PUBLIC_TEST_LOGIN_PASSWORD`.
+7. **Sentry env.** `NEXT_PUBLIC_SENTRY_DSN` goes in `.env.azure` after
+   creating a Sentry project (free tier); `scripts/azure/provision.sh` hands
+   it to the app as both the browser and the server DSN. Already set there:
+   `EMAIL_FROM`, `PLATFORM_OWNER_EMAILS`, `NEXT_PUBLIC_TEST_LOGINS`.
 8. **Lawyer pass** on `/terms` and `/privacy`. Both are marked DRAFT on the
    page; remove the callout in `src/app/terms/page.tsx` and
    `src/app/privacy/page.tsx` when reviewed.
@@ -58,9 +56,10 @@ above, in the order they matter:
     SMTP with Resend's host (`smtp.resend.com`, port 465), username
     `resend`, password a Resend API key, sender `Your HOAsis
 <hello@yourhoasis.com>`. Then Authentication → URL Configuration: Site
-    URL `https://yourhoasis.com`, and add `https://yourhoasis.com/auth/callback`
-    and `https://*.vercel.app/auth/callback` to the redirect list, so a link
-    opened from a preview still signs in.
+    URL `https://yourhoasis.com`, and `https://yourhoasis.com/auth/callback`
+    in the redirect list. Since the move to Azure these are GoTrue's
+    environment variables in the Supabase stack (`infra/supabase`), not the
+    hosted dashboard.
 11. **Sentry DSN** (item 7) and **one uptime check**: betterstack.com or
     uptimerobot.com, free, pointed at `https://yourhoasis.com/api/health`
     every five minutes, email you on failure. The daily digest
@@ -72,30 +71,30 @@ above, in the order they matter:
     blocked, add a sitemap, then Google Search Console → add
     `yourhoasis.com` (DNS record in Cloudflare). Nobody finds the site until
     this is done.
-13. **Staging database.** Accept the Supabase terms once in Vercel
-    (https://vercel.com/monish-naidus-projects/~/integrations/accept-terms/supabase?source=cli),
-    then `pnpm staging:setup` does the rest. Until then every database check
+13. **Staging database.** Create a second Supabase project, put its four
+    values in `.env.staging`, then `pnpm staging:setup` does the rest. Until then every database check
     runs against the live project with throwaway associations it deletes.
 14. **Stripe live-mode billing portal.** `pnpm stripe:setup` (item 3) also
     creates the portal configuration in live mode; it exists in test mode
     only today.
-15. **Vercel crons are four now** (`vercel.json`): dues, billing sweep,
-    autopay, digest. Vercel → project → Settings → Crons shows whether each
-    fired. `CRON_SECRET` is set.
+15. **Daily jobs are five** (`infra/apps.bicep`): dues, bills email, billing
+    sweep, autopay, digest. `/admin` shows the latest run of each; the Azure
+    portal shows each job's execution history. `CRON_SECRET` is set.
 16. **Backups you can restore.** Supabase Pro (item 6) gives daily backups;
     Point-in-Time Recovery is the add-on that makes "undo the last hour"
     possible. Until then, `pg_dump` by hand before anything risky.
 
 17. **Azure.** Done 2026-10-15: `yourhoasis.com` is served from Azure,
-    database and all (`docs/azure-migration-plan.md`). Still yours: pause
-    the Supabase project and delete the Vercel project after 2026-11-14;
-    move `rg-hoasis` to a pay-as-you-go subscription before the first
+    database and all (`docs/azure-migration-plan.md`). The hosted Supabase
+    project is paused and the Vercel project was deleted the same day, so
+    expresshoa.com no longer redirects. Still yours: delete the Supabase
+    project after 2026-11-14 if nothing has needed a rollback; move `rg-hoasis` to a pay-as-you-go subscription before the first
     paying association (the credit is dev/test, with a hard stop at $150 a
-    month); items 6 and 7 above (Supabase Pro, Vercel Pro) are void.
+    month); item 6 above (Supabase Pro) is void.
 
 ## Deploy, then check
 
-10. Push `main` and let Vercel deploy. Then:
+10. Merge to `main`; GitHub Actions deploys it to Azure. Then:
     - Open `/api/health` on yourhoasis.com: every check `ok`.
     - Open `/admin` signed in as yourself: cron runs listed, no errors.
     - Run `pnpm stripe:setup https://yourhoasis.com` once more so Stripe
@@ -114,18 +113,19 @@ from the card at the foot of the rail, sign in as the next: that is how to
 walk a flow from the board side to the owner side. Anyone who finds the
 card can see that association, which is your call for now (2026-09-26).
 The list lives in `NEXT_PUBLIC_TEST_LOGINS` (JSON) in `.env.local` and in
-Vercel; passwords are also in the gitignored `scripts/.qa/test-logins.md`.
-To remove the card, delete the variable in Vercel and redeploy; to rotate a
+`.env.azure`; passwords are also in the gitignored `scripts/.qa/test-logins.md`.
+To remove the card, delete the variable from `.env.azure` and redeploy
+(`scripts/azure/deploy.sh`); to rotate a
 password, set it in Supabase Auth and update the variable.
 
 ## Optional
 
-- Vanity subdomains (`oakview-commons.yourhoasis.com`): Vercel → Domains →
-  add `*.yourhoasis.com`; Cloudflare `CNAME * cname.vercel-dns.com` with
-  proxy off; Vercel env `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=.yourhoasis.com`.
+- Vanity subdomains (`oakview-commons.yourhoasis.com`): bind
+  `*.yourhoasis.com` to the web app (`webCustomDomains` in `provision.sh`);
+  Cloudflare `CNAME *` to the app's address, proxy off;
+  `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=.yourhoasis.com` in `.env.azure`.
   The path form `/c/<slug>` works today without any of this.
 - Better Stack or UptimeRobot on `/` and `/api/health`.
-- Axiom log drain from Vercel for logs older than Vercel keeps.
 
 ## Still open in the product
 

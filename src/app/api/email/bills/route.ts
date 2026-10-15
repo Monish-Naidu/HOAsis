@@ -12,7 +12,7 @@ import { DAY_MS } from "@/lib/utils";
 /**
  * The daily bill email.
  *
- * Vercel calls this at 13:30 UTC with CRON_SECRET, half an hour after the
+ * The daily job calls this at 13:30 UTC with CRON_SECRET, half an hour after the
  * billing run (/api/assessments/run) has posted the day's dues and before
  * the sweep. For each association that had a dues bill posted today and has
  * not turned the email off, it sends the assessment email through

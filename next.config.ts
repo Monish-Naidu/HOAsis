@@ -4,8 +4,8 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 const nextConfig: NextConfig = {
   // The container image (Dockerfile) runs the standalone server, which is
   // the whole app and the parts of node_modules it reaches, nothing else.
-  // Only when asked for: `next start`, the browser suite and Vercel all
-  // want the ordinary output, and standalone makes `next start` complain.
+  // Only when asked for: `next start` and the browser suite want the
+  // ordinary output, and standalone makes `next start` complain.
   output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
   // The trace that decides what standalone carries takes two files of
   // @swc/helpers and misses the ESM ones Next's own require hook asks for at
@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
 
 /**
  * Sentry's build step: source maps to Sentry when SENTRY_AUTH_TOKEN is set
- * (the Vercel integration sets it), nothing at all when it is not. The
+ * (nothing sets it today), nothing at all when it is not. The
  * runtime SDK is separately inert without a DSN (sentry.*.config.ts).
  */
 export default withSentryConfig(nextConfig, {

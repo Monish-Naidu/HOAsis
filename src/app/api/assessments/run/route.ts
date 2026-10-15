@@ -9,7 +9,7 @@ import { recordCronRun } from "@/lib/cron-runs";
 /**
  * The daily dues run.
  *
- * Vercel calls this each morning before the autopay run, with CRON_SECRET.
+ * The daily job calls this each morning before the autopay run, with CRON_SECRET.
  * For every live association it asks duesToIssue whether a period fell due
  * today (or in the last week, if a day was missed) and, if so, bills every
  * home through issue_assessment, which refuses to bill the same due date

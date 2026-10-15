@@ -1,19 +1,18 @@
 /**
  * Which deployment this process is.
  *
- * Vercel sets VERCEL_ENV; Azure sets nothing, so the Container App is given
- * APP_ENV ("production" or "staging") in its environment. NODE_ENV is not the
- * answer: it is "production" on staging too, because that is a production
+ * The Container App is given APP_ENV ("production" or "staging") in its
+ * environment; nothing sets it locally. NODE_ENV is not the answer: it is "production" on staging too, because that is a production
  * build. Pure, so it can be tested with a fake environment.
  */
-export type DeployEnv = "production" | "staging" | "preview" | "development";
+export type DeployEnv = "production" | "staging" | "development";
 
 /** process.env, or a fake of it in a test. */
 type Env = Record<string, string | undefined>;
 
 export function deployEnv(env: Env = process.env): DeployEnv {
-  const named = (env.APP_ENV ?? env.VERCEL_ENV ?? "").trim().toLowerCase();
-  if (named === "production" || named === "staging" || named === "preview") return named;
+  const named = (env.APP_ENV ?? "").trim().toLowerCase();
+  if (named === "production" || named === "staging") return named;
   return env.NODE_ENV === "production" ? "production" : "development";
 }
 

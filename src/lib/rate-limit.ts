@@ -3,10 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * A small per-address limiter for the routes a stranger can call.
  *
- * Fixed windows, counted in memory. Each serverless instance keeps its own
- * counts, so the effective limit is the stated one times however many
- * instances Vercel happens to be running, and a cold start forgets
- * everything. That is fine for what this guards: a script hammering the
+ * Fixed windows, counted in memory. Each replica keeps its own counts, so
+ * the effective limit is the stated one times however many replicas the
+ * Container App happens to be running, and a restart forgets everything. That is fine for what this guards: a script hammering the
  * sign-up form or guessing join codes gets a 429 from the instance it is
  * talking to, and the real defences (Supabase's own auth limits, the
  * five-a-day rule in `request_to_join`, six-character codes) sit behind it.
@@ -71,7 +70,7 @@ export function createLimiter({ limit, windowMs, now = Date.now }: LimiterOption
   };
 }
 
-/** The caller's address as Vercel reports it. */
+/** The caller's address as the ingress reports it. */
 export function clientIp(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim() || "unknown";

@@ -49,8 +49,8 @@ describe("request ids", () => {
   it("keeps a sane incoming header and drops a bad one", () => {
     const good = new Headers({ [REQUEST_ID_HEADER]: "K7QM2X4P" });
     expect(requestIdFrom(good)).toBe("K7QM2X4P");
-    const vercel = new Headers({ [REQUEST_ID_HEADER]: "iad1::abc12-1700000000000-0123456789ab" });
-    expect(requestIdFrom(vercel)).toMatch(/^[A-Z2-9]{8}$/);
+    const foreign = new Headers({ [REQUEST_ID_HEADER]: "iad1::abc12-1700000000000-0123456789ab" });
+    expect(requestIdFrom(foreign)).toMatch(/^[A-Z2-9]{8}$/);
     const bad = new Headers({ [REQUEST_ID_HEADER]: "<script>alert(1)</script>" });
     expect(requestIdFrom(bad)).toMatch(/^[A-Z2-9]{8}$/);
     expect(requestIdFrom(null)).toMatch(/^[A-Z2-9]{8}$/);

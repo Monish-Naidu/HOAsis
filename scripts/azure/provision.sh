@@ -142,8 +142,7 @@ custom_domains=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" --query "prop
 
 # The hosts a cron continuation may fetch (src/lib/cron.ts): the app's own
 # address, where the five jobs point their calls, and any domain bound by
-# hand, which is how a person reaches a cron route. vercel.app is always
-# allowed by the code itself.
+# hand, which is how a person reaches a cron route. Nothing else is allowed.
 cron_hosts=$(python3 - "$AZ_WEB_APP.$env_domain" "$custom_domains" <<'PY'
 import json, sys
 bound = [d.get("name") for d in json.loads(sys.argv[2])]

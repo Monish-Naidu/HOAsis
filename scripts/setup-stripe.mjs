@@ -20,7 +20,7 @@
  * development do not use this at all: `stripe listen` prints its own secret.
  *
  *   node scripts/setup-stripe.mjs
- *   node scripts/setup-stripe.mjs https://preview-branch.vercel.app
+ *   node scripts/setup-stripe.mjs https://ca-hoasis-web.yellowwater-f911a709.westus.azurecontainerapps.io
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -145,8 +145,8 @@ if (!env.CRON_SECRET) {
  * comes back as-is, and validate() asks Stripe to look at the file again.
  *
  * Hosts: the origin given on the command line, NEXT_PUBLIC_SITE_HOST when
- * set, and yourhoasis.com. localhost, *.vercel.app and *.azurecontainerapps.io
- * are skipped: wallets need a real domain.
+ * set, and yourhoasis.com. localhost and *.azurecontainerapps.io are
+ * skipped: wallets need a real domain.
  */
 const hosts = [
   ...new Set(
@@ -158,13 +158,7 @@ const hosts = [
           .replace(/^https?:\/\//, "")
           .replace(/\/.*$/, ""),
       )
-      .filter(
-        (h) =>
-          h &&
-          !h.includes("localhost") &&
-          !h.endsWith(".vercel.app") &&
-          !h.endsWith(".azurecontainerapps.io"),
-      ),
+      .filter((h) => h && !h.includes("localhost") && !h.endsWith(".azurecontainerapps.io")),
   ),
 ];
 
@@ -228,12 +222,9 @@ it only re-validates, nothing is registered twice.`);
 }
 
 console.log(`
-Next, the same values in Vercel (Production and Preview):
-  vercel env add STRIPE_SECRET_KEY
-  vercel env add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  vercel env add STRIPE_WEBHOOK_SECRET
-  vercel env add STRIPE_BILLING_WEBHOOK_SECRET
-  vercel env add CRON_SECRET
-Then redeploy. Local development uses the CLI instead of these endpoints:
+Next, the same values in .env.azure (STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+STRIPE_WEBHOOK_SECRET, STRIPE_BILLING_WEBHOOK_SECRET, CRON_SECRET), then:
+  scripts/azure/secrets.sh
+  scripts/azure/deploy.sh Local development uses the CLI instead of these endpoints:
   stripe listen --forward-connect-to localhost:3000/api/stripe/webhook --forward-to localhost:3000/api/billing/webhook
 `);
