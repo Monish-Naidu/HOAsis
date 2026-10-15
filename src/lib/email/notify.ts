@@ -9,6 +9,7 @@ import { ROLE_LABEL, type Office, type RequestStatus } from "@/lib/types";
 import {
   announcementEmail,
   ballotOpenEmail,
+  ballotResultsEmail,
   boardMessageEmail,
   meetingCancelledEmail,
   meetingMovedEmail,
@@ -17,6 +18,7 @@ import {
 } from "./templates";
 import { meetingJoin } from "@/lib/meetings/video";
 import { meetingPage } from "@/lib/meeting-notices";
+import { resultsSummary } from "@/lib/voting";
 import { emailSender, resendKey } from "./sender";
 import { unsubscribeUrl } from "./tokens";
 import { replyToFor } from "./reply-to";
@@ -60,7 +62,8 @@ export type NotifyKind =
   | "ballot"
   | "letter"
   | "message"
-  | "request";
+  | "request"
+  | "results";
 
 type Category = Database["public"]["Enums"]["email_category"];
 
@@ -115,6 +118,7 @@ const CATEGORY: Record<NotifyKind, Category> = {
   letter: "delinquency",
   message: "message",
   request: "request",
+  results: "ballot",
 };
 
 /** Where the one link lands, once the person is signed in. */
@@ -127,7 +131,16 @@ const LANDING: Record<NotifyKind, string> = {
   letter: "/resident/pay",
   message: "/resident/messages",
   request: "/resident/requests",
+  results: "/resident/vote",
 };
+
+/**
+ * How long after begin_results_email (0118) stamps a ballot its results may
+ * be sent. Long enough for the browser to carry a long roster on over
+ * several calls, each passing over whoever already has it; after that the
+ * results have gone, and a second press sends nothing.
+ */
+const RESULTS_WINDOW_MS = 60 * 60 * 1000;
 
 type Admin = ReturnType<typeof supabaseAdmin>;
 type Recipient = Database["public"]["Functions"]["email_recipients"]["Returns"][number];
@@ -453,6 +466,60 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
             title: data.title,
             body: data.body ?? [],
             closesDate: data.closes_on,
+          }),
+      };
+    }
+    case "results": {
+      if (!input.id) return null;
+      const { data } = await admin
+        .from("ballots")
+        .select("title, audience, status, closes_on, seats, quorum_required, results_emailed_at")
+        .eq("id", input.id)
+        .eq("association_id", input.associationId)
+        .maybeSingle();
+      if (!data || data.audience !== "owners") return null;
+      if (data.status !== "closed" && data.status !== "certified") return null;
+      const stamped = data.results_emailed_at ? Date.parse(data.results_emailed_at) : NaN;
+      if (!(Date.now() - stamped <= RESULTS_WINDOW_MS)) return null;
+      const [{ data: options }, { data: votes }, { count: eligible }] = await Promise.all([
+        admin
+          .from("ballot_options")
+          .select("id, label, position")
+          .eq("ballot_id", input.id)
+          .order("position"),
+        admin.from("votes").select("option_id, unit_id, method").eq("ballot_id", input.id),
+        admin
+          .from("units")
+          .select("id", { count: "exact", head: true })
+          .eq("association_id", input.associationId)
+          .is("retired_on", null),
+      ]);
+      const rows = votes ?? [];
+      const homesBy = (method?: string) =>
+        new Set(rows.filter((v) => !method || v.method === method).map((v) => v.unit_id)).size;
+      const tallied = (options ?? []).map((o) => ({
+        id: o.id,
+        label: o.label,
+        votes: rows.filter((v) => v.option_id === o.id).length,
+      }));
+      const summary = resultsSummary({
+        options: tallied,
+        seats: data.seats,
+        homesVoted: homesBy(),
+        eligible: eligible ?? 0,
+        quorumRequired: data.quorum_required,
+        status: data.status,
+        closesDate: data.closes_on,
+        paperHomes: homesBy("paper"),
+        proxyHomes: homesBy("proxy"),
+      });
+      return {
+        build: (p) =>
+          ballotResultsEmail({
+            ...p,
+            title: data.title,
+            ...summary,
+            options: tallied,
           }),
       };
     }
