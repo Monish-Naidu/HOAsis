@@ -1,13 +1,71 @@
-# Hydration error #418: the cause
+# Hydration error #418: the cause, and the fix
 
-Minified React error #418 (hydration mismatch) has fired on cold loads of
-board pages since the product went to production builds. This page is the
-whole finding, so it can be pasted upstream and re-verified after any
-Next.js bump.
+Minified React error #418 (hydration mismatch) fired on the cold first load
+of board pages and of the wizard on every production build from Next 16.3.1
+upwards. This page is the whole finding, what closed it, and how to re-verify
+after any future bump.
+
+## Fixed by the bump to Next 16.4.2
+
+Next 16.4.2 no longer throws #418, fixed 2026-10-15 in pull request #59. Same
+harness, same machine, same build settings, a fresh production server for each
+build, six cold loads each:
+
+| Build                 | Cold loads of `/board` that fired #418 |
+| --------------------- | -------------------------------------- |
+| Next 16.3.1 (control) | 6 of 6                                 |
+| Next 16.4.2           | 0 of 6                                 |
+
+The recovery render went with the error. React's recovery is itself a client
+render, so a second harness counted DOM mutations after `DOMContentLoaded`
+(three cold loads each): on 16.3.1, 66 mutations in the first 400 ms, 17 of
+them at the `html`/`body` level, removing the server's `body` children and
+putting new ones back. On 16.4.2, 2 mutations in the same window, one of them
+the router's own announcer element, and nothing torn down.
+
+The markup did not change. 16.4.2 still serves
+`<div hidden><!--$--><!--/$--></div>` at the top of `<body>`, and still puts
+the flight payload in `__next_f.push` scripts at the tail of `<body>`. The
+fix is in how that boundary is resolved, not in removing it. The Next changes
+that cover it shipped in 16.4.0: "Keep metadata rendering stable across
+streaming modes" (#97440), "Adopt SelectedMetadata for metadata rendering"
+(#97387).
+
+### The bump was worth taking on security alone
+
+Three advisories patched in 16.4.1 affect every Next from 16.0.0 through
+16.4.0, which includes 16.3.1. The 16.3 line never received them: 16.3.8,
+its last release, is from 2026-09-30.
+
+| Advisory                                                              | Severity | Patched |
+| --------------------------------------------------------------------- | -------- | ------- |
+| Unauthenticated RCE in `use cache` functions returning typed arrays   | critical | 16.4.1  |
+| Unauthenticated RCE in Image Optimization API when SVG files are used | critical | 16.4.1  |
+| Denial of service in the App Router using Server Actions              | high     | 16.4.1  |
+
+What that means here: the tree has no `"use cache"` directive, so the typed
+array RCE has nothing to reach, and this app serves no remote SVG through
+`next/image`. The Server Actions denial of service is the one that applies to
+a product whose forms post through actions in `app-state.tsx`.
+
+### What moved
+
+- `next` 16.3.1 to 16.4.2, with `@next/env` and the `@next/swc-*` binaries.
+- `@sentry/nextjs` 11.0.0 to 11.7.0, which pulls `sentry` 0.44.1 to 0.45.0.
+  The 0.44.1 declaration file is what Turbopack refused, so the two bumps
+  belong together. 11.8.0 is newer than 11.7.0 and is deliberately not taken
+  yet: it is inside the release-age window.
+- Transitive, from those two: `rolldown` 1.2.5 to 1.2.14, `sharp` 0.35.3 to
+  0.35.5, an `oxc-parser` bump, a `browserslist` data refresh, and a patch to
+  `web-vitals`.
+- `pnpm-workspace.yaml` gains a ten-entry `minimumReleaseAgeExclude` block.
+  pnpm 11 wrote it because 16.4.2 was published hours before this commit; the
+  list is the same-package-family entries only (`next`, `@next/env`, the eight
+  `@next/swc-*` binaries).
 
 ## What fires and what does not
 
-Against a production build of this app, on a machine with a warm disk cache:
+On 16.3.1, against a production build, on a machine with a warm disk cache:
 
 - The first full load of a route in a fresh browser fires once, every time:
   `/board` 8 of 8 and 6 of 6, `/board/money` 4 of 4, `/start` 4 of 4,
@@ -55,70 +113,41 @@ subtree, the inline theme script (the only DOMContentLoaded diff, covered by
 re-fire when it is deleted), and Supabase (it fires with every Supabase
 request hung and no session at all).
 
-## What it costs today
+## What it cost while it was there
 
-React recovers, so the page is right within about 35 ms. The visible symptom,
-the dark theme being dropped by the recovery re-render, was already fixed by
-pull request #8. What remains is a wasted full document render on a cold
-load, and an error line in every new visitor's console.
+React recovered, so the page was right within about 35 ms, and the visible
+symptom, the dark theme being dropped by the recovery re-render, was already
+fixed by pull request #8. What remained on every cold load was a wasted full
+document render and an error line in every new visitor's console. Both are
+gone on 16.4.2.
 
-## Why it is not fixed in this repo
+## Why the retry took two nights
 
-No file here renders the boundary; the fix has to come from Next.js. The
-first try was bumping Next 16.3.1 to 16.4.1, and it did not build:
+No file in this repo renders the boundary, so the fix had to come from Next.
+The first attempt, on 2026-10-14, did not build:
 
 - Turbopack rejects `sentry@0.44.1`'s declaration file (module format
-  conflict), and a newer Sentry cannot be installed right now: refreshing
-  `@sentry/nextjs` pulls `vite@8.2.2`, then `rolldown@1.2.14`, which pins
-  `@oxc-project/types@=0.154.0`, a version that was never published.
-
-So the next step is the upstream report below, or a 16.4.1 retry once the
-chain above is publishable.
+  conflict). A newer Sentry was the answer, and refreshing `@sentry/nextjs`
+  pulled `vite@8.2.2`, then `rolldown@1.2.14`, which pins
+  `@oxc-project/types@=0.154.0`.
+- That pin is what failed. The version was published minutes after the
+  attempt, while pnpm's resolver kept serving the older registry metadata (it
+  read 0.153.0 as the latest while the registry held 0.154.0). The retry the
+  next day resolved it, with no change to the plan: `next` to 16.4.2,
+  `pnpm update @sentry/nextjs`, then the harness below.
 
 ## How to re-verify after any bump
 
-The harness is on this machine under `scripts/.qa/` (gitignored):
+The harnesses are on this machine under `scripts/.qa/` (gitignored):
 
 ```bash
 pnpm build
 pnpm start -p 3998 &
 node scripts/.qa/hydration-frequency.mjs 6 normal
+node scripts/.qa/hydration-mutations.mjs 3
 ```
 
 Sign in with the Treasurer test login button on the first screen the harness
-opens. Zero errors across six cold loads is the pass.
-
-## The report to send upstream
-
-Title: Hydration error #418 from the streaming metadata boundary on every
-cold first load, prerendered routes, Next 16.3.1
-
-Body:
-
-Next.js 16.3.1, React 19.2.8, all routes prerendered (`next build` shows
-`○` for every page), served with `next start`.
-
-On the first full load of any route in a fresh browser, hydration throws
-minified React error #418 about 30 ms in, React discards the document and
-renders the client tree, and the page is correct from then on. The second
-load in the same browser does not fire. `next dev` does not fire.
-Client-side navigation does not fire. Deterministic: 8/8 on one route,
-6/6 on a second, 4/4 on a third.
-
-The served HTML is byte-identical between loads that fire and loads that
-clean. The mismatch is inside the streaming metadata boundary: the server
-emits `<div hidden><!--$--><!--/$--></div>` at the top of `body` (the
-boundary's title and meta are hoisted to `head`), while the flight payload
-that resolves `Next.Metadata` sits in the inline `__next_f.push` scripts at
-the tail of `body`. The flight reader resolves those scripts on microtasks
-while hydration walks in scheduler tasks, and on a cold load the walk wins
-the race.
-
-Moving only the `__next_f` scripts from the tail of `body` into `head`
-(serving the same HTML, nothing else changed) makes the error disappear:
-0/6 with the move, 6/6 without. Single-buffering the whole body makes it
-fire less (3/8). That points at the read timing rather than the markup.
-
-Expected: hydration waits for, or tolerates, a metadata boundary whose
-flight content has not been read yet. Actual: `throwOnHydrationMismatch`
-throws #418 from `canHydrateInstance` returning null at the boundary.
+opens. Zero errors across six cold loads is the pass, and a first-400ms
+mutation count in the low single digits (not dozens) says React is still
+using the server's DOM.
