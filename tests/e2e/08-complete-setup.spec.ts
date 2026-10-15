@@ -138,8 +138,9 @@ async function completeEverything(page: Page, property: Kind) {
   }
 
   // Budget: one expense line, which is what the step asks for. Dues income is
-  // already there from the wizard.
-  await page.goto("/board/money");
+  // already there from the wizard, so the overview is in its pace view with no
+  // adder; the Budget tab keeps one in its header.
+  await page.goto("/board/money/budget");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Add a budget line" }).click();
   await page.getByLabel("Annual amount").fill("18000");
