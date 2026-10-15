@@ -146,6 +146,17 @@ export function duesProblem(cents: number | undefined): string | null {
   return null;
 }
 
+/**
+ * What to store for a home's dues: its own amount, or null to use the
+ * standard rate. Typing the standard rate back into the field means "no
+ * longer its own amount", not "its own amount, which happens to match";
+ * stored as an override it would stay behind when the rate changed, and a
+ * scheduled change moves the standard rate while it stayed.
+ */
+export function homeDuesToStore(cents: number, standardCents: number): number | null {
+  return cents === standardCents ? null : cents;
+}
+
 /** The same, for the text of a dues field, so "0" and "-4" are caught where "" is not. */
 export function duesTextProblem(raw: string): string | null {
   if (!raw.trim()) return null;

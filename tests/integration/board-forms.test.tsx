@@ -581,6 +581,28 @@ describe("a home's own dues in the browser copy", () => {
     expect(seen.state.community.homes.find((o) => o.id === home.id)!.duesCents).toBeUndefined();
   });
 
+  it("typing the standard rate back clears the home's own amount", async () => {
+    const user = userEvent.setup();
+    wrap(<HomeownersScreen />);
+    act(() => seen.state.signIn("acct-arya"));
+    const home = seen.state.community.homes.find((o) => !o.placeholder)!;
+    const standard = homeDues(seen.state.community.association, { homeType: home.homeType });
+    await act(async () => {
+      await seen.state.setHomeDues([{ homeId: home.id, cents: standard + 10_000 }]);
+    });
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }),
+    );
+    await user.clear(screen.getByLabelText("Dues for this home"));
+    await user.type(screen.getByLabelText("Dues for this home"), String(standard / 100));
+    await user.click(screen.getByRole("button", { name: "Save dues" }));
+    // The standard rate typed back in means "no longer its own amount", not
+    // an override that happens to match: an override would stay behind when
+    // the rate changed, a scheduled change included.
+    expect(seen.state.community.homes.find((o) => o.id === home.id)!.duesCents).toBeUndefined();
+  });
+
   it("the form offers the standard rate only to a home that has its own amount", () => {
     render(
       <ChangeDuesForm

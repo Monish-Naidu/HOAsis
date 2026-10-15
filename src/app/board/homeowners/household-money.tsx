@@ -5,7 +5,12 @@ import { Badge, Button, Field, Select, fieldClass } from "@/components/ui/primit
 import { PrintStatementControl } from "@/components/app/statement-print";
 import type { Home } from "@/lib/types";
 import { chargeCents, chargeProblem, MAX_CHARGE_LABEL } from "@/lib/payments/charges";
-import { checkManualPayment, duesTextProblem, homeOverpayNote } from "@/lib/input-checks";
+import {
+  checkManualPayment,
+  duesTextProblem,
+  homeDuesToStore,
+  homeOverpayNote,
+} from "@/lib/input-checks";
 import { MANUAL_METHOD_LABEL, type ManualMethod } from "@/lib/payments/instruments";
 import {
   duplicatePaymentWarning,
@@ -376,7 +381,7 @@ export function ChangeDuesForm({
       className="mt-4 space-y-2 border-t border-border pt-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (ready) save(cents);
+        if (ready) save(homeDuesToStore(cents, standardCents));
       }}
     >
       <p className="text-footnote font-semibold text-fg-muted">Dues for {label}</p>
