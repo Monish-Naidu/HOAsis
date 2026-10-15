@@ -28,6 +28,7 @@ import { SharedCostCard } from "@/components/app/shared-cost-card";
 import { formatDate, money, shortMoney, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 import { bankLine } from "@/lib/funds-wording";
+import { transferLegLabel } from "@/lib/resident-wording";
 
 export default function ResidentFinances() {
   const { community, ledger } = useAppState();
@@ -238,6 +239,7 @@ export default function ResidentFinances() {
                   <p className="truncate text-body font-medium text-fg">{e.description}</p>
                   <p className="mt-0.5 truncate text-footnote text-fg-muted">
                     {formatDate(e.date, "long")} · {e.category}
+                    {transferLegLabel(e) ? ` · ${transferLegLabel(e)}` : ""}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">

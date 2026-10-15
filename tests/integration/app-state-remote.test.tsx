@@ -81,7 +81,7 @@ vi.mock("@/lib/supabase/client", () => {
         return builder;
       };
     }
-    for (const filter of ["eq", "neq", "in", "is"]) {
+    for (const filter of ["eq", "neq", "in", "is", "or", "gte", "lt"]) {
       builder[filter] = (...args: unknown[]) => {
         statement.filters.push([filter, ...args]);
         return builder;
@@ -91,6 +91,7 @@ vi.mock("@/lib/supabase/client", () => {
     builder.single = () => builder;
     builder.order = () => builder;
     builder.range = () => builder;
+    builder.limit = () => builder;
     return builder;
   }
   const rpc = (name: string, args: unknown) =>
@@ -3027,5 +3028,186 @@ describe("a person who holds two homes", () => {
     const { result } = renderApp();
     expect(result.current.mySeats).toHaveLength(1);
     expect(result.current.account?.id).toBe(ME);
+  });
+});
+
+describe("the review fixes, signed in", () => {
+  it("never answers a join code from the demo's fixtures", async () => {
+    route = () => ({ body: { found: null } });
+    const { result } = renderApp();
+    let found: unknown = "unset";
+    await act(async () => {
+      found = await result.current.lookupJoinCode("MEADOW");
+    });
+    expect(found).toBeNull();
+    expect(fetched.map((f) => f.url)).toEqual(["/api/join/lookup?code=MEADOW"]);
+  });
+
+  it("asks the database about the demo's code instead of joining the demo", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:request_to_join"
+        ? { error: { message: "No association has that code" } }
+        : undefined;
+    const { result } = renderApp();
+    let outcome: Awaited<ReturnType<typeof result.current.requestToJoin>> | undefined;
+    await act(async () => {
+      outcome = await result.current.requestToJoin({
+        code: "meadow",
+        name: "Nadia Bell",
+        email: "nadia@example.com",
+        unit: "115",
+        note: "",
+      });
+    });
+    expect(outcome).toEqual({ ok: false, error: "No association has that code" });
+    expect(writes().map((s) => s.target)).toEqual(["rpc:request_to_join"]);
+  });
+
+  it("refuses a buyer's email that is not one before anything is written", async () => {
+    const { result } = renderApp();
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.transferHome(server().homes[0].id, {
+        name: "Bea",
+        email: "not-an-email",
+        closingDate: "2026-10-01",
+        settleBalance: false,
+      });
+    });
+    expect(ok).toBe(false);
+    expect(writes()).toEqual([]);
+    expect(errors.join(" ")).toMatch(/email address/);
+  });
+
+  it("appoints a home whose owner has not signed in, keyed on the home, and waits for them", async () => {
+    const seated = new Set(server().accounts.map((a) => a.homeId));
+    const seatless = server().homes.find((o) => !seated.has(o.id))!;
+    const { result } = renderApp();
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.setHomeRole(seatless.id, "treasurer");
+    });
+    expect(ok).toBe(true);
+    expect(writes()[0]).toMatchObject({ target: "memberships", op: "update" });
+    expect(writes()[0].filters).toContainEqual(["eq", "unit_id", seatless.id]);
+    expect(errors).toEqual([]);
+  });
+
+  it("holds a hand payment that repeats one the database already has, read when the write runs", async () => {
+    const UNIT = "0b9d6c1e-6f0a-4c56-9d53-3f1f0a8d2c21";
+    db.answer = (s) =>
+      s.target === "payments" && s.op === "select"
+        ? {
+            data: [
+              {
+                id: "p1",
+                amount_cents: 4_200,
+                rail: "check",
+                state: "settled",
+                refunded_cents: 0,
+                created_at: "2026-10-01T10:00:00Z",
+              },
+            ],
+          }
+        : s.target === "charges" && s.op === "select"
+          ? { data: [{ label: "Check payment #77", amount_cents: -4_200, due_on: "2026-10-01" }] }
+          : undefined;
+    const { result } = renderApp();
+    const entry = {
+      homeId: UNIT,
+      amountCents: 4_200,
+      method: "check" as const,
+      reference: "77",
+      receivedOn: "2026-10-01",
+    };
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.recordManualPayment(entry);
+    });
+    expect(ok).toBe(false);
+    expect(targets()).toEqual([]);
+    expect(errors.join(" ")).toMatch(/already has a \$42\.00 check recorded for Oct 1\./);
+    await act(async () => {
+      ok = await result.current.recordManualPayment({ ...entry, allowRepeat: true });
+    });
+    expect(ok).toBe(true);
+    expect(targets()).toEqual(["rpc:record_manual_payment"]);
+  });
+
+  it("marks a payment paid on the day given, in the vendor's category as spelled, and answers true", async () => {
+    const vendor = { ...server().vendors[0], defaultCategory: "landscaping" as never };
+    const payout = {
+      id: "po-1",
+      vendorId: vendor.id,
+      vendor: vendor.name,
+      invoiceNumber: "INV-1",
+      amountCents: 20_000,
+      method: "ach" as const,
+      status: "scheduled" as const,
+      issuedDate: "2026-08-10",
+      expectedDate: "2026-08-25",
+      approvals: [],
+      approvalsRequired: 0,
+    };
+    change({ vendors: [vendor, ...server().vendors.slice(1)], payouts: [payout] });
+    await act(async () => {
+      await store.refreshRemote();
+    });
+    const { result } = renderApp();
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.markPayoutPaid("po-1", "2026-08-18");
+    });
+    expect(ok).toBe(true);
+    const [moved, line] = writes();
+    expect(moved.values).toEqual({ status: "paid", expected_on: "2026-08-18" });
+    expect(line.values).toMatchObject({
+      occurred_on: "2026-08-18",
+      category: "Landscaping",
+      amount_cents: -20_000,
+    });
+  });
+
+  it("sends an owner's reply through reply_on_request, which checks the home itself", async () => {
+    const { result } = renderApp();
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.replyOnRequest(server().requests[0].reference, "Thanks");
+    });
+    expect(ok).toBe(true);
+    expect(errors).toEqual([]);
+    expect(targets()).toEqual(["rpc:reply_on_request"]);
+    expect(writes()[0].values).toEqual({ p_request_id: server().requests[0].id, p_body: "Thanks" });
+  });
+
+  it("refuses an owner's reply with nothing in it before it reaches the database", async () => {
+    const { result } = renderApp();
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.replyOnRequest(server().requests[0].reference, "   ");
+    });
+    expect(ok).toBe(false);
+    expect(writes()).toEqual([]);
+  });
+
+  it("refuses a credit and a starting balance past the ceiling before they reach the database", async () => {
+    const { result } = renderApp();
+    let ok: unknown;
+    await act(async () => {
+      ok = await result.current.addCredit({
+        homeId: server().homes[0].id,
+        amountCents: 99_999_999_999,
+        reason: "Waived",
+      });
+    });
+    expect(ok).toBe(false);
+    await act(async () => {
+      ok = await result.current.setOpeningBalances("2026-07-01", [
+        { homeId: server().homes[0].id, amountCents: 99_999_999_999 },
+      ]);
+    });
+    expect(ok).toBe(false);
+    expect(writes()).toEqual([]);
+    expect(errors).toHaveLength(2);
   });
 });

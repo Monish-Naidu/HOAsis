@@ -52,7 +52,7 @@ function Probe() {
 }
 
 function wrap(ui: ReactNode) {
-  return render(
+  const rendered = render(
     <AppStateProvider>
       <ToastProvider>
         <Probe />
@@ -60,6 +60,9 @@ function wrap(ui: ReactNode) {
       </ToastProvider>
     </AppStateProvider>,
   );
+  // The president's seat: the demo refuses a change from one that can only look.
+  act(() => seen.state.signIn("acct-arya"));
+  return rendered;
 }
 
 const OPENING = "Balance brought forward";
@@ -276,20 +279,64 @@ describe("the collections ladder", () => {
 });
 
 describe("proposing a change to a governing document, in the demo", () => {
-  it("does not say owners were sent anything", async () => {
+  it("opens a real ballot when sent, and says so", async () => {
+    const user = userEvent.setup();
+    wrap(<AmendScreen />);
+    const before = seen.state.ballots.length;
+
+    await user.click(screen.getByRole("button", { name: "Amend" }));
+    await user.click(screen.getByRole("button", { name: "Send to owners and open voting" }));
+
+    const said = screen.getByRole("status").textContent ?? "";
+    expect(said).toMatch(/Voting is open/);
+    expect(seen.state.ballots).toHaveLength(before + 1);
+    const ballot = seen.state.ballots.find((b) => b.kind === "amendment" && b.status === "open")!;
+    expect(ballot.options.map((o) => o.label)).toEqual(["For", "Against"]);
+  });
+
+  it("says a draft is kept on the page only", async () => {
+    const user = userEvent.setup();
+    wrap(<AmendScreen />);
+    const before = seen.state.ballots.length;
+
+    await user.click(screen.getByRole("button", { name: "Amend" }));
+    await user.click(screen.getByRole("button", { name: "Save as a draft" }));
+
+    expect(screen.getByRole("status").textContent).toMatch(/gone when you leave/);
+    expect(seen.state.ballots).toHaveLength(before);
+  });
+
+  it("keeps Send and Save off until there is a title and wording, and says why", async () => {
     const user = userEvent.setup();
     wrap(<AmendScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Amend" }));
-    await user.click(
-      screen.getByRole("button", {
-        name: /Send to owners and open voting|Put on the board agenda/,
-      }),
-    );
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("button", { name: "Send to owners and open voting" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save as a draft" })).toBeDisabled();
+    expect(screen.getByText("Give the article a title.")).toBeInTheDocument();
 
-    const said = screen.getByRole("status").textContent ?? "";
-    expect(said).toMatch(/This demo (sends nothing to owners|does not save it)/);
-    expect(said).not.toMatch(/Sent to owners|On the agenda\./);
+    await user.type(screen.getByPlaceholderText("Leasing"), "Leasing");
+    expect(screen.getByText("Write the wording first.")).toBeInTheDocument();
+    await user.type(
+      screen.getAllByRole("textbox").find((e) => e.tagName === "TEXTAREA")!,
+      "No leases under a year.",
+    );
+    expect(screen.getByRole("button", { name: "Save as a draft" })).toBeEnabled();
+  });
+
+  it("lists a change only under the document it changes", async () => {
+    const user = userEvent.setup();
+    wrap(<AmendScreen />);
+    await user.click(screen.getByRole("button", { name: "Amend" }));
+    await user.click(screen.getByRole("button", { name: "Save as a draft" }));
+    expect(screen.getAllByText("Draft, not yet sent")).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Bylaws" }));
+    // Only the drafts the bylaws already had; the declaration's is not here.
+    const bylawsDrafts = seen.state.community.governingAmendments.filter(
+      (a) => a.document === "bylaws" && a.stage === "draft",
+    ).length;
+    expect(screen.queryAllByText("Draft, not yet sent")).toHaveLength(bylawsDrafts);
   });
 });
 
@@ -324,7 +371,13 @@ describe("a check or cash from an owner", () => {
     expect(button).toBeEnabled();
     await user.click(button);
     expect(saved).toEqual([
-      { amountCents: 6_000, method: "check", reference: "1042", receivedOn: "2026-08-20" },
+      {
+        amountCents: 6_000,
+        method: "check",
+        reference: "1042",
+        receivedOn: "2026-08-20",
+        allowRepeat: false,
+      },
     ]);
   });
 
@@ -686,6 +739,31 @@ describe("a home's own dues in the browser copy", () => {
     }
     fireEvent.change(field, { target: { value: "290" } });
     expect(schedule).toBeEnabled();
+  });
+
+  it("never prints a total for an amount it would refuse, and says why Save is off", () => {
+    wrap(<DuesSettings />);
+    const field = screen.getByLabelText(/^New rate, per month/);
+    fireEvent.change(screen.getByLabelText("The day the new dues start"), {
+      target: { value: addDays(todayIsoDate(), 30) },
+    });
+    const cases: [string, RegExp][] = [
+      ["285.555", /whole cents/i],
+      ["", /above \$0/i],
+      ["-5", /above \$0/i],
+      ["0", /above \$0/i],
+      ["1000000", /too high/i],
+    ];
+    for (const [typed, reason] of cases) {
+      fireEvent.change(field, { target: { value: typed } });
+      const page = document.body.textContent ?? "";
+      expect(page, `"${typed}" printed a total`).not.toMatch(/NaN|\$170\b|23,000,285/);
+      expect(screen.getAllByRole("alert").some((a) => reason.test(a.textContent ?? ""))).toBe(true);
+      expect(screen.getByRole("button", { name: "Schedule the change" })).toBeDisabled();
+    }
+    // A good amount brings the total back.
+    fireEvent.change(field, { target: { value: "290" } });
+    expect(screen.getByText(/per month across every home from/)).toBeInTheDocument();
   });
 
   it("the dues settings card says how many homes pay their own amount, with a link", async () => {

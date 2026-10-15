@@ -138,9 +138,9 @@ export const MODULES: Record<ModuleKey, ModuleFlag> = {
   "resident-funds": { label: "Association funds", on: true },
   "resident-meetings": { label: "Meetings", on: true },
   "resident-report": {
-    label: "Report a neighbour",
+    label: "Report a neighbor",
     on: false,
-    note: "Rides with the full enforcement queue. Without verification on the board side, a report has nowhere to go.",
+    note: "Reports go to the board's enforcement queue, which is not switched on yet. Message the board or open a request instead.",
   },
   "phone-preview": {
     label: "Phone preview toggle",

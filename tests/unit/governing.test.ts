@@ -76,6 +76,37 @@ describe("amendmentThreshold", () => {
     expect(amendmentThreshold(governingArticles, "rules")).toBe("a vote of the board at a meeting");
   });
 
+  it("takes the number and none of the words in front of it", () => {
+    // "not less than", "more than" and "at least" are qualifiers. Two words
+    // were once captured, which printed "takes than seventy-five percent".
+    const phrasings: [string, string][] = [
+      [
+        "Owners holding not less than seventy-five percent of the total voting interests.",
+        "seventy-five percent of all homes",
+      ],
+      [
+        "Approved by more than seventy-five percent of the total voting interests.",
+        "seventy-five percent of all homes",
+      ],
+      [
+        "By the affirmative vote of at least sixty-seven percent of the total voting interests.",
+        "sixty-seven percent of all homes",
+      ],
+      ["Passed by 60 percent of the total voting interests.", "60 percent of all homes"],
+      ["A vote of two-thirds of the total voting interests.", "two-thirds of all homes"],
+      ["By a majority of the total voting interests.", "a majority of all homes"],
+    ];
+    for (const [sentence, expected] of phrasings) {
+      const text = [`These Bylaws may be amended by ${sentence}`];
+      const result = amendmentThreshold(
+        [article({ document: "bylaws", title: "Amendments", text })],
+        "bylaws",
+      );
+      expect(result).toBe(expected);
+      expect(result).not.toMatch(/\b(than|of|least)\b.*percent/);
+    }
+  });
+
   it("falls back to naming the document rather than inventing a number", () => {
     const silent = [article({ document: "bylaws", title: "Membership" })];
     expect(amendmentThreshold(silent, "bylaws")).toBe("the share stated in your bylaws");

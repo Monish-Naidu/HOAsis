@@ -1,5 +1,6 @@
 import type { Community } from "@/lib/data/community";
 import { fiscalMonth } from "@/lib/metrics";
+import { money } from "@/lib/utils";
 import type { ChargeLine, Cents, ISODate } from "@/lib/types";
 
 /**
@@ -12,6 +13,14 @@ import type { ChargeLine, Cents, ISODate } from "@/lib/types";
  * from. These helpers read the lines.
  */
 
+/** The label an opening balance carries on a statement ("Balance brought forward"). */
+export const OPENING_LINE = /brought forward/i;
+
+/** True for the line that carries what a home owed when the books started here. */
+export function isOpeningLine(line: Pick<ChargeLine, "label">): boolean {
+  return OPENING_LINE.test(line.label);
+}
+
 /**
  * True for a line that is a dues bill: not a late fee, a fine, a one-off
  * charge or an opening balance.
@@ -22,6 +31,9 @@ import type { ChargeLine, Cents, ISODate } from "@/lib/types";
  */
 export function isDuesLine(line: Pick<ChargeLine, "kind" | "label" | "category">): boolean {
   if (line.kind !== "charge") return false;
+  // What a home owed on the day the books began is a carried number, not a
+  // bill, whatever category the row was written under.
+  if (isOpeningLine(line)) return false;
   if (line.category) return line.category === "dues";
   if (/late fee|\bfine\b|brought forward|special/i.test(line.label)) return false;
   return /assessment|dues/i.test(line.label);
@@ -74,15 +86,67 @@ export function statementTotals(
 /**
  * Oldest first: by date, and on one date charges before payments, so a
  * running balance never dips below zero before the bill the payment settles.
- * Stable, so two lines of one kind keep the order they were written in.
+ * Two lines of one kind on one date go by when they were written, newest
+ * last; lines with no timestamp (the demo's) keep the order they were
+ * written in (the sort is stable). A list of recent activity wants the pure
+ * order of events instead, and reads `recentStatementLines`.
  */
 export function compareStatement(
-  a: Pick<ChargeLine, "date" | "kind">,
-  b: Pick<ChargeLine, "date" | "kind">,
+  a: Pick<ChargeLine, "date" | "kind"> & { createdAt?: string },
+  b: Pick<ChargeLine, "date" | "kind"> & { createdAt?: string },
 ): number {
   if (a.date !== b.date) return a.date < b.date ? -1 : 1;
   const rank = (k: ChargeLine["kind"]) => (k === "charge" ? 0 : 1);
-  return rank(a.kind) - rank(b.kind);
+  if (rank(a.kind) !== rank(b.kind)) return rank(a.kind) - rank(b.kind);
+  if (a.createdAt && b.createdAt && a.createdAt !== b.createdAt) {
+    return a.createdAt < b.createdAt ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * The newest `limit` lines of a statement, newest first, for a "recent
+ * activity" list. Date first, then when the line was written, then the order
+ * it sits in, so the line just written is never the one cut off the end.
+ * `lines` may arrive in either order of position; the position is only the
+ * last tie-break, and is read as newest first, as every statement is stored.
+ */
+export function recentStatementLines(lines: readonly ChargeLine[], limit: number): ChargeLine[] {
+  return lines
+    .map((line, position) => ({ line, position }))
+    .sort((x, y) => {
+      if (x.line.date !== y.line.date) return x.line.date < y.line.date ? 1 : -1;
+      const cx = x.line.createdAt ?? "";
+      const cy = y.line.createdAt ?? "";
+      if (cx !== cy) return cx < cy ? 1 : -1;
+      return x.position - y.position;
+    })
+    .slice(0, limit)
+    .map((x) => x.line);
+}
+
+/**
+ * What a statement line shows as its amount. A payment and a credit both
+ * lower what is owed, so both carry the same minus; a charge carries none.
+ */
+export function statementAmountText(line: Pick<ChargeLine, "kind" | "amountCents">): string {
+  const text = money(Math.abs(line.amountCents));
+  return line.kind === "charge" ? text : `\u2212${text}`;
+}
+
+/**
+ * What one home paid in a year, read the way the board's statement reads it:
+ * a payment taken back is out, and the line that took it back is out with it.
+ * `year` is "2026" or 2026. A payment in one year taken back in the next is
+ * counted in the first and subtracted in the second, as the statement shows.
+ */
+export function paidInYear(
+  lines: Pick<ChargeLine, "kind" | "label" | "category" | "amountCents" | "date">[],
+  year: string | number,
+): Cents {
+  const prefix = `${year}-`;
+  const inYear = lines.filter((l) => l.date.startsWith(prefix));
+  return statementTotals(inYear).paidCents;
 }
 
 /**

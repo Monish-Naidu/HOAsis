@@ -11,7 +11,15 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { Avatar, Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui/primitives";
+import {
+  Avatar,
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  EmptyState,
+  PageHeader,
+} from "@/components/ui/primitives";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { useAppState, usePendingPosts, useVisiblePosts } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
@@ -114,7 +122,14 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
         description={
           account?.role === "resident"
             ? "The board has turned community posts off."
-            : "An admin can turn it back on in community settings."
+            : "Turn it back on in Settings, under Residents, with the Community posts switch."
+        }
+        action={
+          account?.role === "resident" ? undefined : (
+            <ButtonLink href="/board/settings#residents" variant="primary" size="md">
+              Open that setting
+            </ButtonLink>
+          )
         }
       />
     );
@@ -201,7 +216,9 @@ export function ForumBoard({ moderate }: { moderate?: boolean }) {
                 onFocus={() => setComposing(true)}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Share something with your neighbors"
-                className="mt-1 w-full resize-none bg-transparent text-body leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
+                // Not bg-transparent: a bare field hands its focus ring to the box around
+                // it, and that box here holds the buttons and the review note too.
+                className="mt-1 w-full resize-none rounded-lg bg-surface px-1 text-body leading-relaxed text-fg outline-none placeholder:text-fg-subtle"
               />
               {composing ? (
                 <>

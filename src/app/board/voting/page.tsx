@@ -2,7 +2,7 @@
 
 import { Lock, Vote } from "lucide-react";
 import { useState } from "react";
-import { BallotCard, resultLine } from "@/components/app/ballot-card";
+import { BallotCard, choiceCounts, endedOn, resultLine } from "@/components/app/ballot-card";
 import { NewBallot } from "@/components/app/new-ballot";
 import { PaperVoteForm } from "@/components/app/paper-vote";
 import { SeatingPanel } from "@/components/app/seating-panel";
@@ -152,11 +152,22 @@ function ClosedBallot({ ballot: b }: { ballot: Ballot }) {
         <div className="min-w-0">
           <p className="text-body font-medium text-fg">{b.title}</p>
           <p className="text-footnote text-fg-muted">{resultLine(b)}</p>
+          {/* How each choice did, not just who won. A close vote reads
+              differently at 44 to 6 than at 26 to 24. */}
+          {choiceCounts(b).some((c) => c.votes > 0) ? (
+            <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-footnote text-fg-muted">
+              {choiceCounts(b).map((c) => (
+                <li key={c.optionId} className="tnum">
+                  {c.label}: {c.votes}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {quorum ? <p className="text-footnote text-fg-subtle">{quorum}</p> : null}
         </div>
         <span className="flex flex-wrap items-center gap-3">
           <span className="tnum text-footnote text-fg-subtle">
-            Ended {formatDate(b.closesDate)}
+            {endedOn(b) ? `Ended ${formatDate(endedOn(b) ?? "")}` : "Closed"}
           </span>
           {sealing ? (
             // Over by its date, with nobody having pressed Close now, so the

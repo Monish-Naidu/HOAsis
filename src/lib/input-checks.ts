@@ -47,11 +47,31 @@ export function checkManualPayment(raw: string, balanceCents: number): PayAmount
   if (!Number.isFinite(cents)) return { ok: false, message: amountFormatMessage(raw) };
   if (cents <= 0) return { ok: false, message: "Enter an amount above $0" };
   const owed = Math.max(balanceCents, 0);
-  const ceiling = owed + MAX_EXTRA_PAYMENT_CENTS;
+  const ceiling = handAmountCeiling(balanceCents);
   if (cents > ceiling) {
     return { ok: false, message: `The most you can record for this home is ${money(ceiling)}.` };
   }
   return { ok: true, cents, extraCents: Math.max(cents - owed, 0) };
+}
+
+/**
+ * The most the board may enter by hand for one home: what it owes plus what
+ * an owner may overpay. A payment and a credit share it, since both lower
+ * what the home owes and a slipped key should book neither at nine figures.
+ */
+export function handAmountCeiling(balanceCents: number): number {
+  return Math.max(balanceCents, 0) + MAX_EXTRA_PAYMENT_CENTS;
+}
+
+/**
+ * What is wrong with a credit in cents on a home owing `balanceCents`, or
+ * null. The same ceiling as a payment recorded by hand.
+ */
+export function creditProblem(cents: number, balanceCents: number): string | null {
+  if (!Number.isInteger(cents)) return FRACTION_CENTS_MESSAGE;
+  if (cents <= 0) return "Enter an amount above $0";
+  const ceiling = handAmountCeiling(balanceCents);
+  return cents > ceiling ? `The most you can credit this home is ${money(ceiling)}.` : null;
 }
 
 /** The line shown beside a hand payment that is more than the home owes, or null. */
@@ -190,6 +210,31 @@ export function lateFeeAmountProblem(cents: number | undefined): string | null {
     return cents > MAX_DUES_CENTS ? DUES_HIGH_MESSAGE : null;
   }
   return "Enter a fee above $0, or choose no late fee";
+}
+
+/**
+ * What is wrong with a late fee already in cents, or null. Zero means no fee
+ * and passes. A fee has the same ceiling as dues and is whole cents, so
+ * "$2.505" and "$1,000,000" are both turned away where they are saved.
+ */
+export function lateFeeCentsProblem(cents: number): string | null {
+  if (!Number.isFinite(cents) || !Number.isInteger(cents)) return FRACTION_CENTS_MESSAGE;
+  if (cents < 0) return "The late fee cannot be negative. Zero means no fee.";
+  return cents > MAX_DUES_CENTS ? DUES_HIGH_MESSAGE : null;
+}
+
+/** The most a home can start with on its statement: two years of the highest dues. */
+export const MAX_OPENING_BALANCE_CENTS = MAX_DUES_CENTS * 24;
+
+/**
+ * What is wrong with a home's opening balance in cents, or null. Negative is
+ * a credit the home brought with it, and is capped the same way.
+ */
+export function openingBalanceProblem(cents: number): string | null {
+  if (!Number.isInteger(cents)) return FRACTION_CENTS_MESSAGE;
+  return Math.abs(cents) > MAX_OPENING_BALANCE_CENTS
+    ? `The most a home can start with is ${money(MAX_OPENING_BALANCE_CENTS, { cents: false })}.`
+    : null;
 }
 
 export const EMAIL_MESSAGE = "Enter an email address, like name@example.com";

@@ -33,10 +33,24 @@ interface Toast {
   action?: ToastAction;
   /** 0 for a warning, which waits to be closed. */
   ms: number;
+  /** A toast with the same key is replaced by this one rather than stacked under it. */
+  key?: string;
 }
 
 interface ToastApi {
-  notify: (message: string, tone?: ToastTone, action?: ToastAction) => void;
+  /**
+   * `replaces` names a kind of toast: a new one with the same name takes the
+   * place of the one on screen instead of stacking under it, which is what a
+   * row of copy buttons wants. A toast with the very same words as one already
+   * showing replaces it too, so one action cannot say the same thing twice.
+   */
+  notify: (message: string, tone?: ToastTone, action?: ToastAction, replaces?: string) => void;
+  /**
+   * Takes down the toasts named `replaces`. A warning waits to be closed, so
+   * one about a file that was too large would still be on screen after the
+   * next upload went through; the next attempt clears it.
+   */
+  clear: (replaces: string) => void;
 }
 
 const Ctx = createContext<ToastApi | null>(null);
@@ -86,19 +100,41 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   const notify = useCallback(
-    (message: string, tone: ToastTone = "ok", action?: ToastAction) => {
+    (message: string, tone: ToastTone = "ok", action?: ToastAction, replaces?: string) => {
       const id = nextId.current++;
       // Long enough to read a sentence. An undo gets longer, because deciding
       // you did not mean it takes a moment longer than reading a confirmation.
       // Paced for a slower reader: four seconds was gone before some looked up.
       const ms = tone === "warn" ? 0 : action ? 12000 : 7000;
-      setToasts((current) => [...current, { id, tone, message, action, ms }]);
+      setToasts((current) => {
+        const same = (t: Toast) => (replaces ? t.key === replaces : t.message === message);
+        for (const old of current.filter(same)) {
+          const timer = timers.current.get(old.id);
+          if (timer) window.clearTimeout(timer.handle);
+          timers.current.delete(old.id);
+        }
+        return [
+          ...current.filter((t) => !same(t)),
+          { id, tone, message, action, ms, key: replaces },
+        ];
+      });
       if (ms) start(id, ms);
     },
     [start],
   );
 
-  const api = useMemo(() => ({ notify }), [notify]);
+  const clear = useCallback((replaces: string) => {
+    setToasts((current) => {
+      for (const old of current.filter((t) => t.key === replaces)) {
+        const timer = timers.current.get(old.id);
+        if (timer) window.clearTimeout(timer.handle);
+        timers.current.delete(old.id);
+      }
+      return current.filter((t) => t.key !== replaces);
+    });
+  }, []);
+
+  const api = useMemo(() => ({ notify, clear }), [notify, clear]);
 
   return (
     <Ctx.Provider value={api}>
@@ -177,5 +213,5 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
  * never a reason to blank a page.
  */
 export function useToast(): ToastApi {
-  return useContext(Ctx) ?? { notify: () => {} };
+  return useContext(Ctx) ?? { notify: () => {}, clear: () => {} };
 }

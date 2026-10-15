@@ -63,6 +63,10 @@ export const theme = {
     primaryHover: "#2160d6",
     primaryFg: "#ffffff",
     primarySoft: "#e8f0fd",
+    /** The primary blue as text. On dark it differs from the fill; see globals.css. */
+    primaryText: "#2b6be3",
+    /** Text on a solid status fill: the count on a tab, the bell. */
+    statusFg: "#ffffff",
     brandGradient: ["#3f82f2", "#2b6be3", "#1f56c9"],
     brandGradientText: ["#2b6be3", "#5f8ff5", "#7b5cf5"],
     tint: {
@@ -96,14 +100,16 @@ export const theme = {
     brand: palette.navy[100],
     brandFg: palette.navy[950],
     accent: "#6ea0f0",
-    primary: "#3d7ff0",
-    primaryHover: "#4d8bf5",
+    primary: "#376fe0",
+    primaryHover: "#2f66d6",
     primaryFg: "#ffffff",
     primarySoft: "#14284a",
-    brandGradient: ["#4d8bf5", "#3d7ff0", "#2b63d6"],
+    primaryText: "#6ea0f0",
+    statusFg: "#0b1524",
+    brandGradient: ["#376fe0", "#3068d9", "#2b63d6"],
     brandGradientText: ["#6ea0f0", "#8fb6ff", "#b7a6ff"],
     tint: {
-      blue: { base: "#4d8bf5", soft: "#14284a", fg: "#9cc0ff" },
+      blue: { base: "#4d8bf5", soft: "#0f2140", fg: "#9cc0ff" },
       teal: { base: "#1fbf8f", soft: "#0f2f27", fg: "#6fe0bd" },
       amber: { base: "#f5b342", soft: "#33270f", fg: "#f9cd78" },
       coral: { base: "#f4735a", soft: "#3a1c16", fg: "#ffa08c" },

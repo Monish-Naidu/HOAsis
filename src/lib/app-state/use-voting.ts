@@ -17,6 +17,7 @@ import {
   type AppDeps,
   emailNotice,
   logDemoActivity,
+  READ_ONLY_MESSAGE,
   remoteWrite,
   sliceStore,
   ValidationError,
@@ -33,7 +34,7 @@ import {
  * to its own slices.
  */
 export function useVotingActions(deps: AppDeps) {
-  const { remote, communityId, account } = deps;
+  const { remote, communityId, account, can } = deps;
 
   const ballotsNow = useCallback(
     (): Ballot[] =>
@@ -56,6 +57,7 @@ export function useVotingActions(deps: AppDeps) {
       method: "paper" | "proxy";
       proxyHolder?: string;
     }): Promise<boolean> => {
+      if (!remote.community && !can("voting")) throw new ValidationError(READ_ONLY_MESSAGE, {});
       const ballot = ballotsNow().find((b) => b.id === input.ballotId);
       if (!ballot) return Promise.resolve(false);
       const homes = remote.community
@@ -126,7 +128,7 @@ export function useVotingActions(deps: AppDeps) {
       );
       return Promise.resolve(true);
     },
-    [ballotsNow, remote.community, communityId, account],
+    [can, ballotsNow, remote.community, communityId, account],
   );
 
   /**
@@ -136,6 +138,7 @@ export function useVotingActions(deps: AppDeps) {
    */
   const seatWinners = useCallback(
     (ballotId: string, offices: Record<string, Office | "">): Promise<string | false> => {
+      if (!remote.community && !can("voting")) throw new ValidationError(READ_ONLY_MESSAGE, {});
       const ballot = ballotsNow().find((b) => b.id === ballotId);
       if (!ballot) return Promise.resolve(false);
       if (ballot.winnersSeatedDate) return Promise.resolve(seatedWords(ballot.seated ?? []));
@@ -233,7 +236,7 @@ export function useVotingActions(deps: AppDeps) {
       );
       return Promise.resolve(words);
     },
-    [ballotsNow, remote.community, communityId, account],
+    [can, ballotsNow, remote.community, communityId, account],
   );
 
   /**
@@ -242,6 +245,7 @@ export function useVotingActions(deps: AppDeps) {
    */
   const emailResults = useCallback(
     async (ballotId: string): Promise<string | false> => {
+      if (!remote.community && !can("voting")) throw new ValidationError(READ_ONLY_MESSAGE, {});
       const ballot = ballotsNow().find((b) => b.id === ballotId);
       if (!ballot) return false;
       if (ballot.audience !== "owners") {
@@ -278,7 +282,7 @@ export function useVotingActions(deps: AppDeps) {
       // The demo has nobody to email, so the results are only marked as sent.
       return "Results marked as sent. The demo emails nobody.";
     },
-    [ballotsNow, remote.community, communityId],
+    [can, ballotsNow, remote.community, communityId],
   );
 
   return { enterPaperVote, seatWinners, emailResults };

@@ -56,6 +56,11 @@ try {
   );
   if (createError) throw new Error(createError.message);
   cleanup.associations.push(associationId);
+  // The people signed in before their homes existed, so the claim the
+  // harness made found nothing; claim again now, as the app does on sign-in.
+  for (const person of [voter1, voter2, dana, percy, ann, vera, seller]) {
+    await person.client.rpc("claim_my_seats");
+  }
 
   const { data: unitRows } = await admin
     .from("units")
@@ -366,12 +371,12 @@ try {
   });
   const { count: currentHome } = await admin
     .from("votes")
-    .select("id", { count: "exact", head: true })
+    .select("unit_id", { count: "exact", head: true })
     .eq("ballot_id", duesBallot)
     .eq("unit_id", unit["11"]);
   const { count: pastDueHome } = await admin
     .from("votes")
-    .select("id", { count: "exact", head: true })
+    .select("unit_id", { count: "exact", head: true })
     .eq("ballot_id", duesBallot)
     .eq("unit_id", unit["4"]);
   check(
@@ -588,6 +593,52 @@ try {
     first === true && second === false && Boolean(stamped?.results_emailed_at),
     JSON.stringify([first, second, stamped?.results_emailed_at]),
   );
+
+  // The day a ballot closed is stamped by the database (0124), whichever
+  // path closed it; the board's row no longer reads the scheduled date.
+  const { data: closedRow } = await admin
+    .from("ballots")
+    .select("closed_on, status")
+    .eq("id", election)
+    .single();
+  check(
+    "a closed ballot carries the day it was closed",
+    closedRow?.status === "closed" && closedRow?.closed_on === day(0),
+    JSON.stringify(closedRow),
+  );
+
+  // ------------------------------------- a ballot with votes is fixed (0120)
+  const { error: retitle } = await president.client
+    .from("ballots")
+    .update({ title: "Something else entirely" })
+    .eq("id", election);
+  check(
+    "a ballot people voted on cannot be retitled",
+    retitle?.code === "42501",
+    retitle?.message ?? "no error",
+  );
+  const { data: lockedOptions } = await admin
+    .from("ballot_options")
+    .select("id")
+    .eq("ballot_id", election)
+    .limit(1);
+  const { error: dropOption } = await president.client
+    .from("ballot_options")
+    .delete()
+    .eq("id", lockedOptions?.[0]?.id ?? "00000000-0000-0000-0000-000000000000");
+  check(
+    "nor can a choice be removed from it",
+    dropOption?.code === "42501",
+    dropOption?.message ?? "no error",
+  );
+  const { error: dropBallot } = await president.client.from("ballots").delete().eq("id", election);
+  check("nor can it be deleted", dropBallot?.code === "42501", dropBallot?.message ?? "no error");
+  const { data: stillThere } = await admin
+    .from("ballots")
+    .select("title")
+    .eq("id", election)
+    .maybeSingle();
+  check("and it is still there, as it was", Boolean(stillThere), JSON.stringify(stillThere));
 
   const boardBallot = await openBallot("Board only", { audience: "board", status: "closed" });
   await options(boardBallot, [{ label: "Yes" }, { label: "No" }]);

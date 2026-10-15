@@ -999,6 +999,8 @@ describe("the community handed to screens", () => {
 
   it("reflects an added vendor", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
+    // A seat that can change the area; the demo refuses one that can only look.
+    act(() => result.current.signIn(ARYA));
     const before = result.current.community.vendors.length;
 
     act(() => {
@@ -1372,6 +1374,8 @@ describe("taking a payment", () => {
 describe("recording an owner's check or cash (demo)", () => {
   it("puts a check on the statement, the balance, the books and the bank, without a fee", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
+    // A seat that can change the area; the demo refuses one that can only look.
+    act(() => result.current.signIn(ARYA));
     const home = result.current.community.homes.find((o) => o.balanceCents > 6_000)!;
     const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
     const ledgerBefore = result.current.ledger.length;
@@ -1409,6 +1413,8 @@ describe("recording an owner's check or cash (demo)", () => {
 
   it("reads Cash payment with no number, and applies to the oldest charge first", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
+    // A seat that can change the area; the demo refuses one that can only look.
+    act(() => result.current.signIn(ARYA));
     const home = result.current.community.homes.find(
       (o) =>
         (result.current.community.homeCharges[o.id] ?? []).some((c) => c.kind === "charge") &&
@@ -1432,6 +1438,8 @@ describe("recording an owner's check or cash (demo)", () => {
 describe("a credit on a statement (demo)", () => {
   it("lowers the balance with the reason as its label and leaves the books alone", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
+    // A seat that can change the area; the demo refuses one that can only look.
+    act(() => result.current.signIn(ARYA));
     const home = result.current.community.homes.find((o) => o.balanceCents > 2_500)!;
     const ledgerBefore = result.current.ledger.length;
     const bankBefore = result.current.community.bankAccounts.map((a) => a.balanceCents);

@@ -5,6 +5,7 @@ import {
   destructive,
   emailNotice,
   logDemoActivity,
+  mayChange,
   newId,
   remoteWrite,
   sessionStore,
@@ -30,7 +31,7 @@ import { type ReplyEmail, replyEmailState } from "@/lib/email/plain-error";
  * between owners and the board.
  */
 export function useCommunicationsActions(deps: AppDeps) {
-  const { remote, communityId } = deps;
+  const { remote, communityId, can } = deps;
 
   const addPost = useCallback(
     (post: ForumPost) => {
@@ -64,6 +65,7 @@ export function useCommunicationsActions(deps: AppDeps) {
       a: { title: string; body: string; category: Announcement["category"]; pinned?: boolean },
       email: "announcement" | "none" = "announcement",
     ) => {
+      if (!remote.community && !mayChange(can, "communications")) return;
       // Author is the seat that pressed the button, in the form the fixtures
       // established: "Arya Mehr, Board President".
       const roleLabel: Record<string, string> = {
@@ -118,11 +120,12 @@ export function useCommunicationsActions(deps: AppDeps) {
         ...all,
       ]);
     },
-    [remote.community, remote.profileId, communityId],
+    [can, remote.community, remote.profileId, communityId],
   );
 
   const removeAnnouncement = useCallback(
     (id: string) => {
+      if (!remote.community && !mayChange(can, "communications")) return;
       if (remote.community) {
         void remoteWrite("Removing the announcement", () =>
           supabaseBrowser().from("announcements").delete({ count: "exact" }).eq("id", id),
@@ -131,7 +134,7 @@ export function useCommunicationsActions(deps: AppDeps) {
       }
       sliceStore(communityId, "announcements").update((all) => all.filter((a) => a.id !== id));
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const moderatePost = useCallback(
@@ -426,6 +429,8 @@ export function useCommunicationsActions(deps: AppDeps) {
 
   const replyToThread = useCallback(
     (threadId: string, body: string): Promise<ReplyEmail | false> => {
+      if (!remote.community && !mayChange(can, "communications"))
+        return Promise.resolve<false>(false);
       const message = (senderName: string, count: number) => ({
         id: `m-${threadId}-${count}`,
         at: todayIsoDate(),
@@ -498,7 +503,7 @@ export function useCommunicationsActions(deps: AppDeps) {
       );
       return Promise.resolve("none");
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const messageOwner = useCallback(
@@ -508,6 +513,7 @@ export function useCommunicationsActions(deps: AppDeps) {
       body: string,
       tag: Community["threads"][number]["tag"] = "General",
     ) => {
+      if (!remote.community && !mayChange(can, "communications")) return false;
       const id = newId();
       const message = (senderName: string) => ({
         id: `m-${id}-0`,
@@ -579,7 +585,7 @@ export function useCommunicationsActions(deps: AppDeps) {
       ]);
       return true;
     },
-    [remote.community, remote.profileId, communityId],
+    [can, remote.community, remote.profileId, communityId],
   );
 
   return {

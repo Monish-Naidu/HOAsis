@@ -254,8 +254,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     castVote,
   } = useMeetingsActions({ ...deps, addAnnouncement });
 
-  const { setWorkOrder, addRequest, attachFiles, updateRequestStatus, replyToRequest } =
-    useRequestsActions(deps);
+  const {
+    setWorkOrder,
+    addRequest,
+    attachFiles,
+    updateRequestStatus,
+    replyToRequest,
+    replyOnRequest,
+  } = useRequestsActions(deps);
 
   const { markW9Requested, addVendor, removeVendor } = useVendorsActions(deps);
 
@@ -463,6 +469,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     castVote,
     updateRequestStatus,
     replyToRequest,
+    replyOnRequest,
     likePost,
     replyToPost,
     updateMyContact,

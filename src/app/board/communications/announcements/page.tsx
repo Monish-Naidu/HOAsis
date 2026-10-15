@@ -20,6 +20,9 @@ import { DuesMailer } from "@/components/app/dues-mailer";
 import { useToast } from "@/components/app/toast";
 import { cn, formatDate, pluralize } from "@/lib/utils";
 
+/** A title is one line on a home screen; longer ones made the page 3,000px wide. */
+const MAX_ANNOUNCEMENT_TITLE = 120;
+
 /**
  * Messages, the announcements tab: what the board says to every home at once.
  *
@@ -122,11 +125,21 @@ function AnnouncementsManager({
           <div className="flex flex-wrap gap-3">
             <input
               value={title}
+              maxLength={MAX_ANNOUNCEMENT_TITLE}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
               aria-label="Announcement title"
               className={cn(fieldClass, "min-w-0 flex-1")}
             />
+            <p
+              className={cn(
+                "w-full text-right text-caption tnum",
+                title.length >= MAX_ANNOUNCEMENT_TITLE - 10 ? "text-warn" : "text-fg-subtle",
+              )}
+              aria-live="polite"
+            >
+              {title.length} of {MAX_ANNOUNCEMENT_TITLE}
+            </p>
           </div>
           <textarea
             value={body}
@@ -170,7 +183,7 @@ function AnnouncementsManager({
         >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-body font-medium text-fg">{a.title}</p>
+              <p className="min-w-0 break-words text-body font-medium text-fg">{a.title}</p>
               {a.pinned ? (
                 <Badge tone="brand">
                   <Pin className="size-2.5" />

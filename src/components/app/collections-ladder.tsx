@@ -8,6 +8,7 @@ import {
   collectionsLadder,
   ladderFilterCounts,
   LADDER_FILTERS,
+  LETTER_NAME,
   matchesLadderFilter,
   type CollectionStage,
   type LadderFilter,
@@ -21,9 +22,9 @@ const STEP: Record<CollectionStage, string> = {
   // Behind, but not yet at the reminder day. It said "Current" beside
   // "9 days late", and the table under it said "In grace" for the same home.
   current: "In grace",
-  reminder: "Reminder due",
-  "late-notice": "Notice due",
-  demand: "Final notice due",
+  reminder: `${LETTER_NAME.reminder} due`,
+  "late-notice": `${LETTER_NAME["late-notice"]} due`,
+  demand: `${LETTER_NAME.demand} due`,
   counsel: "Attorney next",
 };
 
@@ -162,6 +163,18 @@ export function CollectionsLadder({
                 <Badge tone="warn">Autopay failed</Badge>
               ) : null}
               <Badge tone={TONE[row.stage]}>{STEP[row.stage]}</Badge>
+              {/* One home's letter, in the same composer the Homeowners row
+                  opens, started from the letter this home is due. */}
+              {row.stage !== "current" ? (
+                <ButtonLink
+                  href={`/board/homeowners?open=${row.home.id}&letter=1`}
+                  variant="secondary"
+                  size="sm"
+                >
+                  <Mail className="size-3.5" />
+                  Send a reminder
+                </ButtonLink>
+              ) : null}
             </span>
           </div>
         ))}

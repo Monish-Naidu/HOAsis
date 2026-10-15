@@ -76,8 +76,8 @@ describe("the board's Meetings page", () => {
 
   it("draws no live room for anyone, and offers the call as a plain link on the day", () => {
     wrap(<BoardMeetings />);
+    act(() => seen.state.signIn("acct-arya"));
     act(() => {
-      seen.state.signIn("acct-arya");
       seen.state.addMeeting(meeting({ id: "mtg-today", title: "Budget meeting" }));
     });
     // Nothing of the room: no tiles, no camera, no roll of who joined.
@@ -98,8 +98,8 @@ describe("the board's Meetings page", () => {
 
   it("gives a meeting on another day no Join card", () => {
     wrap(<BoardMeetings />);
+    act(() => seen.state.signIn("acct-arya"));
     act(() => {
-      seen.state.signIn("acct-arya");
       seen.state.addMeeting(
         meeting({ id: "mtg-later", title: "Later meeting", date: "2026-12-01" }),
       );
@@ -111,8 +111,8 @@ describe("the board's Meetings page", () => {
 
   it("shows In the room only for a past meeting that has attendees", () => {
     wrap(<BoardMeetings />);
+    act(() => seen.state.signIn("acct-arya"));
     act(() => {
-      seen.state.signIn("acct-arya");
       seen.state.addMeeting(
         meeting({ id: "mtg-empty", title: "Quiet meeting", date: "2026-01-05", status: "ended" }),
       );
@@ -145,8 +145,8 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
 
   it("moves a meeting and remembers the first date", async () => {
     wrap(<BoardMeetings />);
+    act(() => seen.state.signIn("acct-arya"));
     act(() => {
-      seen.state.signIn("acct-arya");
       seen.state.addMeeting(meeting({ id: "mtg-move", date: "2026-09-10" }));
     });
     await act(async () => {
@@ -176,8 +176,8 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
 
   it("refuses a past day, the same day twice, and a meeting that is over", async () => {
     wrap(<BoardMeetings />);
+    act(() => seen.state.signIn("acct-arya"));
     act(() => {
-      seen.state.signIn("acct-arya");
       seen.state.addMeeting(meeting({ id: "mtg-a", date: "2026-09-10" }));
       seen.state.addMeeting(meeting({ id: "mtg-old", date: "2026-01-05" }));
     });
@@ -195,8 +195,8 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
 
   it("cancels with a reason, keeps the row, and moves it to Past meetings", async () => {
     wrap(<BoardMeetings />);
+    act(() => seen.state.signIn("acct-arya"));
     act(() => {
-      seen.state.signIn("acct-arya");
       seen.state.addMeeting(meeting({ id: "mtg-c", title: "Storm meeting", date: "2026-09-10" }));
     });
     expect(() => seen.state.cancelMeeting("mtg-c", " ")).toThrow(
@@ -227,8 +227,8 @@ describe("after the notice: move, cancel, minutes (demo)", () => {
 
   it("records minutes for a meeting that was held, and again to change them", async () => {
     wrap(<BoardMeetings />);
+    act(() => seen.state.signIn("acct-arya"));
     act(() => {
-      seen.state.signIn("acct-arya");
       seen.state.addMeeting(meeting({ id: "mtg-m", title: "Held meeting", date: "2026-08-10" }));
       seen.state.addMeeting(meeting({ id: "mtg-next", date: "2026-09-10" }));
     });

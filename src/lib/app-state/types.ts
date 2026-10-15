@@ -186,8 +186,12 @@ export interface AppState {
     input: { name: string; email: string; closingDate: string; settleBalance: boolean },
   ) => boolean | Promise<boolean>;
   /** Connects an account the association can receive dues into. */
-  /** Appoints a household to an office, or returns them to being a resident. */
-  setAccountRole: (accountId: string, role: AccountRole) => void;
+  /**
+   * Appoints a household to an office, or returns them to being a resident.
+   * Access is reset to the office's defaults (`roleChangeMessage` says so).
+   * Resolves true once saved; false when refused, with the reason toasted.
+   */
+  setAccountRole: (accountId: string, role: AccountRole) => boolean | Promise<boolean>;
   /** Setup tasks this association has said do not apply to them. */
   dismissedSetupTasks: Set<string>;
   dismissSetupTask: (key: string) => void;
@@ -213,6 +217,8 @@ export interface AppState {
     method: ManualMethod;
     reference: string;
     receivedOn: string;
+    /** The board saw the repeat warning and chose "Record it again". */
+    allowRepeat?: boolean;
   }) => boolean | Promise<boolean>;
   /**
    * Takes back a check or cash the board entered by mistake. The home owes the
@@ -326,7 +332,7 @@ export interface AppState {
    * signature only schedules it. Writes the ledger line, so the bank balance,
    * Transactions and the vendor's year all move together.
    */
-  markPayoutPaid: (payoutId: string) => boolean | Promise<boolean>;
+  markPayoutPaid: (payoutId: string, paidOn?: string) => boolean | Promise<boolean>;
   markW9Requested: (vendorId: string) => void;
   /**
    * Posts the board's reply and emails it. Resolves to how the email went
@@ -399,7 +405,11 @@ export interface AppState {
    * with the date it actually left.
    */
   addPayout: (payout: Community["payouts"][number]) => void;
-  addBallot: (ballot: Community["ballots"][number]) => void;
+  /**
+   * Opens a vote. False, with the reason toasted, when its choices repeat or
+   * this seat may only look.
+   */
+  addBallot: (ballot: Community["ballots"][number]) => boolean;
   addMeeting: (meeting: Community["meetings"][number]) => void;
   addBudgetLine: (line: Community["budget"][number]) => void;
   addReserveComponent: (component: Community["reserveComponents"][number]) => void;
@@ -428,6 +438,13 @@ export interface AppState {
    * email went once saved, or false when it was not.
    */
   replyToRequest: (requestId: string, body: string) => Promise<ReplyEmail | false>;
+  /**
+   * An owner adding a message to their own request, found by its number.
+   * Refused (false, reason toasted) when empty, not theirs, or closed.
+   * Signed in it says "Reply by message for now" until the database has a
+   * function for it.
+   */
+  replyOnRequest: (reference: string, body: string) => Promise<boolean>;
   likePost: (postId: string) => void;
   /**
    * A neighbour answering a post. Returns false when nothing was kept, which
@@ -487,8 +504,11 @@ export interface AppState {
    */
   /** The association behind a join code: its name and where it is, or null. */
   lookupJoinCode: (code: string) => Promise<{ name: string; place: string } | null>;
-  /** Gives a home's holder an office, whether or not they have signed up yet. */
-  setHomeRole: (homeId: string, role: AccountRole) => void;
+  /**
+   * Gives a home's holder an office. Refused, with the reason toasted, for a
+   * home whose owner has not signed in: they need a seat to hold an office.
+   */
+  setHomeRole: (homeId: string, role: AccountRole) => boolean | Promise<boolean>;
   requestToJoin: (input: {
     code: string;
     name: string;

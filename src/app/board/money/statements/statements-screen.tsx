@@ -11,7 +11,8 @@ import {
   YearSelect,
 } from "@/components/app/statement-print";
 import { useAppState } from "@/lib/app-state";
-import { statementFor, statementYears } from "@/lib/statement";
+import { statementFor, statementPeriod, statementYears } from "@/lib/statement";
+import { OPENING_LINE } from "@/lib/go-live";
 import { homeLabel } from "@/lib/wording";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
@@ -31,11 +32,33 @@ export function StatementsScreen() {
   const [printing, setPrinting] = useState<string[] | null>(null);
   const year = chosen !== null && years.includes(chosen) ? chosen : years[0];
 
-  const all = useMemo(
-    () =>
-      community.homes.map((home) => ({ home, statement: statementFor(community, home.id, year) })),
-    [community, year],
-  );
+  const all = useMemo(() => {
+    const { from, to } = statementPeriod(community.association.fiscalYearStart, year);
+    // By lot, the order the board reads the register in, not the order the
+    // homes happened to be added.
+    const byLot = [...community.homes].sort((a, b) =>
+      a.unit.localeCompare(b.unit, undefined, { numeric: true }),
+    );
+    return byLot.map((home) => {
+      const statement = statementFor(community, home.id, year);
+      // The opening line is dated, so it lands inside the year as a charge.
+      // It is what the home brought with it, not something billed, so it is
+      // moved out of Billed (or Credits) and into Brought forward; the five
+      // columns then add up to the balance.
+      const opening = (community.homeCharges[home.id] ?? []).filter(
+        (l) => l.date >= from && l.date <= to && OPENING_LINE.test(l.label),
+      );
+      let billed = statement.billedCents;
+      let credits = statement.creditedCents;
+      let broughtForward = statement.openingCents;
+      for (const line of opening) {
+        broughtForward += line.amountCents;
+        if (line.kind === "charge") billed -= line.amountCents;
+        else if (line.kind === "credit") credits += line.amountCents;
+      }
+      return { home, statement, broughtForward, billed, credits };
+    });
+  }, [community, year]);
   const shown = show === "balance" ? all.filter((r) => r.statement.closingCents !== 0) : all;
   const periodLabel = all[0]?.statement.periodLabel ?? String(year);
   // A real association loads two years of lines; the rest is summed.
@@ -103,13 +126,14 @@ export function StatementsScreen() {
         />
       ) : (
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[40rem] text-left text-footnote">
+          <table className="w-full min-w-[46rem] text-left text-footnote">
             <thead className="border-b border-border text-fg-muted">
               <tr>
                 <th className="px-4 py-2.5 font-semibold">Home</th>
                 <th className="px-4 py-2.5 text-right font-semibold">Brought forward</th>
                 <th className="px-4 py-2.5 text-right font-semibold">Billed</th>
                 <th className="px-4 py-2.5 text-right font-semibold">Paid</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Credits</th>
                 <th className="px-4 py-2.5 text-right font-semibold">Balance</th>
                 <th className="px-4 py-2.5">
                   <span className="sr-only">Print</span>
@@ -117,17 +141,18 @@ export function StatementsScreen() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {shown.map(({ home, statement: s }) => (
+              {shown.map(({ home, statement: s, broughtForward, billed, credits }) => (
                 <tr key={home.id}>
                   <td className="px-4 py-2.5">
                     <p className="font-medium text-fg">{homeLabel(community, home.unit)}</p>
                     <p className="text-fg-muted">{home.displayName}</p>
                   </td>
                   <td className="tnum px-4 py-2.5 text-right text-fg-muted">
-                    {money(s.openingCents)}
+                    {money(broughtForward)}
                   </td>
-                  <td className="tnum px-4 py-2.5 text-right">{money(s.billedCents)}</td>
+                  <td className="tnum px-4 py-2.5 text-right">{money(billed)}</td>
                   <td className="tnum px-4 py-2.5 text-right">{money(s.paidCents)}</td>
+                  <td className="tnum px-4 py-2.5 text-right">{money(credits)}</td>
                   <td className="tnum px-4 py-2.5 text-right font-semibold text-fg">
                     {money(s.closingCents)}
                   </td>

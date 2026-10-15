@@ -25,6 +25,9 @@ const requestPasswordReset = vi.fn(async () => ({
   message: "A reset link is on its way.",
 }));
 vi.mock("@/lib/auth", () => ({
+  useAuth: () => ({ user: null, loading: false }),
+  signOutSettled: async () => {},
+  clearExiting: () => {},
   signUp,
   signInWithPassword: vi.fn(),
   requestPasswordReset,

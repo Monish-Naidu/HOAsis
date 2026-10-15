@@ -5,6 +5,7 @@ import {
   emailNotice,
   latest,
   newId,
+  refuse,
   remoteWrite,
   sessionStore,
   sliceStore,
@@ -22,6 +23,9 @@ import {
   uploadAttachment,
 } from "@/lib/attachments";
 import { isUuid } from "@/lib/core/ids";
+
+/** The longest message an owner may add to a request. */
+const MAX_REQUEST_REPLY = 2000;
 
 /**
  * Requests: what an owner asks the board for, how the board answers, and the
@@ -262,6 +266,65 @@ export function useRequestsActions(deps: AppDeps) {
   );
 
   /**
+   * An owner adds a note to their own request. Signed in, reply_on_request
+   * checks the home and appends the line; in the demo the slice is updated
+   * the same way the database would.
+   */
+  const replyOnRequest = useCallback(
+    (reference: string, body: string): Promise<boolean> => {
+      const text = body.trim();
+      if (!text) return Promise.resolve(refuse("Write your message first."));
+      if (text.length > MAX_REQUEST_REPLY) {
+        return Promise.resolve(refuse(`Keep it to ${MAX_REQUEST_REPLY} characters.`));
+      }
+      if (remote.community) {
+        // The function checks the caller holds the home, appends the note and
+        // moves an answered question back into review (0124, 0125); the
+        // store re-reads the row once the write is on the record.
+        const mine = remote.community.requests.find((r) => r.reference === reference);
+        if (!mine) return Promise.resolve(refuse("That request is not on your account."));
+        return remoteWrite("Sending your reply", () =>
+          supabaseBrowser().rpc("reply_on_request", { p_request_id: mine.id, p_body: text }),
+        );
+      }
+      const me = sliceStore(communityId, "accounts")
+        .getSnapshot()
+        .find((a) => a.id === sessionStore.getSnapshot().accountId);
+      const mine = sliceStore(communityId, "requests")
+        .getSnapshot()
+        .find((r) => r.reference === reference && me && r.homeId === me.homeId);
+      if (!me || !mine) return Promise.resolve(refuse("That request is not on your account."));
+      if (mine.status === "closed") {
+        return Promise.resolve(refuse("This request is closed. Send the board a message instead."));
+      }
+      sliceStore(communityId, "requests").update((all) =>
+        all.map((request) =>
+          request.id === mine.id
+            ? {
+                ...request,
+                // An answer to a question the board asked puts the request back in review.
+                status: request.status === "info-needed" ? ("in-review" as const) : request.status,
+                thread: [
+                  ...request.thread,
+                  {
+                    id: `rt-${request.id}-${request.thread.length}`,
+                    at: todayIsoDate(),
+                    actor: me.name,
+                    actorRole: "resident" as const,
+                    body: text,
+                    kind: "note" as const,
+                  },
+                ],
+              }
+            : request,
+        ),
+      );
+      return Promise.resolve(true);
+    },
+    [remote.community, communityId],
+  );
+
+  /**
    * Puts files on a request that already exists: each goes into the bucket
    * and the request is then told about it. A file that cannot go is skipped
    * and one that fails is reported, so the others still land. Resolves true
@@ -319,5 +382,6 @@ export function useRequestsActions(deps: AppDeps) {
     attachFiles,
     updateRequestStatus,
     replyToRequest,
+    replyOnRequest,
   };
 }

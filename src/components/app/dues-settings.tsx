@@ -88,9 +88,11 @@ export function DuesSettings() {
   // cents, above $0, at most $100,000 a period.
   const problemOf = (text: string | undefined) =>
     text?.trim() ? duesTextProblem(text) : "Enter dues above $0";
-  const amountsValid = split
-    ? kinds.every((k) => problemOf(byKind[k]) === null)
-    : problemOf(base) === null;
+  // The first amount that is wrong, said once beside Save. The total below is
+  // only worth printing when every amount behind it is a real one.
+  const amountProblem =
+    (split ? kinds.map((k) => problemOf(byKind[k])) : [problemOf(base)]).find(Boolean) ?? null;
+  const amountsValid = amountProblem === null;
   const dayProblem = startsOn ? duesEffectiveProblem(startsOn, today) : DUES_DAY_MESSAGE;
   const valid = amountsValid && dayProblem === null;
   // A schedule is something new to say: a rate that differs from what is on
@@ -257,12 +259,17 @@ export function DuesSettings() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <p className="text-footnote text-fg-muted">
-              {startsOn && !dayProblem ? (
+              {amountProblem ? (
+                <span role="alert" className="font-medium text-danger">
+                  {amountProblem}
+                </span>
+              ) : startsOn && !dayProblem ? (
                 <>
                   <span className="tnum font-semibold text-fg">
                     {money(projected, { cents: projected % 100 !== 0 })}
                   </span>{" "}
                   per {cadence} across every home from {formatDate(startsOn, "long")}
+                  {changed ? "" : ". That is what homes pay now."}
                 </>
               ) : (
                 "Pick the day the new dues start"

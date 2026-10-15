@@ -1,6 +1,6 @@
 // The tab title. The page itself is a client component, which cannot
 // export metadata, so the name lives here beside it.
-export const metadata = { title: "Account" };
+export const metadata = { title: "Statement" };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

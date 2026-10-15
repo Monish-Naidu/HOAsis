@@ -30,8 +30,10 @@ import { balanceSplit } from "@/lib/statement";
 import { duesChangeWords, duesTerms, homeDues, homeDuesChange } from "@/lib/home-types";
 import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { Announcements } from "./announcements";
+import { NotBoardNotice } from "./not-board-notice";
 import { HomesNote } from "@/components/app/home-switcher";
 import { BoardPausedNote } from "@/components/app/board-paused-note";
+import { recentStatementLines } from "@/lib/statement";
 
 /**
  * The resident home, laid out to the 2026-09-01 dashboard design.
@@ -59,6 +61,7 @@ export default function ResidentHome() {
           Actions run the full width; activity and events share the rest.
           Community left the dashboard on purpose (a five-home association
           would see an empty card); it stays a sidebar tab. */}
+      <NotBoardNotice />
       <HomesNote />
       <BoardPausedNote />
       <AccountSummary />
@@ -260,19 +263,34 @@ function AccountSummary() {
 /* ----------------------------------------------------------------- actions */
 
 function QuickActions() {
-  // Three, and each goes somewhere different. Five tiles used to resolve to
-  // three destinations, two of them already in the tab bar.
+  const { community } = useAppState();
+  // The third tile follows the ballots: "Vote" while one is open, and a way
+  // to the results once all are closed. With nothing at all there is nothing
+  // to open, so it is left out rather than leading to "Nothing to vote on".
+  const ballots = community.ballots.filter((b) => b.audience === "owners");
+  const phases = ballots.map((b) => ballotPhase(b));
+  const votes: { href: string; label: string; icon: typeof Wrench; tint: TintName }[] =
+    phases.includes("open")
+      ? [{ href: "/resident/vote", label: "Vote", icon: Vote, tint: "teal" }]
+      : phases.some((p) => p === "closed" || p === "certified")
+        ? [{ href: "/resident/vote", label: "Past results", icon: Vote, tint: "teal" }]
+        : [];
+  // Each goes somewhere different. Five tiles used to resolve to three
+  // destinations, two of them already in the tab bar.
   const actions: { href: string; label: string; icon: typeof Wrench; tint: TintName }[] = [
     { href: "/resident/requests/new", label: "New request", icon: Wrench, tint: "blue" },
     { href: "/resident/documents", label: "Documents", icon: FileText, tint: "violet" },
-    { href: "/resident/vote", label: "Vote", icon: Vote, tint: "teal" },
+    ...votes,
   ];
   // A row of three tinted buttons, no card around them. A card titled
   // "Quick actions" wrapping three links was the tallest thing on the page
   // after the photo, for the least information. Each wears the colour its
   // section wears everywhere else.
   return (
-    <nav aria-label="Quick actions" className="grid grid-cols-3 gap-3 @xl:gap-4">
+    <nav
+      aria-label="Quick actions"
+      className={cn("grid gap-3 @xl:gap-4", actions.length === 3 ? "grid-cols-3" : "grid-cols-2")}
+    >
       {actions.map(({ href, label, icon, tint }) => (
         <Link
           key={label}
@@ -322,21 +340,18 @@ function RecentActivity() {
 
   // Requests surface only as these activity lines. A clearer signal for them
   // waits on Monish's decision about whether they need more than that.
-  const rows: ActivityRow[] = [...charges]
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, 4)
-    .map((c) => ({
-      id: c.id,
-      date: c.date,
-      title: c.label,
-      href: "/resident/account",
-      icon: c.kind === "payment" ? CircleDollarSign : Receipt,
-      tint: c.kind === "payment" ? "teal" : "neutral",
-      // A payment carries a minus, as on the statement, so the colour is
-      // not the only thing that says which way the money went.
-      amount: `${c.kind === "payment" ? "−" : ""}${money(Math.abs(c.amountCents))}`,
-      amountTone: c.kind === "payment" ? "text-ok" : "text-fg",
-    }));
+  const rows: ActivityRow[] = recentStatementLines(charges, 4).map((c) => ({
+    id: c.id,
+    date: c.date,
+    title: c.label,
+    href: "/resident/account",
+    icon: c.kind === "payment" ? CircleDollarSign : Receipt,
+    tint: c.kind === "payment" ? "teal" : "neutral",
+    // A payment carries a minus, as on the statement, so the colour is
+    // not the only thing that says which way the money went.
+    amount: `${c.kind === "payment" ? "−" : ""}${money(Math.abs(c.amountCents))}`,
+    amountTone: c.kind === "payment" ? "text-ok" : "text-fg",
+  }));
 
   const withUpdate = requests
     .map((r) => ({ r, last: [...r.thread].sort((a, b) => (a.at < b.at ? 1 : -1))[0] }))

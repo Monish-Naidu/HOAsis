@@ -14,7 +14,7 @@ import {
 } from "@/lib/utils";
 import { policyFor } from "@/lib/collections";
 import { totalDues } from "@/lib/home-types";
-import { isDuesLine, isPaymentReversal } from "@/lib/statement";
+import { isDuesLine, isOpeningLine, isPaymentReversal } from "@/lib/statement";
 import { meetingPage } from "@/lib/meeting-notices";
 
 /**
@@ -760,6 +760,10 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
   // The first month with anything on the books, in any year.
   let firstActive = "";
   for (const e of ledgerFlows(c)) {
+    // An opening balance is what an account held when the books began, not
+    // activity: counting it made a new association with a starting balance
+    // look like it had billed the month it was entered.
+    if (e.category === "Opening balance") continue;
     const ym = e.date.slice(0, 7);
     if (!firstActive || ym < firstActive) firstActive = ym;
   }
@@ -774,7 +778,7 @@ export function duesCollection(c: Community, year: number, asOf: string = c.asOf
     const active = Array.from({ length: 12 }, () => false);
     for (const e of ledgerFlows(c)) {
       if (yearOf(e.date) !== y) continue;
-      active[monthOf(e.date) - 1] = true;
+      if (e.category !== "Opening balance") active[monthOf(e.date) - 1] = true;
       // Net: a reversal or refund (negative) comes off what was deposited.
       if (e.category === "Assessments") deposited[monthOf(e.date) - 1] += e.amountCents;
     }
@@ -1275,6 +1279,33 @@ export function ledgerSide(e: Community["ledger"][number]): "in" | "out" | null 
   if (e.status === "needs-review") return null;
   if (e.category === "Reserve transfer" || e.category === "Opening balance") return null;
   return e.amountCents > 0 || isPaymentReturn(e) ? "in" : e.amountCents < 0 ? "out" : null;
+}
+
+/**
+ * Money in and out for a closed year, read from its rollup by category the way
+ * the Transactions page counts a year. The rollup sums every ledger line, so
+ * its own totals include the starting balances and the transfers between the
+ * association's accounts, which are neither income nor spending, and count a
+ * payment given back as money out instead of netting it against money in.
+ */
+export function fiscalYearFlows(
+  categories: readonly { category: string; inCents: number; outCents: number }[],
+): { inCents: number; outCents: number } {
+  let inCents = 0;
+  let outCents = 0;
+  for (const row of categories) {
+    if (row.category === "Opening balance" || row.category === "Reserve transfer") continue;
+    if (row.category === "Assessments") {
+      // What was paid net of what was given back.
+      const net = row.inCents - row.outCents;
+      if (net >= 0) inCents += net;
+      else outCents += -net;
+      continue;
+    }
+    inCents += row.inCents;
+    outCents += row.outCents;
+  }
+  return { inCents, outCents };
 }
 
 /**
@@ -1898,7 +1929,9 @@ export function meetingStatus(m: Pick<Community["meetings"][number], "rsvps" | "
 function anyChargeIssued(c: Community): boolean {
   return (
     Boolean(c.recentDuesBill) ||
-    Object.values(c.homeCharges ?? {}).some((lines) => lines.some((l) => l.kind === "charge")) ||
+    Object.values(c.homeCharges ?? {}).some((lines) =>
+      lines.some((l) => l.kind === "charge" && !isOpeningLine(l)),
+    ) ||
     (c.history?.statementMonths ?? []).some((m) => m.kind === "charge" && m.count > 0)
   );
 }

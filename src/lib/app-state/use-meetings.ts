@@ -7,8 +7,10 @@ import {
   joinLine,
   latest,
   logDemoActivity,
+  mayChange,
   newId,
   noticesInFlight,
+  refuse,
   remoteWrite,
   sessionStore,
   sliceStore,
@@ -21,6 +23,7 @@ import type { ActionItem, MeetingAttendee } from "@/lib/types";
 import { meetingPhase } from "@/lib/phases";
 import { activityWords } from "@/lib/activity";
 import { changeEmailSentence, noticeToast } from "@/lib/email/plain-error";
+import { ballotChoicesProblem } from "@/lib/ballots";
 import { ownerVoteNotice } from "@/lib/voting";
 import type { useCommunicationsActions } from "./use-communications";
 
@@ -31,10 +34,11 @@ import type { useCommunicationsActions } from "./use-communications";
 export function useMeetingsActions(
   deps: AppDeps & Pick<ReturnType<typeof useCommunicationsActions>, "addAnnouncement">,
 ) {
-  const { remote, communityId, associationRow, meetingList, addAnnouncement, mySeats } = deps;
+  const { remote, communityId, associationRow, meetingList, addAnnouncement, mySeats, can } = deps;
 
   const closeBallot = useCallback(
     (ballotId: string) => {
+      if (!remote.community && !mayChange(can, "voting")) return;
       if (remote.community) {
         void remoteWrite("Closing the ballot", () =>
           supabaseBrowser()
@@ -45,14 +49,20 @@ export function useMeetingsActions(
         return;
       }
       sliceStore(communityId, "ballots").update((all) =>
-        all.map((b) => (b.id === ballotId ? { ...b, status: "closed" as const } : b)),
+        all.map((b) =>
+          b.id === ballotId ? { ...b, status: "closed" as const, closedDate: todayIsoDate() } : b,
+        ),
       );
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const sendMeetingNotice = useCallback(
     (meetingId: string) => {
+      // The notice is an announcement as well as a date on the meeting.
+      if (!remote.community && (!mayChange(can, "voting") || !mayChange(can, "communications"))) {
+        return false;
+      }
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
       if (!m) return false;
@@ -132,7 +142,7 @@ export function useMeetingsActions(
       // The demo has nobody to email, so the notice is only posted.
       return "Notice posted.";
     },
-    [remote.community, meetingList, associationRow, addAnnouncement, communityId],
+    [can, remote.community, meetingList, associationRow, addAnnouncement, communityId],
   );
 
   const rsvpMeeting = useCallback(
@@ -166,6 +176,7 @@ export function useMeetingsActions(
 
   const addActionItem = useCallback(
     (input: { title: string; ownerName: string; dueOn?: string; meetingId?: string }) => {
+      if (!remote.community && !mayChange(can, "voting")) return;
       const title = input.title.trim();
       if (!title) throw new ValidationError("Describe the action item", { title });
       if (remote.community) {
@@ -194,11 +205,12 @@ export function useMeetingsActions(
       };
       sliceStore(communityId, "actionItems").update((all) => [...all, item]);
     },
-    [remote.community, remote.profileId, communityId],
+    [can, remote.community, remote.profileId, communityId],
   );
 
   const setActionItemDone = useCallback(
     (itemId: string, done: boolean) => {
+      if (!remote.community && !mayChange(can, "voting")) return;
       const doneOn = done ? todayIsoDate() : undefined;
       if (remote.community) {
         void remoteWrite(done ? "Ticking it off" : "Reopening it", () =>
@@ -213,11 +225,12 @@ export function useMeetingsActions(
         all.map((i) => (i.id === itemId ? { ...i, doneOn } : i)),
       );
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const removeActionItem = useCallback(
     (itemId: string) => {
+      if (!remote.community && !mayChange(can, "voting")) return;
       if (remote.community) {
         void remoteWrite("Removing the item", () =>
           supabaseBrowser().from("action_items").delete({ count: "exact" }).eq("id", itemId),
@@ -226,11 +239,16 @@ export function useMeetingsActions(
       }
       sliceStore(communityId, "actionItems").update((all) => all.filter((i) => i.id !== itemId));
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const addBallot = useCallback(
-    (ballot: Community["ballots"][number]) => {
+    (ballot: Community["ballots"][number]): boolean => {
+      if (!remote.community && !mayChange(can, "voting")) return false;
+      // Held here as well as on the form: two choices of one name would split
+      // one answer across two counts.
+      const problem = ballotChoicesProblem(ballot.options);
+      if (problem) return refuse(problem);
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Opening the ballot", async () => {
@@ -270,15 +288,17 @@ export function useMeetingsActions(
             void emailNotice(rc.id, { kind: "ballot", id });
           }
         });
-        return;
+        return true;
       }
       sliceStore(communityId, "ballots").update((all) => [ballot, ...all]);
+      return true;
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const addMeeting = useCallback(
     (meeting: Community["meetings"][number]) => {
+      if (!remote.community && !mayChange(can, "voting")) return;
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Scheduling the meeting", () =>
@@ -308,7 +328,7 @@ export function useMeetingsActions(
         [...all, meeting].sort((a, b) => a.date.localeCompare(b.date)),
       );
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   /**
@@ -320,6 +340,7 @@ export function useMeetingsActions(
    */
   const rescheduleMeeting = useCallback(
     (meetingId: string, to: { date: string; time?: string; location?: string }) => {
+      if (!remote.community && !mayChange(can, "voting")) return Promise.resolve<false>(false);
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
       if (!m) return Promise.resolve<false>(false);
@@ -374,7 +395,7 @@ export function useMeetingsActions(
       );
       return Promise.resolve(`${m.title} moved to ${formatDate(to.date, "long")}.`);
     },
-    [remote.community, meetingList, communityId],
+    [can, remote.community, meetingList, communityId],
   );
 
   /**
@@ -384,6 +405,7 @@ export function useMeetingsActions(
    */
   const cancelMeeting = useCallback(
     (meetingId: string, reason: string) => {
+      if (!remote.community && !mayChange(can, "voting")) return Promise.resolve<false>(false);
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
       if (!m) return Promise.resolve<false>(false);
@@ -425,7 +447,7 @@ export function useMeetingsActions(
       );
       return Promise.resolve(`${m.title} is cancelled.`);
     },
-    [remote.community, meetingList, communityId],
+    [can, remote.community, meetingList, communityId],
   );
 
   /**
@@ -434,6 +456,7 @@ export function useMeetingsActions(
    */
   const recordMinutes = useCallback(
     (meetingId: string, minutes: string, attended: MeetingAttendee[]) => {
+      if (!remote.community && !mayChange(can, "voting")) return Promise.resolve(false);
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
       if (!m) return Promise.resolve(false);
@@ -477,7 +500,7 @@ export function useMeetingsActions(
       );
       return Promise.resolve(true);
     },
-    [remote.community, meetingList, communityId],
+    [can, remote.community, meetingList, communityId],
   );
 
   const castVote = useCallback(

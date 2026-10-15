@@ -46,6 +46,9 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
   const [quorumText, setQuorumText] = useState("");
   const [quorumUnit, setQuorumUnit] = useState<QuorumUnit>("homes");
   const [duesCurrent, setDuesCurrent] = useState(false);
+  // What the ballot mutation refused (two identical choices, for one), said
+  // beside the button that was pressed.
+  const [refused, setRefused] = useState<string | null>(null);
 
   const field = fieldClass;
   const election = kind === "election";
@@ -58,6 +61,8 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
       ? "Seats to fill is a whole number, at least 1."
       : null;
   const filled = choices.filter((c) => c.trim()).length;
+  const sameChoices =
+    new Set(choices.filter((c) => c.trim()).map((c) => c.trim().toLowerCase())).size < filled;
   const ready =
     title.trim().length > 2 && filled >= 2 && !dateProblem && !quorum.problem && !seatProblem;
   // The first thing still missing, said beside the button that waits on it.
@@ -71,7 +76,8 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
 
   function open() {
     const seq = ballots.length + 1;
-    addBallot({
+    setRefused(null);
+    const opened = addBallot({
       id: `bal-${today}-${seq}`,
       reference: `BAL-${today.slice(0, 4)}-${String(seq).padStart(3, "0")}`,
       title: title.trim(),
@@ -101,6 +107,17 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
           homeId: election && candidateHomes[index] ? candidateHomes[index] : undefined,
         })),
     });
+    // Refused, with its reason already toasted: two choices that read the same,
+    // or a seat that may only look. Stay on the form, and say here what can be
+    // fixed from it.
+    if (!opened) {
+      setRefused(
+        sameChoices
+          ? "Two choices read the same. Give each its own words."
+          : "The ballot did not open. The reason is in the message at the bottom of the screen.",
+      );
+      return;
+    }
     notify(`Ballot is open. Homes can vote until ${formatDate(closesOn, "long")}.`);
     onClose();
   }
@@ -189,9 +206,10 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
               <div key={index} className="flex gap-2">
                 <input
                   value={choice}
-                  onChange={(e) =>
-                    setChoices(choices.map((c, i) => (i === index ? e.target.value : c)))
-                  }
+                  onChange={(e) => {
+                    setChoices(choices.map((c, i) => (i === index ? e.target.value : c)));
+                    setRefused(null);
+                  }}
                   aria-label={`Choice ${index + 1}`}
                   placeholder={election ? "Their name" : "Yes"}
                   className={field}
@@ -336,7 +354,13 @@ export function NewBallot({ onClose }: { onClose: () => void }) {
           <Button type="submit" size="lg" disabled={!ready} onClick={open}>
             Open the ballot
           </Button>
-          {missing ? <span className="text-footnote text-fg-muted">{missing}</span> : null}
+          {refused ? (
+            <span role="alert" className="text-footnote text-danger">
+              {refused}
+            </span>
+          ) : missing ? (
+            <span className="text-footnote text-fg-muted">{missing}</span>
+          ) : null}
         </div>
       </div>
     </Card>

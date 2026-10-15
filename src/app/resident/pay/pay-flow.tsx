@@ -198,6 +198,15 @@ export function PayFlow() {
     });
   }
 
+  // Why Continue is off, said beside it: the amount section can be a screen
+  // above the button, and a refusal nobody sees reads as a broken page.
+  const amountProblem =
+    amountMode === "custom" && !customCheck.ok
+      ? custom.trim()
+        ? customCheck.message
+        : "Enter an amount to continue."
+      : null;
+
   const policy = NO_PLATFORM_FEE;
   const cheapest = cheapestRail(instruments, amountCents, policy);
   const cost = selected ? computePaymentCost(selected.kind, amountCents, policy) : null;
@@ -515,6 +524,17 @@ export function PayFlow() {
               Next autopay: {formatDate(autopayDate, "long")} · {relativeDays(autopayDate)}
               {skipsUpcoming ? ` · ${monthLabel(upcomingMonth)} skipped` : ""}
             </div>
+            {/* The next date says nothing about what is already late, and a
+                green line under a past-due balance reads as all clear. */}
+            {home.daysPastDue > 0 && balanceCents > 0 ? (
+              <p
+                role="status"
+                className="mt-2 rounded-lg bg-warn-soft px-3 py-2 text-footnote font-medium text-warn"
+              >
+                The {money(balanceCents, { cents: balanceCents % 100 !== 0 })} past due is not part
+                of autopay. Pay it now.
+              </p>
+            ) : null}
           </>
         ) : null}
       </Card>
@@ -552,7 +572,8 @@ export function PayFlow() {
             )}
           </Callout>
         ))}
-        {amountSection}
+        {/* The amount does not apply while a method is being saved. */}
+        {adding ? null : amountSection}
         {stripeAccountId && !stripeReady ? (
           <StripeReadyCheck associationId={community.association.id} />
         ) : null}
@@ -567,6 +588,7 @@ export function PayFlow() {
                   associationId={community.association.id}
                   unitId={home.id}
                   amountCents={amountCents}
+                  amountProblem={amountProblem}
                   publishableKey={publishableKey}
                   instruments={instruments}
                   selection={stripeSelection}
@@ -594,7 +616,7 @@ export function PayFlow() {
               // too many.
               <Button variant="ghost" size="sm" className="w-full" onClick={() => setAdding(true)}>
                 <Plus className="size-3.5" />
-                Save a card or bank account
+                Add a payment method
               </Button>
             )}
             {autopaySection}
@@ -642,7 +664,8 @@ export function PayFlow() {
     <div className="animate-rise space-y-6">
       {heading}
 
-      {amountSection}
+      {/* The amount does not apply while a method is being saved. */}
+      {adding ? null : amountSection}
 
       {/* Instruments */}
       <section>
@@ -795,6 +818,11 @@ export function PayFlow() {
               <dd className="tnum font-semibold text-fg">{money(cost.residentPaysCents)}</dd>
             </div>
           </dl>
+          {amountProblem ? (
+            <p role="alert" className="mt-3 text-footnote font-medium text-danger">
+              {amountProblem}
+            </p>
+          ) : null}
           <Button
             variant="primary"
             size="lg"

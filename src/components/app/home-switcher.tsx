@@ -50,7 +50,12 @@ export function HomeSwitcher({
           className,
         )}
       >
-        <span className="min-w-0 truncate">{children}</span>
+        <span
+          className="min-w-0 truncate"
+          title={typeof children === "string" ? children : undefined}
+        >
+          {children}
+        </span>
         <ChevronDown
           className={cn("size-3.5 shrink-0 opacity-70 transition-transform", place && "rotate-180")}
           aria-hidden

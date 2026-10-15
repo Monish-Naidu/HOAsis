@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { Building2, CircleHelp, LogOut, RefreshCw, User } from "lucide-react";
 import { Avatar } from "@/components/ui/primitives";
-import { useAuth } from "@/lib/auth";
+import { isExiting, clearExiting, signOutSettled, useAuth } from "@/lib/auth";
 import { NoAssociationYet } from "@/components/app/no-association";
 import { retryRemote, useRemote } from "@/lib/data/remote-store";
 import { useAppState } from "@/lib/app-state";
@@ -14,6 +14,21 @@ import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { HummingbirdLoader } from "@/components/app/hummingbird";
 import { supportMailto } from "@/lib/support";
+
+/**
+ * Signs out, waits for the request that ends the session on the server, and
+ * only then leaves for the sign-in page. Navigating first aborted the
+ * request and left the session alive.
+ */
+export function useSignOut() {
+  const { signOut } = useAppState();
+  const router = useRouter();
+  return useCallback(async () => {
+    signOut();
+    await signOutSettled();
+    router.push("/signin");
+  }, [signOut, router]);
+}
 
 /** Role switch and sign out. Switching views never signs you out. */
 export function ViewSwitcher({ className }: { className?: string }) {
@@ -79,8 +94,8 @@ export function AccountPopover({
   place: { top?: number; bottom?: number; left?: number; right?: number };
   onClose: () => void;
 }) {
-  const { account, community, signOut } = useAppState();
-  const router = useRouter();
+  const { account, community } = useAppState();
+  const signOut = useSignOut();
   if (!account) return null;
   return createPortal(
     <>
@@ -117,8 +132,7 @@ export function AccountPopover({
           role="menuitem"
           onClick={() => {
             onClose();
-            signOut();
-            router.push("/signin");
+            void signOut();
           }}
           className="flex min-h-11 w-full items-center gap-2.5 px-3.5 text-left text-body text-fg hover:bg-surface-2"
         >
@@ -157,7 +171,7 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
         aria-expanded={open}
         aria-label={`${account.name}, account menu`}
         onClick={(e) => toggle(e.currentTarget)}
-        className="press flex items-center gap-2 rounded-lg p-0.5 hover:bg-surface-2"
+        className="press flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg hover:bg-surface-2"
       >
         <Avatar name={account.name} />
         {!compact ? (
@@ -196,9 +210,18 @@ export function RequireSession({ children }: { children: React.ReactNode }) {
   const loadFailed = Boolean(auth.user) && remote.status === "error";
   const signedIn = Boolean(account) || remote.status === "empty" || loadFailed;
 
+  const pathname = usePathname();
+
   useEffect(() => {
-    if (ready && !settling && !signedIn) router.replace("/signin");
-  }, [ready, settling, signedIn, router]);
+    if (signedIn) clearExiting();
+    // Somebody who just chose to sign out is already on their way to the
+    // sign-in page; sending them there again with this page as the reason
+    // would also abort the request that ends their session.
+    if (!ready || settling || signedIn || isExiting()) return;
+    // Carry the page, so signing in comes back to it rather than to a default.
+    const here = `${pathname}${window.location.search}`;
+    router.replace(`/signin?next=${encodeURIComponent(here)}`);
+  }, [ready, settling, signedIn, router, pathname]);
 
   // The bird holds the page while the session resolves, instead of a blank.
   if (!ready || settling) {

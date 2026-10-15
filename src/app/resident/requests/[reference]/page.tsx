@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -11,16 +11,25 @@ import {
   MessageSquare,
   Wrench,
 } from "lucide-react";
-import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  SectionTitle,
+  textareaClass,
+} from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { certificateMailto, certificateValidThrough } from "@/lib/request-certificate";
 import { requestStatusLabel, requestStatusTone } from "@/lib/request-status";
+import { REQUEST_SEEN_PROMISE, requestWords } from "@/lib/resident-wording";
 import { formatDate, money, relativeDays } from "@/lib/utils";
+import type { HomeRequest } from "@/lib/types";
 import { AttachmentList } from "../request-files";
 
 export default function RequestDetail({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = use(params);
-  const { requests } = useAppState();
+  const { requests, community, isRemote } = useAppState();
   const request = requests.find((r) => r.reference === decodeURIComponent(reference));
 
   if (!request) {
@@ -35,13 +44,27 @@ export default function RequestDetail({ params }: { params: Promise<{ reference:
   const approved = request.status === "approved";
   // From the decision on the record, not a date typed into the screen.
   const validThrough = certificateValidThrough(request);
-  // The description is shown once, above. Filing a request also writes it as
-  // the first entry of the thread; that copy is not repeated in Activity.
-  const activity = request.thread.filter(
-    (e, i) => !(i === 0 && e.actorRole === "resident" && e.body.trim() === request.summary.trim()),
-  );
+  // The response time the form itself promised, so the clock in the thread
+  // and the reason under the deadline say the number the owner was shown.
+  const decisionDays = (
+    community.forms.find((f) => f.id === request.submission?.formId) ??
+    (request.kind === "architectural" ? community.forms.find((f) => f.decisionDays) : undefined)
+  )?.decisionDays;
   const openStates = ["draft", "submitted", "in-review", "info-needed"];
   const isOpen = openStates.includes(request.status);
+  // The description is shown once, above. Filing a request also writes it as
+  // the first entry of the thread; that copy is not repeated in Activity. The
+  // form's pre-send promise is not an event either: on a request already
+  // sent it only repeats a line that was true before the owner pressed Send.
+  const activity = request.thread.filter(
+    (e, i) =>
+      !(i === 0 && e.actorRole === "resident" && e.body.trim() === request.summary.trim()) &&
+      !(
+        request.status !== "draft" &&
+        e.actorRole === "system" &&
+        e.body.trim() === REQUEST_SEEN_PROMISE
+      ),
+  );
   // What the board wrote with the denial, without the word that opens it.
   const deniedWhy = [...request.thread]
     .reverse()
@@ -60,13 +83,15 @@ export default function RequestDetail({ params }: { params: Promise<{ reference:
 
       <div>
         <div className="mb-2 flex items-center gap-2">
-          <Badge tone={requestStatusTone(request)}>{requestStatusLabel(request)}</Badge>
+          <Badge tone={requestStatusTone(request)}>{requestStatusLabel(request.status)}</Badge>
           <span className="text-footnote text-fg-subtle">{request.reference}</span>
         </div>
         <h1 className="text-title3 font-semibold leading-snug tracking-[-0.02em] text-fg">
           {request.title}
         </h1>
-        <p className="mt-2 text-body leading-relaxed text-fg-muted">{request.summary}</p>
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
+          {requestWords(request.summary)}
+        </p>
       </div>
 
       {approved && request.certificateId ? (
@@ -148,7 +173,8 @@ export default function RequestDetail({ params }: { params: Promise<{ reference:
                 The board owes you an answer {relativeDays(request.dueDate)}
               </p>
               <p className="mt-0.5 text-footnote leading-snug text-fg-muted">
-                {request.dueReason} · deadline {formatDate(request.dueDate, "long")}
+                {request.dueReason ? `${requestWords(request.dueReason, decisionDays)} · ` : ""}
+                deadline {formatDate(request.dueDate, "long")}
               </p>
             </div>
           </div>
@@ -218,7 +244,9 @@ export default function RequestDetail({ params }: { params: Promise<{ reference:
                 .map((a) => (
                   <div key={a.fieldId}>
                     <dt className="text-footnote font-semibold text-fg-muted">{a.label}</dt>
-                    <dd className="mt-0.5 break-words text-body text-fg">{a.value}</dd>
+                    <dd className="mt-0.5 break-words text-body text-fg">
+                      {requestWords(a.value)}
+                    </dd>
                   </div>
                 ))}
             </dl>
@@ -261,7 +289,9 @@ export default function RequestDetail({ params }: { params: Promise<{ reference:
                   <span className="text-footnote font-semibold text-fg">{e.actor}</span>
                   <span className="text-footnote text-fg-subtle">{formatDate(e.at)}</span>
                 </div>
-                <p className="mt-1 text-body leading-relaxed text-fg-muted">{e.body}</p>
+                <p className="mt-1 text-body leading-relaxed text-fg-muted">
+                  {requestWords(e.body, decisionDays)}
+                </p>
               </div>
             </li>
           ))}
@@ -269,23 +299,85 @@ export default function RequestDetail({ params }: { params: Promise<{ reference:
       </section>
 
       {isOpen ? (
-        // A note box sat here with no handler behind it: Attach and Send did
-        // nothing, on the one screen an owner opens while waiting. Until a
-        // request carries an owner's reply, questions go to the board's inbox,
-        // which does reach them.
-        <Card className="flex items-center justify-between gap-3 px-4 py-3">
-          <p className="text-footnote text-fg-muted">
-            Have a question about this request, or something to add?
-          </p>
-          <Link
-            href={`/resident/messages?subject=${encodeURIComponent(`${request.reference}: ${request.title}`)}`}
-            className="inline-flex shrink-0 items-center gap-1.5 text-footnote font-medium text-primary hover:underline"
-          >
-            <MessageSquare className="size-3.5" />
-            Message the board
-          </Link>
-        </Card>
+        <>
+          <ReplyBox reference={request.reference} />
+          <Card className="flex items-center justify-between gap-3 px-4 py-3">
+            <p className="text-footnote text-fg-muted">
+              {isRemote
+                ? "Have a question about this request, or something to add?"
+                : "Want to ask the board something else?"}
+            </p>
+            <Link
+              href={`/resident/messages?subject=${encodeURIComponent(`${request.reference}: ${request.title}`)}&about=${ABOUT[request.kind]}`}
+              className="inline-flex shrink-0 items-center gap-1.5 text-footnote font-medium text-primary hover:underline"
+            >
+              <MessageSquare className="size-3.5" />
+              Message the board
+            </Link>
+          </Card>
+        </>
       ) : null}
     </div>
+  );
+}
+
+/** The Messages topic a request's kind belongs under, so "About" starts on the right one. */
+const ABOUT = {
+  maintenance: "Maintenance",
+  architectural: "Architectural",
+  records: "Governance",
+  amenity: "General",
+  "violation-appeal": "Governance",
+} as const satisfies Record<HomeRequest["kind"], string>;
+
+/**
+ * An owner's note on their own request. It lands on the same thread the
+ * board reads, so an answer to "can you send a photo" has somewhere to go.
+ */
+function ReplyBox({ reference }: { reference: string }) {
+  const { replyOnRequest } = useAppState();
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+
+  async function send() {
+    if (!body.trim() || sending) return;
+    setSending(true);
+    try {
+      // A refusal has already told the person why (a toast from the state
+      // layer), and what they wrote stays in the box.
+      if (await replyOnRequest(reference, body.trim())) setBody("");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3 p-4">
+      <label className="block">
+        <span className="mb-1.5 block text-footnote font-semibold text-fg-muted">
+          Add a note for the board
+        </span>
+        <textarea
+          rows={3}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="An answer to a question, or something to add."
+          className={`${textareaClass} resize-none`}
+        />
+      </label>
+      <div className="flex items-center justify-end gap-3">
+        {body.trim() ? null : (
+          <p className="mr-auto text-footnote text-fg-muted">Write a note to send it.</p>
+        )}
+        <Button
+          variant="primary"
+          size="md"
+          disabled={!body.trim() || sending}
+          onClick={() => void send()}
+        >
+          {sending ? "Sending" : "Send note"}
+        </Button>
+      </div>
+    </Card>
   );
 }

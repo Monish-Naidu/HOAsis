@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeftRight,
   Check,
@@ -38,6 +38,9 @@ import {
   textareaClass,
 } from "@/components/ui/primitives";
 import { checkNewEmail } from "@/lib/email-change";
+import { amenityNameProblem, duplicateHolderNote } from "@/lib/amenity-checks";
+import { roleChangeMessage, waitingRoleMessage } from "@/lib/app-state/role-change";
+import { DOCUMENT_ACCEPT, formatSize, rejectReason } from "@/lib/documents";
 import { DangerZone } from "@/components/app/danger-zone";
 import { RecordsExportCard } from "@/components/app/records-export-card";
 import { SameNameNote } from "@/components/app/same-name-note";
@@ -113,9 +116,44 @@ export function SettingsScreen() {
     });
   }
 
+  // The section the reader is in, for the jump row. Set from the observer's
+  // callback and from a click, never from an effect body.
+  const [active, setActive] = useState(SECTIONS[0].id);
+
+  // A link to #amenities or #contact-email lands on that section. The browser
+  // tried before this page had drawn anything and gave up at the top.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView();
+  }, []);
+
+  // Which section is under the sticky header, so the jump row can show it.
+  useEffect(() => {
+    const nodes = SECTIONS.map((x) => document.getElementById(x.id)).filter(
+      (el): el is HTMLElement => el !== null,
+    );
+    if (nodes.length === 0 || typeof IntersectionObserver === "undefined") return;
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visible.add(entry.target.id);
+          else visible.delete(entry.target.id);
+        }
+        const first = SECTIONS.find((x) => visible.has(x.id));
+        if (first) setActive(first.id);
+      },
+      { rootMargin: "-96px 0px -60% 0px" },
+    );
+    for (const node of nodes) observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const [newAmenity, setNewAmenity] = useState("");
   const [name, setName] = useState(settings.displayName);
   const [newFormLabel, setNewFormLabel] = useState("");
+  const [newFormFile, setNewFormFile] = useState<File | null>(null);
+  const formFileInput = useRef<HTMLInputElement>(null);
   const [appointing, setAppointing] = useState<{ homeId: string; role: AccountRole } | null>(null);
 
   const roleFromLabel = (label?: string): AccountRole =>
@@ -167,10 +205,19 @@ export function SettingsScreen() {
   }
 
   const isPresident = account?.role === "president";
+  // Said beside the Add button while a second holder is being chosen.
+  const appointingNote = appointing
+    ? duplicateHolderNote(appointing.role, ROLE_LABEL[appointing.role], officers)
+    : null;
+
+  const amenityProblem = amenityNameProblem(
+    newAmenity,
+    amenities.map((a) => a.name),
+  );
 
   function addAmenity() {
     const name = newAmenity.trim();
-    if (!name) return;
+    if (!name || amenityProblem) return;
     setAmenities([
       ...amenities,
       {
@@ -189,20 +236,47 @@ export function SettingsScreen() {
     setAmenities(amenities.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   }
 
+  // Why Upload is off. A label with no file used to save a form that was
+  // 0 KB, which owners then downloaded as an empty page.
+  const formFileProblem = newFormFile ? rejectReason(newFormFile) : null;
+  const formWhyNot = !newFormLabel.trim()
+    ? "Give the form a label."
+    : !newFormFile
+      ? "Choose the file."
+      : formFileProblem;
+
   function addForm() {
     const label = newFormLabel.trim();
-    if (!label) return;
+    if (!label || !newFormFile || formFileProblem) return;
     const form: ArchitecturalForm = {
       id: `form-${Date.now()}`,
       label,
       description: "Uploaded by the board",
-      fileName: `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`,
-      size: "0 KB",
+      fileName: newFormFile.name,
+      size: formatSize(newFormFile.size),
       source: "uploaded",
       updatedDate: todayIsoDate(),
     };
     setForms([...forms, form]);
     setNewFormLabel("");
+    setNewFormFile(null);
+    if (formFileInput.current) formFileInput.current.value = "";
+  }
+
+  // Appointing is never blocked by a seat already being held; it is said.
+  async function changeRole(homeId: string, name: string, role: AccountRole) {
+    // Said before the write: a seat with nobody signed in is created by the
+    // appointment itself, so the check afterwards would always find one.
+    const waiting = !accounts.some((a) => a.homeId === homeId);
+    const ok = await Promise.resolve(setHomeRole(homeId, role));
+    if (!ok) return;
+    notify(waiting ? waitingRoleMessage(name, role) : roleChangeMessage(name, role), "ok");
+    const note = duplicateHolderNote(
+      role,
+      ROLE_LABEL[role],
+      officers.filter((o) => o.homeId !== homeId),
+    );
+    if (note) notify(note, "warn", undefined, "role-duplicate");
   }
 
   return (
@@ -217,12 +291,19 @@ export function SettingsScreen() {
           description="Text size, name, visibility, board members, and billing."
         />
 
-        <nav aria-label="On this page" className="-mt-2 flex flex-wrap gap-x-1 gap-y-1">
+        {/* The links carry 10px of padding for their hover shape, so the row
+            steps back by the same to put the first word on the content edge. */}
+        <nav aria-label="On this page" className="-mt-2 -ml-2.5 flex flex-wrap gap-x-1 gap-y-1">
           {SECTIONS.map((x) => (
             <a
               key={x.id}
               href={`#${x.id}`}
-              className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-footnote font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg pointer-coarse:min-h-11"
+              onClick={() => setActive(x.id)}
+              aria-current={active === x.id ? "location" : undefined}
+              className={cn(
+                "inline-flex items-center rounded-lg px-2.5 py-1.5 text-footnote font-medium transition-colors hover:bg-surface-2 hover:text-fg pointer-coarse:min-h-11",
+                active === x.id ? "bg-surface-2 text-fg" : "text-fg-muted",
+              )}
             >
               {x.label}
             </a>
@@ -307,10 +388,15 @@ export function SettingsScreen() {
                     />
                   ) : null}
                 </SettingRow>
-                <ContactEmailRow
-                  value={community.association.contactEmail ?? ""}
-                  save={(contactEmail) => updateAssociation({ contactEmail })}
-                />
+                <div
+                  id="contact-email"
+                  className="scroll-mt-32 border-b border-border last:border-b-0 lg:scroll-mt-24"
+                >
+                  <ContactEmailRow
+                    value={community.association.contactEmail ?? ""}
+                    save={(contactEmail) => updateAssociation({ contactEmail })}
+                  />
+                </div>
                 <BillsByEmailRow
                   value={community.association.billsByEmail !== false}
                   save={(billsByEmail) => updateAssociation({ billsByEmail })}
@@ -444,7 +530,7 @@ export function SettingsScreen() {
                     <DraftField
                       value={community.association.insuranceCarrier ?? ""}
                       onCommit={(insuranceCarrier) => updateAssociation({ insuranceCarrier })}
-                      placeholder="Carrier name"
+                      placeholder="Not set"
                       aria-label="Insurance carrier"
                       className={cn(fieldClass, "mt-1.5")}
                     />
@@ -454,7 +540,7 @@ export function SettingsScreen() {
                     <DraftField
                       value={community.association.insurancePolicyNo ?? ""}
                       onCommit={(insurancePolicyNo) => updateAssociation({ insurancePolicyNo })}
-                      placeholder="Policy number"
+                      placeholder="Not set"
                       aria-label="Policy number"
                       className={cn(fieldClass, "mt-1.5")}
                     />
@@ -613,8 +699,7 @@ export function SettingsScreen() {
                       e.preventDefault();
                       const home = candidates.find((h) => h.homeId === appointing.homeId);
                       if (!home) return;
-                      setHomeRole(home.homeId, appointing.role);
-                      notify(`${home.name} is ${ROLE_LABEL[appointing.role]}`, "ok");
+                      void changeRole(home.homeId, home.name, appointing.role);
                       setAppointing(null);
                     }}
                   >
@@ -655,6 +740,9 @@ export function SettingsScreen() {
                     <Button variant="ghost" size="md" onClick={() => setAppointing(null)}>
                       Cancel
                     </Button>
+                    {appointingNote ? (
+                      <p className="w-full text-footnote font-medium text-warn">{appointingNote}</p>
+                    ) : null}
                   </form>
                 ) : null}
                 <div className="divide-y divide-border">
@@ -672,6 +760,19 @@ export function SettingsScreen() {
                             : ""}
                           {row.signedUp ? "" : " · not signed up yet"}
                         </p>
+                        {duplicateHolderNote(
+                          row.role,
+                          ROLE_LABEL[row.role],
+                          officers.filter((o) => o.homeId !== row.homeId),
+                        ) ? (
+                          <p className="mt-0.5 text-footnote text-warn">
+                            {duplicateHolderNote(
+                              row.role,
+                              ROLE_LABEL[row.role],
+                              officers.filter((o) => o.homeId !== row.homeId),
+                            )}
+                          </p>
+                        ) : null}
                         {row.opens.length ? (
                           <div className="mt-1.5 flex flex-wrap items-center gap-1">
                             <span className="text-footnote text-fg-subtle">Opens</span>
@@ -690,7 +791,9 @@ export function SettingsScreen() {
                       {isPresident && row.role !== "president" ? (
                         <Select
                           value={row.role}
-                          onChange={(e) => setHomeRole(row.homeId, e.target.value as AccountRole)}
+                          onChange={(e) =>
+                            void changeRole(row.homeId, row.name, e.target.value as AccountRole)
+                          }
                           aria-label={`${row.name}'s role`}
                         >
                           {(["vice-president", "treasurer", "secretary", "resident"] as const).map(
@@ -950,6 +1053,7 @@ export function SettingsScreen() {
                     onChange={(e) => setNewAmenity(e.target.value)}
                     placeholder="Add an amenity"
                     aria-label="New amenity name"
+                    aria-invalid={amenityProblem ? true : undefined}
                     className={cn(fieldClass, "min-w-0 flex-1")}
                   />
                   <Button
@@ -957,12 +1061,17 @@ export function SettingsScreen() {
                     variant="secondary"
                     size="md"
                     className="shrink-0"
-                    disabled={!newAmenity.trim()}
+                    disabled={!newAmenity.trim() || Boolean(amenityProblem)}
                   >
                     <Plus className="size-3.5" />
                     Add
                   </Button>
                 </form>
+                {amenityProblem ? (
+                  <p role="alert" className="px-5 pb-3 text-footnote text-danger">
+                    {amenityProblem}
+                  </p>
+                ) : null}
               </Card>
 
               {/* Architectural forms */}
@@ -1005,7 +1114,7 @@ export function SettingsScreen() {
                   ))}
                 </div>
                 <form
-                  className="flex items-center gap-2 border-t border-border px-5 py-3"
+                  className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3"
                   onSubmit={(e) => {
                     e.preventDefault();
                     addForm();
@@ -1014,20 +1123,39 @@ export function SettingsScreen() {
                   <input
                     value={newFormLabel}
                     onChange={(e) => setNewFormLabel(e.target.value)}
-                    placeholder="Label residents see, like Paint color request"
+                    placeholder="What residents call it"
                     aria-label="New form label"
-                    className={cn(fieldClass, "min-w-0 flex-1")}
+                    className={cn(fieldClass, "min-w-[12rem] flex-1")}
+                  />
+                  <input
+                    ref={formFileInput}
+                    type="file"
+                    accept={DOCUMENT_ACCEPT}
+                    aria-label="New form file"
+                    onChange={(e) => setNewFormFile(e.target.files?.[0] ?? null)}
+                    className="min-w-0 max-w-full text-footnote text-fg-muted file:mr-3 file:rounded-lg file:border file:border-border-2 file:bg-surface file:px-3 file:py-2 file:text-footnote file:font-medium file:text-fg"
                   />
                   <Button
                     type="submit"
                     variant="secondary"
                     size="md"
                     className="shrink-0"
-                    disabled={!newFormLabel.trim()}
+                    disabled={Boolean(formWhyNot)}
                   >
                     <Upload className="size-3.5" />
                     Upload
                   </Button>
+                  {formWhyNot ? (
+                    <p
+                      role={formFileProblem ? "alert" : undefined}
+                      className={cn(
+                        "w-full text-footnote",
+                        formFileProblem ? "text-danger" : "text-fg-subtle",
+                      )}
+                    >
+                      {formWhyNot}
+                    </p>
+                  ) : null}
                 </form>
               </Card>
             </section>
@@ -1123,7 +1251,7 @@ export function ContactEmailRow({
               );
           });
         }}
-        placeholder="board@yourassociation.org"
+        placeholder="No contact email yet"
         aria-label="Board contact email"
         className={cn(fieldClass, "w-64 max-w-full")}
       />

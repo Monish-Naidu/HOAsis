@@ -195,7 +195,7 @@ function RequestRow({
           value={choice}
           onChange={(e) => setChoice(e.target.value)}
           aria-label={`Home for ${request.name}`}
-          className="w-full min-w-0 sm:w-80"
+          className="w-full min-w-0 sm:w-[30rem] sm:max-w-full"
         >
           <option value="">Choose their home</option>
           {homes.map((o) => (

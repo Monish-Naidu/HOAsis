@@ -7,7 +7,7 @@ import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import { TEMPLATE_TOKENS } from "@/lib/data";
 import type { MessageTemplate } from "@/lib/data/templates";
-import { collectionsLadder, policyFor, type CollectionStage } from "@/lib/collections";
+import { LETTER_NAME, collectionsLadder, policyFor, type CollectionStage } from "@/lib/collections";
 import { dueLetter, renderLetter } from "@/lib/letters";
 import { homeLabel } from "@/lib/wording";
 import { cn, formatDate, pluralize, money, todayIsoDate } from "@/lib/utils";
@@ -37,6 +37,11 @@ const LETTER_TONE: Record<CollectionStage, "neutral" | "warn" | "danger"> = {
   demand: "danger",
   counsel: "danger",
 };
+
+/** The rung's name, so the composer and the list of homes call a letter the same thing. */
+function letterName(stage: CollectionStage, template: MessageTemplate): string {
+  return stage === "current" ? template.name : LETTER_NAME[stage];
+}
 
 export function RemindersComposer({ onClose }: { onClose: () => void }) {
   const { community, templates, saveTemplate, messageOwner } = useAppState();
@@ -167,7 +172,9 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
                       {pluralize(row.home.daysPastDue, "day")} late
                     </span>
                   </span>
-                  <Badge tone={LETTER_TONE[row.stage]}>{row.letter?.name}</Badge>
+                  <Badge tone={LETTER_TONE[row.stage]}>
+                    {row.stage === "current" ? row.letter?.name : LETTER_NAME[row.stage]}
+                  </Badge>
                 </button>
               </li>
             );
@@ -204,7 +211,7 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
           {selected?.letter ? (
             editingSelected && edit ? (
               <LetterEditor
-                template={selected.letter}
+                name={letterName(selected.stage, selected.letter)}
                 subject={edit.subject}
                 body={edit.body}
                 onChange={(next) => setEdit({ ...edit, ...next })}
@@ -218,7 +225,7 @@ export function RemindersComposer({ onClose }: { onClose: () => void }) {
                   onClick={() => startEditing(selected.letter!)}
                   className="text-footnote font-medium text-accent hover:underline"
                 >
-                  Edit the &ldquo;{selected.letter.name}&rdquo; letter
+                  Edit the &ldquo;{letterName(selected.stage, selected.letter)}&rdquo; letter
                 </button>
               </LetterPreview>
             ) : null
@@ -284,14 +291,14 @@ function LetterPreview({
 
 /** The template behind a letter, with its tokens, for every household that gets it. */
 function LetterEditor({
-  template,
+  name,
   subject,
   body,
   onChange,
   onSave,
   onCancel,
 }: {
-  template: MessageTemplate;
+  name: string;
   subject: string;
   body: string;
   onChange: (next: { subject?: string; body?: string }) => void;
@@ -302,8 +309,8 @@ function LetterEditor({
   return (
     <div>
       <p className="text-footnote text-fg-muted">
-        Editing &ldquo;{template.name}&rdquo;. The change applies to every home getting this letter,
-        now and next month.
+        Editing &ldquo;{name}&rdquo;. The change applies to every home getting this letter, now and
+        next month.
       </p>
       <label className="mt-3 block">
         <span className="mb-1 block text-footnote font-semibold text-fg-muted">Subject</span>

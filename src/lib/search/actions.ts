@@ -144,7 +144,7 @@ export function residentShortcuts(
       shortcut(
         "act-my-home",
         `Open ${homeLabel(community, home.unit)}`,
-        "Account · your balance and history",
+        "Statement · your balance and history",
         "/resident/account",
         HomeIcon,
       ),

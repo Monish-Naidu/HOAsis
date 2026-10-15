@@ -25,6 +25,7 @@ import {
 } from "@/lib/app-state";
 import { noticeKey, readStore, useReadNotices } from "@/lib/notifications-read";
 import { ballotPhase } from "@/lib/phases";
+import { transactionsToConfirm, vendorPaymentsToApprove } from "@/lib/requests";
 import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { cn, daysFromToday, money, pastDueLabel, pluralize, relativeDays } from "@/lib/utils";
 
@@ -69,7 +70,7 @@ function useBoardNotices(): Notice[] {
   if (can("finances") && recon.needsReview.length > 0) {
     notices.push({
       id: "review",
-      title: `${pluralize(recon.needsReview.length, "transaction")} to look at`,
+      title: transactionsToConfirm(recon.needsReview.length),
       detail: "The books close once each one is confirmed",
       href: "/board/money",
       icon: CircleDollarSign,
@@ -79,7 +80,7 @@ function useBoardNotices(): Notice[] {
   if (can("vendors") && approvals.length > 0) {
     notices.push({
       id: "approvals",
-      title: `${pluralize(approvals.length, "invoice")} awaiting approval`,
+      title: vendorPaymentsToApprove(approvals.length),
       detail: money(approvals.reduce((t, p) => t + p.amountCents, 0)),
       href: "/board/vendors",
       icon: Receipt,
@@ -284,11 +285,11 @@ function BellPanel({
         }
         aria-expanded={open}
         onClick={(e) => toggle(e.currentTarget)}
-        className="press relative flex size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:size-9"
+        className="press relative flex size-11 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:size-9"
       >
         <Bell className="size-[18px]" strokeWidth={1.9} />
         {unread > 0 ? (
-          <span className="tnum absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+          <span className="tnum absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-status-fg">
             {unread}
           </span>
         ) : null}

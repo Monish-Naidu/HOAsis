@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/primitives";
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { AddReserveComponent } from "@/components/app/add-reserve-component";
+import { amenityNameProblem } from "@/lib/amenity-checks";
+import { roleChangeMessage } from "@/lib/app-state/role-change";
 import { QuestionFlow, useFlowPosition, type FlowQuestion } from "@/components/app/question-flow";
 import { useCoverPhotoUpload } from "@/components/app/community-hero";
 import { useToast } from "@/components/app/toast";
@@ -128,11 +130,20 @@ const QUESTION: Record<string, { title: string; detail: string }> = {
     title: "What does the neighborhood look like?",
     detail: "The picture owners see when they sign in. Any photo of the place does the job.",
   },
+  "contact-email": {
+    title: "Where should owners' replies go?",
+    detail: "An address the board reads. Without one, a reply to any email from here goes nowhere.",
+  },
   billing: {
     title: "Is there a card on file?",
     detail: "Add a card before the free days end so nothing stops.",
   },
 };
+
+/** The line under a question's title: the plan's own sentence, else the task's. */
+function questionDetail(task: PlanTask): string {
+  return task.because ?? QUESTION[task.key]?.detail ?? task.detail;
+}
 
 /**
  * Waits for the signed in person's own association before asking anything.
@@ -219,7 +230,7 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
     id: task.key,
     group: phase?.title ?? "Setting up",
     title: QUESTION[task.key]?.title ?? task.label,
-    detail: task.because ?? QUESTION[task.key]?.detail ?? task.detail,
+    detail: questionDetail(task),
     canContinue: task.complete,
     skipLabel: task.complete ? undefined : "Skip for now",
     body: (
@@ -252,14 +263,18 @@ function SetupQuestions({ welcome }: { welcome: boolean }) {
           </button>
         ) : null}
 
-        <details className="group rounded-lg bg-surface-2 px-4 py-3">
-          <summary className="cursor-pointer select-none text-footnote font-semibold text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden">
-            Why this matters
-          </summary>
-          <p className="mt-2 max-w-[64ch] text-footnote leading-relaxed text-fg-muted">
-            {task.why}
-          </p>
-        </details>
+        {/* A step with no reason of its own repeats its detail as its reason;
+            printing it a second time under "Why this matters" adds nothing. */}
+        {task.why !== questionDetail(task) && task.why !== task.detail ? (
+          <details className="group rounded-lg bg-surface-2 px-4 py-3">
+            <summary className="cursor-pointer select-none text-footnote font-semibold text-fg-muted marker:hidden [&::-webkit-details-marker]:hidden">
+              Why this matters
+            </summary>
+            <p className="mt-2 max-w-[64ch] text-footnote leading-relaxed text-fg-muted">
+              {task.why}
+            </p>
+          </details>
+        ) : null}
       </div>
     ),
   };
@@ -622,11 +637,19 @@ function PhaseRows({ phase }: { phase: PlanPhase }) {
                     <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
                       {task.detail}
                     </span>
+                    {task.because && task.because !== task.detail ? (
+                      <span className="mt-1.5 block text-footnote leading-relaxed text-fg-muted">
+                        {task.because}
+                      </span>
+                    ) : null}
                     {/* Order is the whole argument at a handover, so the reason a
-                      step sits where it does is stated rather than implied. */}
-                    <span className="mt-1.5 block border-l-2 border-border-2 pl-3 text-footnote leading-relaxed text-fg-muted">
-                      {task.why}
-                    </span>
+                      step sits where it does is stated rather than implied.
+                      Left out when it is only the detail again. */}
+                    {task.why !== task.detail ? (
+                      <span className="mt-1.5 block border-l-2 border-border-2 pl-3 text-footnote leading-relaxed text-fg-muted">
+                        {task.why}
+                      </span>
+                    ) : null}
                   </>
                 ) : (
                   <span className="mt-0.5 block text-footnote leading-relaxed text-fg-muted">
@@ -778,7 +801,10 @@ function PaperworkInline({ task }: { task: PlanTask }) {
   const guide = task.href.startsWith("/library");
   return (
     <div className="space-y-3">
-      <p className="text-body leading-relaxed text-fg-muted">{task.detail}</p>
+      {/* The question above already says this when it has no sentence of its own. */}
+      {questionDetail(task) !== task.detail ? (
+        <p className="text-body leading-relaxed text-fg-muted">{task.detail}</p>
+      ) : null}
       {task.href ? (
         guide ? (
           <ButtonLink href={task.href} variant="ghost" size="md">
@@ -803,9 +829,7 @@ function PaymentsInline({ task }: { task: PlanTask }) {
   if (whereIs(community) === "browser-copy") {
     return (
       <div className="space-y-3">
-        <p className="text-body leading-relaxed text-fg-muted">
-          A copy in this browser cannot take payments. Set it up for real to turn them on.
-        </p>
+        {/* The question above already says a copy cannot take payments. */}
         <ButtonLink href="/signin" variant="primary" size="md">
           Set it up for real
           <ArrowRight className="size-3.5" />
@@ -824,7 +848,7 @@ function PaymentsInline({ task }: { task: PlanTask }) {
 
 function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
   const { uploadDocuments } = useAppState();
-  const { notify } = useToast();
+  const { notify, clear } = useToast();
   const [busy, setBusy] = useState(false);
   return (
     <div className="space-y-3">
@@ -847,6 +871,7 @@ function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
               event.target.value = "";
               if (!files.length) return;
               setBusy(true);
+              clear("upload-refused");
               try {
                 const outcome = await uploadDocuments(files, {
                   category: "Governing",
@@ -858,7 +883,7 @@ function DocumentInline({ task, hint }: { task: PlanTask; hint?: string }) {
                   );
                 }
                 for (const refused of outcome.rejected)
-                  notify(`${refused.name}: ${refused.reason}`, "warn");
+                  notify(`${refused.name}: ${refused.reason}`, "warn", undefined, "upload-refused");
               } finally {
                 setBusy(false);
               }
@@ -1074,7 +1099,6 @@ function HouseholdInline({ task }: { task: PlanTask }) {
 function InvitesInline({ task }: { task: PlanTask }) {
   return (
     <div className="space-y-3">
-      <p className="text-body leading-relaxed text-fg-muted">{task.because ?? task.detail}</p>
       <GoThere task={task} />
     </div>
   );
@@ -1110,9 +1134,12 @@ function BoardInline({ task }: { task: PlanTask }) {
             <select
               value={account.role}
               aria-label={`${account.name}'s role`}
-              onChange={(e) => {
-                setAccountRole(account.id, e.target.value as AccountRole);
-                notify(`${account.name} is now ${ROLE_LABEL[e.target.value as AccountRole]}`);
+              onChange={async (e) => {
+                const role = e.target.value as AccountRole;
+                // Said once it is saved, and with what the change did to access.
+                if (await Promise.resolve(setAccountRole(account.id, role))) {
+                  notify(roleChangeMessage(account.name, role));
+                }
               }}
               className={cn(field, "h-9 w-40")}
             >
@@ -1135,9 +1162,13 @@ function AmenityInline({ task }: { task: PlanTask }) {
   const { community, setAmenities } = useAppState();
   const { notify } = useToast();
   const [name, setName] = useState("");
+  const problem = amenityNameProblem(
+    name,
+    community.amenities.map((a) => a.name),
+  );
   function add() {
     const label = name.trim();
-    if (!label) return;
+    if (!label || problem) return;
     setAmenities([
       ...community.amenities,
       {
@@ -1175,10 +1206,20 @@ function AmenityInline({ task }: { task: PlanTask }) {
           onKeyDown={(e) => e.key === "Enter" && add()}
           className={field}
         />
-        <Button variant="primary" size="md" disabled={!name.trim()} onClick={add}>
+        <Button
+          variant="primary"
+          size="md"
+          disabled={!name.trim() || Boolean(problem)}
+          onClick={add}
+        >
           Add
         </Button>
       </div>
+      {problem ? (
+        <p role="alert" className="text-footnote text-danger">
+          {problem}
+        </p>
+      ) : null}
       <GoThere task={task} secondary />
     </div>
   );

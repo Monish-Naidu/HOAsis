@@ -11,6 +11,7 @@ import { sameAssociationName } from "@/lib/community-links";
 import { useToast } from "@/components/app/toast";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { refreshRemote } from "@/lib/data/remote-store";
+import { noteLeaving } from "@/lib/auth";
 
 /**
  * The association name, and the switcher between associations.
@@ -137,6 +138,7 @@ export function CommunityName({ onPhoto }: { onPhoto?: boolean } = {}) {
                         if (setCommunity(option.id) === "switched") {
                           router.push(pathname.startsWith("/resident") ? "/resident" : "/board");
                         } else {
+                          noteLeaving();
                           router.push("/signin");
                         }
                       }}

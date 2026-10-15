@@ -20,7 +20,7 @@ export function BoardOnly({ children }: { children: React.ReactNode }) {
   const resident = ready && account?.role === "resident";
 
   useEffect(() => {
-    if (resident) router.replace("/resident");
+    if (resident) router.replace("/resident?from=board");
   }, [resident, router]);
 
   if (resident) {

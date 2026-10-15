@@ -28,6 +28,32 @@ export { isUuid, newId } from "@/lib/core/ids";
 export { ValidationError } from "@/lib/core/errors";
 export { remoteWrite } from "@/lib/data/remote-store";
 
+/** What a seat that may look but not change is told, the same as the page's callout says. */
+export const READ_ONLY_MESSAGE =
+  "You can look here, not change it. The President can give you access to make changes.";
+
+/**
+ * Whether this seat may change an area, in the demo. The database holds the
+ * same rule for a signed in association with row level security; the demo
+ * has no database, so every demo mutation asks here and the seat that can
+ * only look cannot change the browser's copy either. Says why when it cannot.
+ */
+export function mayChange(can: (c: Capability) => boolean, capability: Capability): boolean {
+  if (can(capability)) return true;
+  reportRemoteError(READ_ONLY_MESSAGE);
+  return false;
+}
+
+/**
+ * A mutation turned away, with the reason a person can act on. The reason
+ * goes out through the same toast a failed write uses, so a screen that only
+ * reads the `false` still says why, in the demo and signed in alike.
+ */
+export function refuse(reason: string): false {
+  reportRemoteError(reason);
+  return false;
+}
+
 /** The signed in person's id, read straight from the remote store snapshot. */
 export function sessionUserId(): string | null {
   return remoteSnapshot().profileId;

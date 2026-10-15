@@ -8,7 +8,7 @@ import { Badge, Card, SectionTitle } from "@/components/ui/primitives";
 import { useAppState, useCurrentHome, useHomeCharges } from "@/lib/app-state";
 import { loadEarlierStatement } from "@/lib/data/remote-store";
 import { formatDate, money, today, todayIsoDate } from "@/lib/utils";
-import { balanceSplit } from "@/lib/statement";
+import { balanceSplit, statementAmountText } from "@/lib/statement";
 import { balanceStanding } from "@/lib/resident-wording";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
@@ -71,7 +71,8 @@ export default function ResidentAccount() {
   ).sort((a, b) => b[0].localeCompare(a[0]));
 
   const row = (line: (typeof homeCharges)[number], i: number) => {
-    const isPayment = line.kind === "payment";
+    // A credit lowers what is owed like a payment does, so it reads like one.
+    const isPayment = line.kind !== "charge";
     const body = (
       <>
         <div className="flex items-start gap-3">
@@ -91,8 +92,7 @@ export default function ResidentAccount() {
           </div>
           <div className="shrink-0 text-right">
             <p className={`tnum text-body font-semibold ${isPayment ? "text-ok" : "text-fg"}`}>
-              {isPayment ? "−" : ""}
-              {money(Math.abs(line.amountCents))}
+              {statementAmountText(line)}
             </p>
             <p className="tnum mt-0.5 text-footnote text-fg-subtle">
               Balance {money(line.balanceAfterCents)}

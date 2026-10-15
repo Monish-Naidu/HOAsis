@@ -86,6 +86,7 @@ export function StripePayPanel({
   associationId,
   unitId,
   amountCents,
+  amountProblem,
   publishableKey,
   instruments,
   selection,
@@ -94,6 +95,8 @@ export function StripePayPanel({
   associationId: string;
   unitId: string;
   amountCents: number;
+  /** Why the amount cannot be paid yet, shown beside the button that is off. */
+  amountProblem?: string | null;
   publishableKey: string;
   instruments: PaymentInstrument[];
   /** A saved instrument's id, or "new-ach" / "new-card". Owned by the pay flow. */
@@ -333,7 +336,9 @@ export function StripePayPanel({
                   <span className="flex items-center gap-2 [&>span:not(:first-child)]:shrink-0">
                     {/* The last four stay whole: they are how a person tells two cards apart. */}
                     <span className="flex min-w-0 text-body font-medium text-fg">
-                      <span className="truncate">{instrument.label}</span>
+                      <span className="truncate" title={instrument.label}>
+                        {instrument.label}
+                      </span>
                       <span className="tnum shrink-0">&nbsp;••{instrument.mask}</span>
                     </span>
                     {instrument.isDefault ? <Badge tone="neutral">Default</Badge> : null}
@@ -391,7 +396,10 @@ export function StripePayPanel({
             className={rowClass(selection === option.value)}
           >
             <option.icon className="size-4 shrink-0 text-fg-muted" />
-            <span className="min-w-0 flex-1 truncate text-body font-medium text-fg">
+            <span
+              title={option.label}
+              className="min-w-0 flex-1 truncate text-body font-medium text-fg"
+            >
               {option.label}
             </span>
             <span className="shrink-0 text-footnote text-fg-muted">{option.hint}</span>
@@ -399,6 +407,11 @@ export function StripePayPanel({
         ))}
       </div>
       {problem ? <p className="mt-3 text-footnote font-medium text-danger">{problem}</p> : null}
+      {amountProblem && !problem ? (
+        <p role="alert" className="mt-3 text-footnote font-medium text-danger">
+          {amountProblem}
+        </p>
+      ) : null}
       <Button
         variant="primary"
         size="lg"

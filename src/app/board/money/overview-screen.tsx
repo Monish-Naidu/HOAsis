@@ -10,6 +10,7 @@ import { ClosedYears } from "./closed-years";
 import { OpeningBalances } from "./opening-balances";
 import { ReverseLedgerLine } from "@/components/app/reverse-ledger-line";
 import { useToast } from "@/components/app/toast";
+import { comparisonNote } from "@/lib/comparison";
 import { useAppState, useReconciliation } from "@/lib/app-state";
 import {
   agingBuckets,
@@ -27,7 +28,6 @@ import {
   type PeriodPreset,
   operatingRunway,
   pastDueHint,
-  percentChange,
   spendingBetween,
   yearEarlierFlows,
 } from "@/lib/metrics";
@@ -242,12 +242,12 @@ export function OverviewScreen() {
                 <p className="px-5 pb-1 text-footnote text-fg-muted">
                   A year earlier ({rangeWords(earlier.from, earlier.to)}):{" "}
                   {money(earlier.inCents, { cents: false })} in
-                  {percentChange(flowIn, earlier.inCents)
-                    ? ` (${percentChange(flowIn, earlier.inCents)} now)`
+                  {comparisonNote(flowIn, earlier.inCents)
+                    ? ` (${comparisonNote(flowIn, earlier.inCents)} now)`
                     : ""}
                   , {money(earlier.outCents, { cents: false })} out
-                  {percentChange(flowOut, earlier.outCents)
-                    ? ` (${percentChange(flowOut, earlier.outCents)} now)`
+                  {comparisonNote(flowOut, earlier.outCents)
+                    ? ` (${comparisonNote(flowOut, earlier.outCents)} now)`
                     : ""}
                   .
                 </p>

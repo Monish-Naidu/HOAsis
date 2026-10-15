@@ -5,6 +5,7 @@ import {
   DUES_ZERO_MESSAGE,
   MAX_DUES_CENTS,
   duesEffectiveProblem,
+  lateFeeCentsProblem,
 } from "@/lib/input-checks";
 import type { Cents, HomeType, ISODate } from "@/lib/types";
 import { todayIsoDate } from "@/lib/utils";
@@ -18,6 +19,7 @@ import {
   logDemoActivity,
   MUTABLE_SLICES,
   newId,
+  refuse,
   remoteWrite,
   resetCommunity,
   sessionStore,
@@ -52,6 +54,12 @@ export function useSettingsActions(deps: AppDeps) {
 
   const updateSettings = useCallback(
     (patch: SettingsPatch) => {
+      // A late fee is whole cents and no more than a home's dues, the same
+      // ceiling the wizard holds, here too so a saved policy cannot carry
+      // one the wizard would have refused.
+      const fee = patch.collectionPolicy?.lateFeeCents;
+      const feeProblem = fee === undefined ? null : lateFeeCentsProblem(fee);
+      if (feeProblem) return refuse(feeProblem);
       if (!remote.community) {
         sliceStore(communityId, "settings").update((current) => ({
           ...current,

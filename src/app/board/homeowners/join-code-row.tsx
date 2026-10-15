@@ -14,8 +14,8 @@ export function JoinCodeRow({ code }: { code: string }) {
 
   function copy(text: string, said: string) {
     void navigator.clipboard?.writeText(text).then(
-      () => notify(said, "ok"),
-      () => notify(text, "info"),
+      () => notify(said, "ok", undefined, "join-code-copy"),
+      () => notify(text, "info", undefined, "join-code-copy"),
     );
   }
 
@@ -32,7 +32,12 @@ export function JoinCodeRow({ code }: { code: string }) {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => copy(`${window.location.origin}/join?code=${code}`, "Join link copied")}
+        onClick={() =>
+          copy(
+            `${window.location.origin}/join?code=${encodeURIComponent(code)}`,
+            "Join link copied",
+          )
+        }
       >
         <Copy className="size-3.5" />
         Copy link

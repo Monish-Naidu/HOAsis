@@ -112,7 +112,7 @@ export function SearchButton({
         onClick={openSearch}
         aria-label="Search"
         className={cn(
-          "press inline-flex size-10 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg lg:size-9",
+          "press inline-flex size-11 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg lg:size-9",
           className,
         )}
       >

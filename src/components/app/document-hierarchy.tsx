@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/primitives";
 import { GOVERNING_DOCS, articlesIn, documentsPresent } from "@/lib/governing";
 import type { GoverningArticle } from "@/lib/types";
 import { pluralize } from "@/lib/utils";
+import { capitalize, countWord } from "@/lib/resident-wording";
 
 /**
  * Which document is which, and which one wins.
@@ -27,7 +28,8 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
       <div className="border-b border-border px-5 py-3.5">
         <p className="flex items-center gap-2 text-body font-semibold text-fg">
           <Landmark className="size-4 text-fg-muted" />
-          Three documents, and which one wins
+          {capitalize(countWord(present.length))} {present.length === 1 ? "document" : "documents"},
+          and which one wins
         </p>
         <p className="mt-1 text-footnote leading-relaxed text-fg-muted">
           When two of them disagree, the one higher up this list governs. Most arguments in an
@@ -43,9 +45,13 @@ export function DocumentHierarchy({ articles }: { articles: GoverningArticle[] }
           <div className="min-w-0 flex-1">
             <p className="text-body font-semibold text-fg">State law</p>
             <p className="mt-0.5 text-footnote leading-relaxed text-fg-muted">
-              Beats all three of the documents below. A covenant the legislature has since
-              overridden stays printed in the declaration and stops being enforceable anyway, which
-              is why a provision existing is not the same as it applying.
+              Beats{" "}
+              {present.length === 1
+                ? "the document"
+                : `all ${countWord(present.length)} of the documents`}{" "}
+              below. A covenant the legislature has since overridden stays printed in the
+              declaration and stops being enforceable anyway, which is why a provision existing is
+              not the same as it applying.
             </p>
           </div>
         </div>

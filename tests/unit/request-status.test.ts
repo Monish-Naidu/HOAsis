@@ -5,6 +5,7 @@ import {
   openRequestCount,
   repliedOn,
   requestGroup,
+  requestScheduleLabel,
   requestStatusLabel,
   scheduledFor,
   statusAfterReply,
@@ -22,11 +23,11 @@ const req = (kind: string, status: RequestStatus, extra: object = {}) => ({
 
 describe("a request that needs a decision", () => {
   it("goes Sent, Under review, then Approved or Denied", () => {
-    expect(requestStatusLabel(req("architectural", "submitted"))).toBe("Sent");
-    expect(requestStatusLabel(req("architectural", "in-review"))).toBe("Under review");
-    expect(requestStatusLabel(req("architectural", "approved"))).toBe("Approved");
-    expect(requestStatusLabel(req("architectural", "denied"))).toBe("Denied");
-    expect(requestStatusLabel(req("architectural", "closed"))).toBe("Closed");
+    expect(requestStatusLabel("submitted")).toBe("Sent");
+    expect(requestStatusLabel("in-review")).toBe("Under review");
+    expect(requestStatusLabel("approved")).toBe("Approved");
+    expect(requestStatusLabel("denied")).toBe("Declined");
+    expect(requestStatusLabel("closed")).toBe("Closed");
   });
 
   it("waits on a decision until it is decided", () => {
@@ -46,7 +47,6 @@ describe("a maintenance request", () => {
   it("needs scheduling, is Scheduled, then is done", () => {
     expect(requestGroup(req("maintenance", "submitted"))).toBe("scheduling");
     expect(requestGroup(req("maintenance", "in-review"))).toBe("progress");
-    expect(requestStatusLabel(req("maintenance", "in-review"))).toBe("Scheduled");
     expect(requestGroup(req("maintenance", "closed"))).toBe("done");
   });
 
@@ -126,25 +126,33 @@ describe("a vendor's name", () => {
   });
 });
 
-describe("the pill and the group come from one place", () => {
+describe("one name per status", () => {
   const maint = (status: RequestStatus, extra: object = {}) => req("maintenance", status, extra);
 
-  it("never says Needs info on a request waiting for a decision", () => {
-    expect(requestGroup(req("architectural", "info-needed"))).toBe("decision");
-    expect(requestStatusLabel(req("architectural", "info-needed"))).toBe("Under review");
+  it("has exactly one label for each status, whatever the kind of request", () => {
+    const all: [RequestStatus, string][] = [
+      ["draft", "Draft"],
+      ["submitted", "Sent"],
+      ["in-review", "Under review"],
+      ["info-needed", "Needs info"],
+      ["approved", "Approved"],
+      ["denied", "Declined"],
+      ["closed", "Closed"],
+    ];
+    for (const [status, label] of all) expect(requestStatusLabel(status)).toBe(label);
   });
 
-  it("never says Sent on a request that needs scheduling", () => {
+  it("never calls a new request Not scheduled, which an owner reads as a refusal", () => {
     expect(requestGroup(maint("submitted"))).toBe("scheduling");
-    expect(requestStatusLabel(maint("submitted"))).toBe("Not scheduled");
-    expect(requestStatusLabel(maint("info-needed"))).toBe("Not scheduled");
+    expect(requestStatusLabel(maint("submitted").status)).toBe("Sent");
+    expect(requestScheduleLabel(maint("submitted"))).toBeNull();
   });
 
-  it("reads Scheduled with the date from the work order or from the note", () => {
-    expect(requestStatusLabel(maint("in-review"))).toBe("Scheduled");
+  it("puts the date on its own line, from the work order or from the note", () => {
+    expect(requestScheduleLabel(maint("in-review"))).toBeNull();
     expect(
-      requestStatusLabel(maint("in-review", { workOrder: { scheduledOn: "2026-10-03" } })),
-    ).toBe("Scheduled Oct 3");
+      requestScheduleLabel(maint("in-review", { workOrder: { scheduledOn: "2026-10-03" } })),
+    ).toBe("Scheduled for Oct 3");
     const thread = [
       {
         at: "2026-10-01",
@@ -154,12 +162,12 @@ describe("the pill and the group come from one place", () => {
       },
     ];
     expect(scheduledFor({ thread })).toBe("2026-10-09");
-    expect(requestStatusLabel(maint("in-review", { thread }))).toBe("Scheduled Oct 9");
+    expect(requestScheduleLabel(maint("in-review", { thread }))).toBe("Scheduled for Oct 9");
   });
 
-  it("reads Fixed for a finished repair and Closed for anything else", () => {
-    expect(requestStatusLabel(maint("closed"))).toBe("Fixed");
-    expect(requestStatusLabel(req("records", "closed"))).toBe("Closed");
-    expect(requestStatusLabel(maint("approved"))).toBe("Approved");
+  it("says nothing about a schedule once the work is done or for a decision request", () => {
+    const workOrder = { scheduledOn: "2026-10-03", completedOn: "2026-10-04" };
+    expect(requestScheduleLabel(maint("closed", { workOrder }))).toBeNull();
+    expect(requestScheduleLabel(req("architectural", "in-review", { workOrder }))).toBeNull();
   });
 });

@@ -120,7 +120,7 @@ try {
   const { data: earlyApply } = await admin.rpc("apply_dues_change", {
     p_association_id: associationId,
   });
-  const stillWaiting = await admin
+  const { data: stillWaiting } = await admin
     .from("associations")
     .select("dues_cents, dues_change_cents")
     .eq("id", associationId)
@@ -140,7 +140,7 @@ try {
     p_dues_by_type: null,
     p_effective_on: day(0),
   });
-  const replaced = await admin
+  const { data: replaced } = await admin
     .from("associations")
     .select("dues_change_cents, dues_change_on")
     .eq("id", associationId)
@@ -155,7 +155,7 @@ try {
   const { data: applied } = await admin.rpc("apply_dues_change", {
     p_association_id: associationId,
   });
-  const moved = await admin
+  const { data: moved } = await admin
     .from("associations")
     .select("dues_cents, dues_change_cents, dues_change_by_type, dues_change_on")
     .eq("id", associationId)
@@ -168,7 +168,7 @@ try {
   const { data: appliedAgain } = await admin.rpc("apply_dues_change", {
     p_association_id: associationId,
   });
-  const stillMoved = await admin
+  const { data: stillMoved } = await admin
     .from("associations")
     .select("dues_cents")
     .eq("id", associationId)
@@ -199,8 +199,11 @@ try {
     JSON.stringify(summaries),
   );
 
-  // A home with its own amount keeps it across the change.
+  // A home with its own amount keeps it across the change, and a home with a
+  // kind bills that kind's rate. A home with no kind bills the standard rate,
+  // so the second home is given one here.
   await president.client.rpc("set_home_dues", { p_unit_id: unitA, p_dues_cents: 7000 });
+  await admin.from("units").update({ home_type: "single-family" }).eq("id", unitB);
   const { error: kindSchedule } = await president.client.rpc("schedule_dues_change", {
     p_association_id: associationId,
     p_dues_cents: 13000,
@@ -236,7 +239,7 @@ try {
     p_dues_by_type: null,
     p_effective_on: null,
   });
-  const cancelled = await admin
+  const { data: cancelled } = await admin
     .from("associations")
     .select("dues_cents, dues_change_cents, dues_change_on")
     .eq("id", associationId)

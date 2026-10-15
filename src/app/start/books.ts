@@ -1,4 +1,5 @@
 import type { CommunityDraft, DraftHousehold } from "@/lib/data/new-community";
+import { nextDueOnOrAfter } from "@/lib/utils";
 
 /**
  * Where the books start, asked in the wizard and carried on the draft.
@@ -106,4 +107,17 @@ export function householdsNeedingBooks(
 export function wallToday(now: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
+ * The date the first bill is shown as: the one the board picked, or the next
+ * due date when it was left as offered. Continue reads it as well as the
+ * field, so what is checked is what the field shows.
+ */
+export function firstBillDate(draft: CommunityDraft, today: string): string {
+  const books = booksOf(draft, today);
+  return (
+    books.billingStartsOn ??
+    nextDueOnOrAfter(today, draft.dueDay, draft.duesCadence, books.fiscalYearStart)
+  );
 }

@@ -10,6 +10,22 @@ import { hasSupabase } from "@/lib/supabase/env";
 import { HummingbirdLoader } from "@/components/app/hummingbird";
 
 /**
+ * Whether an association answers to this address. A lookup that fails or is
+ * turned away counts as yes: a hiccup must not tell somebody their real
+ * association does not exist.
+ */
+async function slugExists(slug: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/join/lookup?community=${encodeURIComponent(slug)}`);
+    if (!response.ok) return true;
+    const body = (await response.json()) as { found?: unknown };
+    return body.found !== null;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Turns a community link into an active association, then leaves.
  *
  * Runs in an effect because it navigates. Waits for auth and the
@@ -23,29 +39,45 @@ export function CommunityEntry({ slug, path }: { slug: string; path: string }) {
   const { communities, setCommunity } = useAppState();
 
   useEffect(() => {
+    const missing = `/signin?missing=${encodeURIComponent(slug)}`;
     if (!isSlug(slug)) {
-      router.replace("/signin");
+      router.replace(missing);
       return;
     }
 
     // The demo: ids are slugs already, and picking one is picking a seat.
     if (!hasSupabase) {
-      if (communities.some((c) => c.id === slug)) setCommunity(slug);
+      if (!communities.some((c) => c.id === slug)) {
+        router.replace(missing);
+        return;
+      }
+      setCommunity(slug);
       router.replace("/signin");
       return;
     }
 
     if (auth.loading || remote.status === "loading") return;
 
+    let cancelled = false;
     if (!auth.user) {
-      // Remember the ask across the sign-in, and keep the link whole.
-      preferRemoteSlug(slug);
-      const next = communityPath(slug, path);
-      router.replace(`/signin?next=${encodeURIComponent(next)}`);
-      return;
+      void (async () => {
+        // An address nobody holds says so now, instead of after a sign in
+        // that ends on a join page for nothing.
+        if (!(await slugExists(slug))) {
+          if (!cancelled) router.replace(missing);
+          return;
+        }
+        if (cancelled) return;
+        // Remember the ask across the sign-in, and keep the link whole.
+        preferRemoteSlug(slug);
+        const next = communityPath(slug, path);
+        router.replace(`/signin?next=${encodeURIComponent(next)}`);
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
 
-    let cancelled = false;
     void (async () => {
       const outcome = await setRemoteAssociationBySlug(slug);
       if (cancelled) return;

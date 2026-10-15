@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { syncAccountStatus } from "@/lib/stripe/account-status";
 import { recordAppError } from "@/lib/app-errors";
+import { sendAutopayNotice } from "@/lib/email/autopay";
 import { sendDisputeNotice } from "@/lib/email/dispute";
 import { sendPaymentsPausedNotice } from "@/lib/email/payments-paused";
 import { communityPath } from "@/lib/community-links";
@@ -99,6 +100,58 @@ function railFromCharge(charge: Stripe.Charge | null, fallback: "ach" | "card") 
   if (wallet === "apple_pay") return "apple-pay" as const;
   if (wallet === "google_pay") return "google-pay" as const;
   return "card" as const;
+}
+
+/**
+ * The failed notice the autopay job sends, for a payment the bank returned
+ * after the job had moved on. Every current seat on the home with an email
+ * hears it, because the job itself writes to whoever it charged and the
+ * webhook cannot tell which of two owners that was. A send that fails is
+ * logged and not retried: the month already reads failed, which is what
+ * the board acts on.
+ */
+async function tellOwnerAutopayFailed(
+  admin: ReturnType<typeof supabaseAdmin>,
+  run: { association_id: string; amount_cents: number; rail: string | null },
+  unitId: string,
+  problem: string,
+  origin: string,
+) {
+  const [{ data: association }, { data: seats }] = await Promise.all([
+    admin.from("associations").select("name, slug").eq("id", run.association_id).maybeSingle(),
+    admin
+      .from("memberships")
+      .select("full_name, profile_id, profiles(email)")
+      .eq("unit_id", unitId)
+      .is("ends_on", null),
+  ]);
+  if (!association) return;
+  for (const seat of seats ?? []) {
+    const profile = seat.profiles as { email: string | null } | { email: string | null }[] | null;
+    const email = Array.isArray(profile) ? profile[0]?.email : profile?.email;
+    if (!email) continue;
+    const result = await sendAutopayNotice({
+      associationId: run.association_id,
+      unitId,
+      profileId: seat.profile_id,
+      to: email,
+      kind: "failed",
+      message: {
+        associationName: association.name,
+        ownerName: seat.full_name,
+        amountCents: run.amount_cents,
+        method: run.rail === "ach" ? "The saved bank account" : "The saved card",
+        problem,
+        payUrl: `${origin}${communityPath(association.slug, "/resident/pay")}`,
+      },
+    });
+    if (!result.ok) {
+      logger("stripe/webhook").warn("autopay failed notice not sent", {
+        err: result.error,
+        unitId,
+      });
+    }
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -283,7 +336,8 @@ export async function POST(request: NextRequest) {
     case "payment_intent.payment_failed":
     case "payment_intent.canceled": {
       const intent = event.data.object;
-      const { error } = await supabaseAdmin()
+      const admin = supabaseAdmin();
+      const { error } = await admin
         .from("payments")
         .update({ state: "failed" })
         .eq("stripe_payment_intent_id", intent.id)
@@ -296,6 +350,38 @@ export async function POST(request: NextRequest) {
           intentId: intent.id,
         });
         return retryLater(error.message);
+      }
+
+      // A bank payment is accepted by Stripe days before the bank answers,
+      // and the autopay job had already written the month down as charged
+      // and sent the receipt. When the bank returns it, the month has to
+      // read failed, so the board's card shows it and a new method retries
+      // it, and the owner has to hear why. Only the autopay intents carry
+      // the month; a hand payment that fails is the owner's own screen.
+      const month = intent.metadata?.autopay_month;
+      const unitId = intent.metadata?.unit_id;
+      if (month && unitId) {
+        const problem = intent.last_payment_error?.message ?? "the bank returned it";
+        const { data: run, error: runError } = await admin
+          .from("autopay_runs")
+          .update({ state: "failed", reason: problem })
+          .eq("unit_id", unitId)
+          .eq("month", month)
+          .eq("state", "charged")
+          .select("association_id, amount_cents, rail")
+          .maybeSingle();
+        if (runError) {
+          log.error("could not fail the autopay month", {
+            err: runError.message,
+            intentId: intent.id,
+            unitId,
+            month,
+          });
+          return retryLater(runError.message);
+        }
+        if (run) {
+          await tellOwnerAutopayFailed(admin, run, unitId, problem, new URL(request.url).origin);
+        }
       }
       break;
     }

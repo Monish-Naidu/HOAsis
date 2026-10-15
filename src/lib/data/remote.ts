@@ -31,6 +31,7 @@ import { fileTypeOf, fromDbVisibility, SIGNED_URL_SECONDS } from "@/lib/document
 import { duesFor, HOME_TYPE_LABEL } from "@/lib/home-types";
 import { withReversals } from "@/lib/ledger-corrections";
 import { compareStatement } from "@/lib/statement";
+import { fiscalYearFlows } from "@/lib/metrics";
 import { savedByCurrentMember } from "@/lib/stripe/saved-method-owner";
 import { addDays, clockTime, daysBetween, localIsoDate, nextDueOnOrAfter } from "@/lib/utils";
 import { isPostedDuesBill } from "@/lib/email/bill-run";
@@ -197,6 +198,46 @@ interface FundsSummary {
     amount_cents: number;
     bank_account_id: string | null;
   }[];
+  /**
+   * Dues collected, month by month. `recent` leaves Assessments out on
+   * purpose, since a payment's line names the household that paid, so this is
+   * the owner's only sight of dues coming in. Absent until the database
+   * function sends it.
+   */
+  assessments_by_month?: { month: string; in_cents: number; out_cents: number }[];
+}
+
+/**
+ * The ledger an owner may see: recent spending line by line, and dues
+ * collected as one line a month with no household named. Without the monthly
+ * sums an owner's "Money in" read $0 the month after dues were paid.
+ */
+export function fundsLedger(funds: FundsSummary): LedgerEntry[] {
+  const lines: LedgerEntry[] = funds.recent.map((e) => ({
+    id: e.id,
+    date: e.occurred_on,
+    description: e.description,
+    counterparty: e.counterparty,
+    category: e.category as LedgerEntry["category"],
+    accountId: e.bank_account_id ?? "unassigned",
+    amountCents: e.amount_cents,
+    status: "cleared" as const,
+  }));
+  for (const m of funds.assessments_by_month ?? []) {
+    const net = Number(m.in_cents) - Number(m.out_cents);
+    if (net === 0) continue;
+    lines.push({
+      id: `funds-dues-${m.month.slice(0, 7)}`,
+      date: `${m.month.slice(0, 7)}-01`,
+      description: net > 0 ? "Dues collected" : "Payment reversed, net of dues collected",
+      counterparty: "Homeowners",
+      category: "Assessments",
+      accountId: "unassigned",
+      amountCents: net,
+      status: "cleared" as const,
+    });
+  }
+  return lines.sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : 0));
 }
 
 function fundsActual(funds: FundsSummary, category: string, kind: "income" | "expense"): number {
@@ -298,18 +339,26 @@ function latestDuesBill(rows: ChargeRow[]): { postedOn: string; dueOn: string } 
  * five years in, oldest first put the owner's last payment a hundred and
  * twenty lines down the page.
  */
-export function statementLines(rows: ChargeRow[], carriedCents = 0): ChargeLine[] {
+export function statementLines(
+  rows: ChargeRow[],
+  carriedCents = 0,
+  paid: PaymentDetails = NO_PAYMENT_DETAILS,
+): ChargeLine[] {
   let running = carriedCents;
   const lines: ChargeLine[] = [];
-  // By date, and on one date the charge before the payment that settles it,
-  // so the running balance never dips before the bill it pays. Two lines of
-  // one kind keep the order they were written in.
+  const details = paymentLineDetails(rows, paid);
+  // By date, and within a date by when the line was written, newest last, so
+  // the running balance reads in the order things happened and the newest
+  // line is never cut from the end of a recent list.
   for (const c of [...rows].sort(
     (x, y) =>
-      compareStatement({ date: x.due_on, kind: x.kind }, { date: y.due_on, kind: y.kind }) ||
-      x.created_at.localeCompare(y.created_at),
+      compareStatement(
+        { date: x.due_on, kind: x.kind, createdAt: x.created_at },
+        { date: y.due_on, kind: y.kind, createdAt: y.created_at },
+      ) || x.id.localeCompare(y.id),
   )) {
     running += c.amount_cents;
+    const detail = details.get(c.id);
     lines.push({
       id: c.id,
       date: c.due_on,
@@ -317,10 +366,91 @@ export function statementLines(rows: ChargeRow[], carriedCents = 0): ChargeLine[
       kind: c.kind,
       amountCents: c.amount_cents,
       balanceAfterCents: running,
+      createdAt: c.created_at,
       ...(c.category ? { category: c.category } : {}),
+      ...(detail?.method ? { method: detail.method } : {}),
+      ...(detail?.appliedTo.length ? { appliedTo: detail.appliedTo } : {}),
     });
   }
   return lines.reverse();
+}
+
+/** The payments row behind a statement's payment line, and what it was applied to. */
+export interface PaymentDetails {
+  payments: {
+    id: string;
+    unit_id: string;
+    amount_cents: number;
+    rail: string;
+    created_at: string;
+  }[];
+  allocations: {
+    payment_id: string;
+    charge_id: string;
+    amount_cents: number;
+    /** The bill paid, read with the allocation so a bill outside the window still has its name. */
+    charges?: { label: string } | null;
+  }[];
+}
+
+const NO_PAYMENT_DETAILS: PaymentDetails = { payments: [], allocations: [] };
+
+/** How a payment's rail reads in the Method column. The card or account number is not stored with the payment. */
+const RAIL_METHOD: Record<string, string> = {
+  ach: "Bank",
+  card: "Card",
+  "apple-pay": "Apple Pay",
+  "google-pay": "Google Pay",
+  check: "Check",
+  cash: "Cash",
+};
+
+/**
+ * For each payment line, its method and the bills it paid.
+ *
+ * The statement line and the payments row are written in one transaction, so
+ * they carry the same unit, amount and creation time; that is how they are
+ * matched, each payments row at most once. A line with no match (a payment
+ * from before the rows were kept, a credit) simply has no details.
+ */
+export function paymentLineDetails(
+  rows: ChargeRow[],
+  paid: PaymentDetails,
+): Map<string, { method?: string; appliedTo: NonNullable<ChargeLine["appliedTo"]> }> {
+  const out = new Map<
+    string,
+    { method?: string; appliedTo: NonNullable<ChargeLine["appliedTo"]> }
+  >();
+  if (paid.payments.length === 0) return out;
+  const labels = new Map(rows.map((r) => [r.id, r.label]));
+  const byPayment = new Map<string, PaymentDetails["allocations"]>();
+  for (const a of paid.allocations) {
+    const list = byPayment.get(a.payment_id);
+    if (list) list.push(a);
+    else byPayment.set(a.payment_id, [a]);
+  }
+  const units = new Set(rows.map((r) => r.unit_id));
+  const free = paid.payments.filter((p) => units.has(p.unit_id));
+  for (const row of rows) {
+    if (row.kind !== "payment") continue;
+    const at = free.findIndex(
+      (p) =>
+        p.unit_id === row.unit_id &&
+        p.amount_cents === -row.amount_cents &&
+        p.created_at === row.created_at,
+    );
+    if (at < 0) continue;
+    const [payment] = free.splice(at, 1);
+    out.set(row.id, {
+      method: RAIL_METHOD[payment.rail],
+      appliedTo: (byPayment.get(payment.id) ?? []).map((a) => ({
+        chargeId: a.charge_id,
+        label: a.charges?.label ?? labels.get(a.charge_id) ?? "A bill",
+        amountCents: a.amount_cents,
+      })),
+    });
+  }
+  return out;
 }
 
 type LedgerRow = {
@@ -369,6 +499,60 @@ export async function loadLedgerBefore(
   return withReversals((data ?? []).map(ledgerLine));
 }
 
+/**
+ * The payments behind a set of statement lines and the bills each one paid.
+ *
+ * Read beside the statement and never instead of it: a statement that cannot
+ * learn its payments' methods or allocations still shows every line, just
+ * without "Paid toward". Row level security decides who sees which rows.
+ */
+async function loadPaymentDetails(
+  supabase: SupabaseClient,
+  scope: { associationId: string; from: string } | { unitId: string },
+): Promise<PaymentDetails> {
+  try {
+    const [payments, allocations] = await Promise.all([
+      everyRow<PaymentDetails["payments"][number]>((from, to) => {
+        const query = supabase
+          .from("payments")
+          .select("id, unit_id, amount_cents, rail, created_at")
+          .in("state", ["settled", "refunded"]);
+        return ("unitId" in scope
+          ? query.eq("unit_id", scope.unitId)
+          : query.eq("association_id", scope.associationId).gte("created_at", scope.from)
+        )
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to) as unknown as PromiseLike<{
+          data: PaymentDetails["payments"] | null;
+          error: { message: string } | null;
+        }>;
+      }),
+      everyRow<PaymentDetails["allocations"][number]>((from, to) => {
+        const query = supabase
+          .from("payment_allocations")
+          .select("payment_id, charge_id, amount_cents, charges!inner(label)");
+        return ("unitId" in scope
+          ? query.eq("charges.unit_id", scope.unitId)
+          : query
+              .eq("charges.association_id", scope.associationId)
+              .gte("charges.due_on", scope.from)
+        )
+          .order("payment_id")
+          .order("charge_id")
+          .range(from, to) as unknown as PromiseLike<{
+          data: PaymentDetails["allocations"] | null;
+          error: { message: string } | null;
+        }>;
+      }),
+    ]);
+    if (payments.error || allocations.error) return NO_PAYMENT_DETAILS;
+    return { payments: payments.data ?? [], allocations: allocations.data ?? [] };
+  } catch {
+    return NO_PAYMENT_DETAILS;
+  }
+}
+
 /** One home's whole statement, every line, for a screen that asked to see earlier. */
 export async function loadWholeStatement(
   supabase: SupabaseClient,
@@ -384,7 +568,8 @@ export async function loadWholeStatement(
       .range(from, to),
   );
   if (error) throw new Error(`Could not load the earlier statement: ${error.message}`);
-  return statementLines(data ?? []);
+  const paid = await loadPaymentDetails(supabase, { unitId });
+  return statementLines(data ?? [], 0, paid);
 }
 
 export async function loadCommunity(
@@ -444,6 +629,7 @@ export async function loadCommunity(
     activityRows,
     fiscalYearRows,
     enteredRows,
+    paymentDetails,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     // A retired home (0099) keeps its records but is off the register.
@@ -635,6 +821,8 @@ export async function loadCommunity(
     // Votes the board typed in (0118): which home, how, and by whom, never
     // the choice. Empty for anybody without the voting capability.
     supabase.from("ballot_entered_votes").select("*").eq("association_id", associationId),
+    // Which payment each statement line was, and the bills it paid.
+    loadPaymentDetails(supabase, { associationId, from: windowFrom }),
   ]);
 
   const urlByPath = documents.urlByPath;
@@ -833,6 +1021,7 @@ export async function loadCommunity(
     homeCharges[unit.id] = statementLines(
       rowsByUnit.get(unit.id) ?? [],
       Number(unitSummary.get(unit.id)?.carried_cents ?? 0),
+      paymentDetails,
     );
   }
 
@@ -871,8 +1060,15 @@ export async function loadCommunity(
   const fiscalYears: Community["fiscalYears"] = (fiscalYearRows.data ?? []).map((y) => ({
     startsOn: y.starts_on,
     endsOn: y.ends_on,
-    inCents: Number(y.in_cents),
-    outCents: Number(y.out_cents),
+    ...fiscalYearFlows(
+      ((y.categories ?? []) as { category: string; in_cents: number; out_cents: number }[]).map(
+        (x) => ({
+          category: x.category,
+          inCents: Number(x.in_cents),
+          outCents: Number(x.out_cents),
+        }),
+      ),
+    ),
     billedCents: Number(y.billed_cents),
     collectedCents: Number(y.collected_cents),
     accounts: (
@@ -1060,18 +1256,7 @@ export async function loadCommunity(
           insuredLimitCents: 250_000_00,
         })),
 
-    ledger: funds
-      ? funds.recent.map((e) => ({
-          id: e.id,
-          date: e.occurred_on,
-          description: e.description,
-          counterparty: e.counterparty,
-          category: e.category as Community["ledger"][number]["category"],
-          accountId: e.bank_account_id ?? "unassigned",
-          amountCents: e.amount_cents,
-          status: "cleared" as const,
-        }))
-      : withReversals((ledger.data ?? []).map(ledgerLine)),
+    ledger: funds ? fundsLedger(funds) : withReversals((ledger.data ?? []).map(ledgerLine)),
 
     budget: (budgetRows.data ?? []).length
       ? (budgetRows.data ?? []).map((line) => ({
@@ -1439,6 +1624,8 @@ export async function loadCommunity(
         certifiedBy: b.certified_by ?? undefined,
         certifiedDate: b.certified_on ?? undefined,
         liveResultsVisible: b.live_results_visible ?? false,
+        // Read if the table keeps it; a database without the column answers none.
+        closedDate: (b as { closed_on?: string | null }).closed_on ?? undefined,
       };
     }),
 

@@ -58,6 +58,14 @@ const sendDisputeNotice = vi.fn<(input: object) => Promise<{ sent: number; faile
 );
 vi.mock("@/lib/email/dispute", () => ({ sendDisputeNotice }));
 
+// The owner's "autopay failed" email, for a bank payment returned after the
+// job had moved on. Mocked: what is tested is that the month is failed and
+// the owner is asked for a new method, not the mail itself.
+const sendAutopayNotice = vi.fn<
+  (input: { kind: string; to: string; message: object }) => Promise<{ ok: boolean }>
+>(async () => ({ ok: true }));
+vi.mock("@/lib/email/autopay", () => ({ sendAutopayNotice }));
+
 const syncAccountStatus = vi.fn(async () => undefined);
 vi.mock("@/lib/stripe/account-status", () => ({ syncAccountStatus }));
 
@@ -340,6 +348,58 @@ describe("the webhook route", () => {
     expect(failed.argsOf("update")).toEqual([{ state: "failed" }]);
     expect(failed.chain).toContainEqual(["eq", "stripe_payment_intent_id", "pi_1"]);
     expect(failed.chain).toContainEqual(["eq", "state", "pending"]);
+  });
+
+  it("fails the autopay month and tells the owner when the bank returns the payment", async () => {
+    fake.once("autopay_runs.update", {
+      data: { association_id: "assoc-1", amount_cents: 28500, rail: "ach" },
+      error: null,
+    });
+    fake.once("associations.select", { data: { name: "Mehr Meadows", slug: "mehr-meadows" } });
+    fake.once("memberships.select", {
+      data: [{ full_name: "Nina Okafor", profile_id: "prof-1", profiles: { email: "n@x.test" } }],
+    });
+    const response = await POST(
+      signedRequest(
+        intentEvent("payment_intent.payment_failed", {
+          metadata: { ...METADATA, autopay_month: "2026-10", unit_id: "unit-1" },
+          last_payment_error: { message: "Insufficient funds." },
+        }),
+      ) as never,
+    );
+    expect(response.status).toBe(200);
+    const run = withMethod("update").find((call) => call.target === "autopay_runs");
+    expect(run?.argsOf("update")).toEqual([{ state: "failed", reason: "Insufficient funds." }]);
+    expect(run?.chain).toContainEqual(["eq", "unit_id", "unit-1"]);
+    expect(run?.chain).toContainEqual(["eq", "month", "2026-10"]);
+    expect(run?.chain).toContainEqual(["eq", "state", "charged"]);
+    expect(sendAutopayNotice).toHaveBeenCalledTimes(1);
+    expect(sendAutopayNotice.mock.calls[0][0]).toMatchObject({
+      kind: "failed",
+      to: "n@x.test",
+      message: { amountCents: 28500, problem: "Insufficient funds.", ownerName: "Nina Okafor" },
+    });
+  });
+
+  it("leaves the autopay months alone when a hand payment fails", async () => {
+    const response = await POST(
+      signedRequest(intentEvent("payment_intent.payment_failed", {})) as never,
+    );
+    expect(response.status).toBe(200);
+    expect(withMethod("update").some((call) => call.target === "autopay_runs")).toBe(false);
+    expect(sendAutopayNotice).not.toHaveBeenCalled();
+  });
+
+  it("asks Stripe again when the autopay month could not be failed", async () => {
+    fake.once("autopay_runs.update", { error: { message: "fetch failed" } });
+    const response = await POST(
+      signedRequest(
+        intentEvent("payment_intent.payment_failed", {
+          metadata: { ...METADATA, autopay_month: "2026-10", unit_id: "unit-1" },
+        }),
+      ) as never,
+    );
+    expect(response.status).toBe(500);
   });
 
   it("answers 500 when the pending row could not be failed, so it does not stand forever", async () => {

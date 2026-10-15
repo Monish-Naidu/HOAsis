@@ -2,7 +2,15 @@ import { useCallback } from "react";
 import type { Community } from "@/lib/data/community";
 import { todayIsoDate } from "@/lib/utils";
 import { refreshRemote } from "@/lib/data/remote-store";
-import { type AppDeps, destructive, NOT_CHANGED, remoteWrite, sliceStore } from "./core";
+import {
+  type AppDeps,
+  destructive,
+  mayChange,
+  NOT_CHANGED,
+  READ_ONLY_MESSAGE,
+  remoteWrite,
+  sliceStore,
+} from "./core";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import {
   documentTitle,
@@ -21,7 +29,7 @@ import type { UploadOutcome } from "./types";
  * and the text imported from a governing document.
  */
 export function useDocumentsActions(deps: AppDeps) {
-  const { remote, communityId } = deps;
+  const { remote, communityId, can } = deps;
 
   const uploadDocuments = useCallback(
     async (
@@ -33,6 +41,12 @@ export function useDocumentsActions(deps: AppDeps) {
       },
     ): Promise<UploadOutcome> => {
       const outcome: UploadOutcome = { uploaded: [], rejected: [], filed: [] };
+      // The demo has no database to refuse a seat that may only look, so the
+      // refusal is said here, file by file, the way the screen reads it.
+      if (!remote.community && !can("documents")) {
+        outcome.rejected = files.map((file) => ({ name: file.name, reason: READ_ONLY_MESSAGE }));
+        return outcome;
+      }
       const category = options?.category ?? "Notices";
       const visibility = options?.visibility ?? "board";
       const accepted: File[] = [];
@@ -90,7 +104,7 @@ export function useDocumentsActions(deps: AppDeps) {
       if (outcome.uploaded.length) await refreshRemote();
       return outcome;
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   /**
@@ -103,6 +117,7 @@ export function useDocumentsActions(deps: AppDeps) {
    */
   const addGoverningArticles = useCallback(
     (articles: Community["governingDocs"]) => {
+      if (!remote.community && !mayChange(can, "documents")) return;
       if (remote.community) {
         const rc = remote.community;
         const offset = rc.governingDocs.length;
@@ -139,11 +154,13 @@ export function useDocumentsActions(deps: AppDeps) {
         return [...all, ...fresh];
       });
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const setDocumentVisibility = useCallback(
     async (documentId: string, visibility: Community["documents"][number]["visibility"]) => {
+      // Thrown, as a refused signed in write is, so the screen says it did not change.
+      if (!remote.community && !can("documents")) throw new Error(READ_ONLY_MESSAGE);
       if (!remote.community) {
         sliceStore(communityId, "documents").update((all) =>
           all.map((doc) => (doc.id === documentId ? { ...doc, visibility } : doc)),
@@ -160,11 +177,12 @@ export function useDocumentsActions(deps: AppDeps) {
       if (count === 0) throw new Error(NOT_CHANGED);
       await refreshRemote();
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const removeDocument = useCallback(
     async (documentId: string) => {
+      if (!remote.community && !can("documents")) throw new Error(READ_ONLY_MESSAGE);
       if (!remote.community) {
         return destructive(sliceStore(communityId, "documents"), (all) =>
           all.filter((d) => d.id !== documentId),
@@ -188,7 +206,7 @@ export function useDocumentsActions(deps: AppDeps) {
       await refreshRemote();
       return undefined;
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   return {

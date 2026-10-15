@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, MessagesSquare, Plus, Send } from "lucide-react";
 import {
   addressLabel,
@@ -50,15 +50,31 @@ export function MessagesScreen() {
   // A request page sends its owner here with the subject filled in, so a
   // question about a request opens ready to type.
   const params = useSearchParams();
+  const router = useRouter();
   const asked = params.get("subject") ?? "";
+  // The topic the link names, so a question about a repair opens as one.
+  const askedAbout = TOPICS.find((t) => t.value === params.get("about"))?.value;
   // A link can open the form already addressed, as the Write buttons do.
   const askedOffice = params.get("to");
-  const [composing, setComposing] = useState(Boolean(asked || askedOffice));
+  // Not when this conversation is already open: reloading a link that was
+  // used to send a message reopened the form, and a second send was one tap.
+  const alreadyAsked =
+    Boolean(asked) &&
+    community.threads.some((t) => t.homeId === home?.id && t.subject.trim() === asked.trim());
+  const [wanted, setWanted] = useState(Boolean(asked || askedOffice));
+  // True until the person does something themselves; only then does their
+  // own choice to compose outrank the link having been used already.
+  const [byLink, setByLink] = useState(true);
+  const composing = wanted && !(byLink && alreadyAsked);
+  const setComposing = (on: boolean) => {
+    setWanted(on);
+    setByLink(false);
+  };
   const [to, setTo] = useState<ThreadAddress>(
     OFFICES.some((o) => o === askedOffice) ? (askedOffice as ThreadAddress) : "board",
   );
   const [subject, setSubject] = useState(asked);
-  const [topic, setTopic] = useState<MessageThread["tag"]>("General");
+  const [topic, setTopic] = useState<MessageThread["tag"]>(askedAbout ?? "General");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -80,6 +96,8 @@ export function MessagesScreen() {
         setTopic("General");
         setTo("board");
         setComposing(false);
+        // The link that opened the form must not open it again on a reload.
+        if (asked || askedOffice || askedAbout) router.replace("/resident/messages");
       }
     } catch (error) {
       notify(
@@ -196,7 +214,13 @@ export function MessagesScreen() {
               className={cn(field, "resize-none py-2.5 leading-relaxed")}
             />
           </label>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+            {/* Said beside the button, so a disabled Send is never a puzzle. */}
+            {!subject.trim() || !body.trim() ? (
+              <p className="mr-auto text-footnote text-fg-muted">
+                {!subject.trim() ? "Add a subject to send." : "Write your message to send."}
+              </p>
+            ) : null}
             <Button variant="ghost" size="md" onClick={() => setComposing(false)}>
               Cancel
             </Button>
