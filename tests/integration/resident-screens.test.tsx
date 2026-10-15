@@ -154,18 +154,29 @@ describe("announcements on the resident home", () => {
     expect(fold.closest("details")?.contains(fine)).toBe(true);
   });
 
-  it("opens each card to its whole text in place", async () => {
+  it("opens a plain card to its whole text in place", async () => {
     const user = userEvent.setup();
     wrap(<Announcements />);
-    const title = screen.getByText("Budget workshop, September 3 at 6:30pm");
+    await user.click(screen.getByText(/Earlier announcements \(1\)/));
+    const title = screen.getByText("Windstorm season: clear your deck before the first big one");
     const card = title.closest("details") as HTMLDetailsElement;
     expect(card).not.toHaveAttribute("open");
-    const body = within(card).getByText(/draft 2027 operating budget/);
+    const body = within(card).getByText(/stow patio furniture/);
     // Two lines while closed, all of it once opened.
     expect(body.className).toContain("line-clamp-2");
     expect(body.className).toContain("group-open/card:line-clamp-none");
     await user.click(within(card).getByText("Read more"));
     expect(card).toHaveAttribute("open");
+  });
+
+  it("links a meeting notice to the meeting's own page", () => {
+    wrap(<Announcements />);
+    const title = screen.getByText("Budget workshop, September 3 at 6:30pm");
+    const link = title.closest("a");
+    expect(link).toHaveAttribute("href", "/resident/calendar/mtg-workshop-sep3");
+    // Nothing to expand behind: the agenda, how to join and the minutes are
+    // one tap in, on the meeting itself.
+    expect(title.closest("details")).toBeNull();
   });
 });
 

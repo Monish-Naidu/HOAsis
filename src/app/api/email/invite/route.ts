@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isEmail } from "@/lib/input-checks";
 import { logger } from "@/lib/log";
 import { Resend } from "resend";
 import { emailSender } from "@/lib/email/sender";
@@ -30,6 +31,10 @@ import { communityPath, placeLabel } from "@/lib/community-links";
  * to their home. Everybody else gets the join page with their address
  * filled in; the seat is claimed when they confirm that address.
  *
+ * `onlyEmail` narrows a home to one member: the welcome a board sends after
+ * letting a join request in goes to the person who asked alone, so a first
+ * owner sharing the home is not told they are in a second time.
+ *
  * The send is paced and stops before the time limit below
  * (src/lib/email/pace.ts). A batch that stopped says so in its answer, and
  * sending it again reaches the rest without inviting anybody twice. Whoever
@@ -51,7 +56,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sign in first" }, { status: 401 });
   }
 
-  let body: { associationId?: string; unitIds?: string[]; kind?: "invite" | "welcome" };
+  let body: {
+    associationId?: string;
+    unitIds?: string[];
+    kind?: "invite" | "welcome";
+    onlyEmail?: string;
+  };
   try {
     body = await request.json();
   } catch {
@@ -67,6 +77,12 @@ export async function POST(request: NextRequest) {
   }
   if (kind !== "invite" && kind !== "welcome") {
     return NextResponse.json({ error: "Unknown kind" }, { status: 400 });
+  }
+  // One address among the home's members: the welcome for a second owner
+  // goes to the person the board just let in, not to the first owner too.
+  const onlyEmail = typeof body.onlyEmail === "string" ? body.onlyEmail.trim() : "";
+  if (onlyEmail && !isEmail(onlyEmail)) {
+    return NextResponse.json({ error: "onlyEmail does not look like an address" }, { status: 400 });
   }
 
   // Either capability will do: settings holders add households, and
@@ -122,7 +138,9 @@ export async function POST(request: NextRequest) {
     ? await recentlySent(admin, { associationId, category: "invite" })
     : new Set<string>();
 
-  const list = members ?? [];
+  const list = (members ?? []).filter(
+    (m) => !onlyEmail || (m.invited_email ?? "").trim().toLowerCase() === onlyEmail.toLowerCase(),
+  );
   type Member = (typeof list)[number];
   const labelOf = (m: Member) => {
     const units = m.units as unknown as { label: string } | { label: string }[] | null;

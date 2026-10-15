@@ -22,6 +22,7 @@ Generated from exported Next.js route handlers. Request and response details, au
 | `/email/webhook` | `POST` | `src/app/api/email/webhook/route.ts` |
 | `/health` | `GET` | `src/app/api/health/route.ts` |
 | `/join/lookup` | `GET` | `src/app/api/join/lookup/route.ts` |
+| `/join/notify` | `POST` | `src/app/api/join/notify/route.ts` |
 | `/log` | `POST` | `src/app/api/log/route.ts` |
 | `/ops/digest` | `GET` | `src/app/api/ops/digest/route.ts` |
 | `/stripe/connect` | `GET`, `POST` | `src/app/api/stripe/connect/route.ts` |

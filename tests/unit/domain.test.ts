@@ -9,7 +9,7 @@ import {
   setToday,
   todayIsoDate,
 } from "@/lib/utils";
-import { monthGrid, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
+import { monthGrid, openingMonth, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
 import { renderTemplate } from "@/lib/data/templates";
 import {
   cashPosition,
@@ -201,6 +201,49 @@ describe("calendar grid", () => {
     const upcoming = upcomingFrom(entries, TODAY_ISO);
     expect(upcoming.map((e) => e.id)).toEqual(["a", "b"]);
     expect(upcomingFrom(entries, "2026-08-21")).toHaveLength(1);
+  });
+});
+
+describe("the month the calendar opens on", () => {
+  const meeting = (id: string, date: string): CalendarEntry => ({
+    id,
+    date,
+    title: id,
+    kind: "meeting",
+  });
+
+  it("opens on the month of the next meeting, not on a month with nothing", () => {
+    const entries = [meeting("next", "2026-10-07"), meeting("later", "2026-11-04")];
+    expect(openingMonth(entries, "2026-08-20")).toEqual({ year: 2026, month: 9 });
+  });
+
+  it("counts a meeting on today, so a live meeting's month is the one shown", () => {
+    const entries = [meeting("today", "2026-08-20"), meeting("next", "2026-09-16")];
+    expect(openingMonth(entries, "2026-08-20")).toEqual({ year: 2026, month: 7 });
+  });
+
+  it("prefers a meeting over an earlier deadline of another kind", () => {
+    const entries: CalendarEntry[] = [
+      { id: "closes", date: "2026-09-10", title: "Ballot closes", kind: "ballot-closes" },
+      meeting("mtg", "2026-10-07"),
+    ];
+    expect(openingMonth(entries, "2026-08-20")).toEqual({ year: 2026, month: 9 });
+  });
+
+  it("falls back to the next thing of any kind, then to today's month", () => {
+    const deadline: CalendarEntry = {
+      id: "due",
+      date: "2026-10-01",
+      title: "Deadline",
+      kind: "deadline",
+    };
+    expect(openingMonth([deadline], "2026-08-20")).toEqual({ year: 2026, month: 9 });
+    expect(openingMonth([], "2026-08-20")).toEqual({ year: 2026, month: 7 });
+  });
+
+  it("crosses a year boundary without landing on a wrong month index", () => {
+    const entries = [meeting("next", "2027-01-14")];
+    expect(openingMonth(entries, "2026-12-28")).toEqual({ year: 2027, month: 0 });
   });
 });
 

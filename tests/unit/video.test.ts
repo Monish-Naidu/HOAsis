@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { meetingJoin, roomHash, roomSlug, videoJoinUrl, videoRoomName } from "@/lib/meetings/video";
+import {
+  isDialInNumber,
+  meetingJoin,
+  roomHash,
+  roomSlug,
+  videoJoinUrl,
+  videoRoomName,
+} from "@/lib/meetings/video";
 
 describe("roomSlug", () => {
   it("keeps only lowercase letters, digits and single dashes", () => {
@@ -66,6 +73,24 @@ describe("videoJoinUrl", () => {
   });
 });
 
+describe("isDialInNumber", () => {
+  it("takes the ways a number is written down", () => {
+    expect(isDialInNumber("(425) 555-0110")).toBe(true);
+    expect(isDialInNumber("+1 425 555 0110")).toBe(true);
+    expect(isDialInNumber("555.0110.22")).toBe(true);
+    expect(isDialInNumber(" 425-555-0110 ")).toBe(true);
+  });
+  it("refuses anything a phone cannot dial", () => {
+    // Another room's address without its scheme was reaching owners as a
+    // "Dial in" line, which is the bug this rule closes.
+    expect(isDialInNumber("meet.jit.si/hoasis-other-room")).toBe(false);
+    expect(isDialInNumber("Zoom ID 8842")).toBe(false);
+    expect(isDialInNumber("8842")).toBe(false);
+    expect(isDialInNumber("")).toBe(false);
+    expect(isDialInNumber("extension 12")).toBe(false);
+  });
+});
+
 describe("meetingJoin", () => {
   const meeting = { id: "mtg-1" };
 
@@ -93,6 +118,16 @@ describe("meetingJoin", () => {
     ).toEqual({
       videoUrl: videoJoinUrl(meeting, "assoc-a"),
       dialIn: "(425) 555-0110",
+      passcode: "99",
+    });
+  });
+
+  it("shows no dial in for text that is not a number, and keeps one call link", () => {
+    expect(
+      meetingJoin({ ...meeting, dialIn: "meet.jit.si/other-room", passcode: "99" }, "assoc-a"),
+    ).toEqual({
+      videoUrl: videoJoinUrl(meeting, "assoc-a"),
+      dialIn: "",
       passcode: "99",
     });
   });

@@ -20,7 +20,8 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import type { ActionItem, MeetingAttendee } from "@/lib/types";
 import { meetingPhase } from "@/lib/phases";
 import { activityWords } from "@/lib/activity";
-import { noticeToast } from "@/lib/email/plain-error";
+import { changeEmailSentence, noticeToast } from "@/lib/email/plain-error";
+import { ownerVoteNotice } from "@/lib/voting";
 import type { useCommunicationsActions } from "./use-communications";
 
 /**
@@ -30,7 +31,7 @@ import type { useCommunicationsActions } from "./use-communications";
 export function useMeetingsActions(
   deps: AppDeps & Pick<ReturnType<typeof useCommunicationsActions>, "addAnnouncement">,
 ) {
-  const { remote, communityId, associationRow, meetingList, addAnnouncement } = deps;
+  const { remote, communityId, associationRow, meetingList, addAnnouncement, mySeats } = deps;
 
   const closeBallot = useCallback(
     (ballotId: string) => {
@@ -248,6 +249,7 @@ export function useMeetingsActions(
             seats: ballot.seats ?? 1,
             quorum_required: ballot.quorumRequired,
             threshold_label: ballot.thresholdLabel,
+            dues_current_required: ballot.duesCurrentRequired ?? false,
             meeting_id: isUuid(ballot.meetingId ?? "") ? ballot.meetingId : null,
             live_results_visible: ballot.liveResultsVisible,
           });
@@ -257,6 +259,7 @@ export function useMeetingsActions(
               ballot_id: id,
               label: option.label,
               detail: option.detail ?? null,
+              unit_id: option.homeId ?? null,
               position,
             })),
           );
@@ -312,12 +315,14 @@ export function useMeetingsActions(
    * Moves a meeting that has not happened to another day. The first date it
    * was noticed for is kept, so the screen can say "Was Oct 3". The database
    * refuses a past date and a meeting that is over, and so does the demo.
+   * Resolves to the sentence to toast: the new date, and how the notice of
+   * the move got to owners. False when the write was refused.
    */
   const rescheduleMeeting = useCallback(
     (meetingId: string, to: { date: string; time?: string; location?: string }) => {
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
-      if (!m) return Promise.resolve(false);
+      if (!m) return Promise.resolve<false>(false);
       if (to.date < todayIsoDate())
         throw new ValidationError("Pick a date that has not passed.", { date: to.date });
       if (m.status === "cancelled" || meetingPhase(m) === "ended") {
@@ -326,14 +331,26 @@ export function useMeetingsActions(
       const time = to.time?.trim() || undefined;
       const location = to.location?.trim() || undefined;
       if (remote.community) {
-        return remoteWrite("Changing the date", () =>
-          supabaseBrowser().rpc("reschedule_meeting", {
-            p_meeting_id: meetingId,
-            p_held_on: to.date,
-            p_held_at: time ?? null,
-            p_location: location ?? null,
-          }),
-        );
+        const rc = remote.community;
+        // The notice goes out only once the new date is on the record,
+        // because the route reads the row back for its words. A write the
+        // database refused changed nothing, so nobody is emailed about a
+        // move that never happened. One call, so a move that reached some
+        // of a long roster and stopped is carried on inside it rather than
+        // by a second press.
+        return (async () => {
+          const written = await remoteWrite("Changing the date", () =>
+            supabaseBrowser().rpc("reschedule_meeting", {
+              p_meeting_id: meetingId,
+              p_held_on: to.date,
+              p_held_at: time ?? null,
+              p_location: location ?? null,
+            }),
+          );
+          if (!written) return false;
+          const outcome = await emailNotice(rc.id, { kind: "meeting-moved", id: meetingId }, true);
+          return `${m.title} moved to ${formatDate(to.date, "long")}. ${changeEmailSentence(outcome)}`;
+        })();
       }
       logDemoActivity(communityId, "meeting", `Moved meeting "${m.title}" to ${to.date}`, {
         was: m.date,
@@ -355,17 +372,21 @@ export function useMeetingsActions(
           )
           .sort((a, b) => a.date.localeCompare(b.date)),
       );
-      return Promise.resolve(true);
+      return Promise.resolve(`${m.title} moved to ${formatDate(to.date, "long")}.`);
     },
     [remote.community, meetingList, communityId],
   );
 
-  /** Cancels a meeting that has not happened. It stays on the record with the reason. */
+  /**
+   * Cancels a meeting that has not happened. It stays on the record with the
+   * reason. Resolves to the sentence to toast: the fact, and how the notice
+   * of the cancellation got to owners. False when the write was refused.
+   */
   const cancelMeeting = useCallback(
     (meetingId: string, reason: string) => {
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
-      if (!m) return Promise.resolve(false);
+      if (!m) return Promise.resolve<false>(false);
       const why = reason.trim();
       if (why.length < 3)
         throw new ValidationError("Say why the meeting is cancelled.", { reason });
@@ -373,9 +394,21 @@ export function useMeetingsActions(
         throw new ValidationError("That meeting is over.", { meetingId });
       }
       if (remote.community) {
-        return remoteWrite("Cancelling the meeting", () =>
-          supabaseBrowser().rpc("cancel_meeting", { p_meeting_id: meetingId, p_reason: why }),
-        );
+        const rc = remote.community;
+        // As with a move: the reason has to be on the record before the
+        // route can say it, and a refused write emails nobody.
+        return (async () => {
+          const written = await remoteWrite("Cancelling the meeting", () =>
+            supabaseBrowser().rpc("cancel_meeting", { p_meeting_id: meetingId, p_reason: why }),
+          );
+          if (!written) return false;
+          const outcome = await emailNotice(
+            rc.id,
+            { kind: "meeting-cancelled", id: meetingId },
+            true,
+          );
+          return `${m.title} is cancelled. ${changeEmailSentence(outcome)}`;
+        })();
       }
       logDemoActivity(communityId, "meeting", `Cancelled meeting "${m.title}"`, { reason: why });
       sliceStore(communityId, "meetings").update((all) =>
@@ -390,7 +423,7 @@ export function useMeetingsActions(
             : x,
         ),
       );
-      return Promise.resolve(true);
+      return Promise.resolve(`${m.title} is cancelled.`);
     },
     [remote.community, meetingList, communityId],
   );
@@ -463,6 +496,38 @@ export function useMeetingsActions(
       const existing = store.getSnapshot().find((b) => b.id === ballotId);
       const receipt = existing?.myVoteReceipt ?? voteReceipt(ballotId, picks[0]);
 
+      // The dues rule and a vote the board entered keep a home from voting,
+      // exactly as cast_votes (0118) refuses it. The demo walks the same
+      // edge cases so the two paths cannot drift apart.
+      const myHomes = sliceStore(communityId, "homes")
+        .getSnapshot()
+        .filter((h) => mySeats.some((s) => s.homeId === h.id));
+      let votingFor = myHomes.map((h) => h.id);
+      if (existing && myHomes.length > 0) {
+        const mine = new Set(myHomes.map((h) => h.id));
+        const enteredForMe = (existing.entered ?? []).filter((e) => mine.has(e.homeId));
+        const notice = ownerVoteNotice(
+          existing,
+          myHomes,
+          enteredForMe.map((e) => ({ homeId: e.homeId, method: e.method })),
+        );
+        if (!notice.canVote) {
+          throw new ValidationError(notice.line ?? "You cannot vote on this ballot.", {
+            ballotId,
+          });
+        }
+        votingFor = notice.homeIds;
+      }
+
+      // The homes this vote is for, so a paper vote cannot be entered for
+      // one of them afterwards. A changed vote adds no home to the count.
+      const before = new Set(existing?.votedHomeIds ?? []);
+      const fresh =
+        existing?.myVoteOptionIds?.length || existing?.myVoteOptionId
+          ? 0
+          : votingFor.filter((id) => !before.has(id)).length;
+      const counted = [...new Set([...before, ...votingFor])];
+
       store.update((all) =>
         all.map((ballot) => {
           if (ballot.id !== ballotId) return ballot;
@@ -478,6 +543,8 @@ export function useMeetingsActions(
             myVoteOptionId: picks[0],
             myVoteOptionIds: picks,
             myVoteReceipt: receipt,
+            homesVoted: ballot.homesVoted === undefined ? undefined : ballot.homesVoted + fresh,
+            votedHomeIds: counted,
             options: ballot.options.map((option) => {
               const was = previous.has(option.id);
               const is = next.has(option.id);
@@ -491,7 +558,7 @@ export function useMeetingsActions(
 
       return receipt;
     },
-    [remote.community, communityId],
+    [remote.community, communityId, mySeats],
   );
 
   return {

@@ -91,3 +91,20 @@ export function upcomingFrom(entries: CalendarEntry[], fromIso: string, limit?: 
     .sort((a, b) => (a.date < b.date ? -1 : 1));
   return limit ? rows.slice(0, limit) : rows;
 }
+
+/**
+ * The month the calendar opens on: the next meeting's, so it does not open on
+ * a month with nothing in it. When no meeting is coming, the next thing of
+ * any kind; when nothing is coming at all, the community's own "today". A
+ * meeting counts whatever its state, because a cancelled one stays on the
+ * calendar marked, and the reader decides what to do with it there.
+ */
+export function openingMonth(
+  entries: CalendarEntry[],
+  asOf: string,
+): { year: number; month: number } {
+  const upcoming = upcomingFrom(entries, asOf);
+  const next = upcoming.find((e) => e.kind === "meeting") ?? upcoming[0] ?? { date: asOf };
+  const [year, month] = next.date.split("-").map(Number);
+  return { year, month: month - 1 };
+}

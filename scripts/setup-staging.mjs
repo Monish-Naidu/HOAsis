@@ -11,11 +11,9 @@
  * SUPABASE_SERVICE_ROLE_KEY and SUPABASE_DB_PASSWORD.
  *
  *   node scripts/setup-staging.mjs            every migration into staging
- *   node scripts/setup-staging.mjs --vercel   and point Vercel previews at it
  *
- * Safe to run again: migrations already applied are skipped, and the Vercel
- * step replaces the Preview values only. Production values are never read
- * or written here.
+ * Safe to run again: migrations already applied are skipped. Production
+ * values are never read or written here.
  */
 import { spawnSync } from "node:child_process";
 import { loadEnv } from "./env.mjs";
@@ -91,29 +89,6 @@ if (!pushed) {
     "No address worked. Check the database password in .env.staging, and set STAGING_REGION there if the project is not in us-west-2.",
   );
   process.exit(1);
-}
-
-if (process.argv.includes("--vercel")) {
-  for (const name of [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-  ]) {
-    // Remove the Preview value if there is one, then set staging's. A name
-    // that had no Preview value makes the removal fail, which is fine.
-    spawnSync("npx", ["vercel", "env", "rm", name, "preview", "--yes"], { stdio: "ignore" });
-    const add = spawnSync("npx", ["vercel", "env", "add", name, "preview"], {
-      input: env[name],
-      stdio: ["pipe", "ignore", "pipe"],
-      encoding: "utf8",
-    });
-    console.log(
-      add.status === 0
-        ? `Vercel Preview: ${name} set to staging.`
-        : `Vercel Preview: ${name} was NOT set (${(add.stderr ?? "").trim().split("\n").pop()?.slice(0, 120)}).`,
-    );
-  }
-  console.log("Pull request previews use staging from their next build.");
 }
 
 console.log(`

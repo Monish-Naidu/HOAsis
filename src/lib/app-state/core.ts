@@ -48,26 +48,41 @@ export function latest(rc: Community): Community {
   return now && now.id === rc.id ? now : rc;
 }
 
-export type NoticeKind = "announcement" | "meeting" | "ballot" | "letter" | "message" | "request";
+export type NoticeKind =
+  | "announcement"
+  | "meeting"
+  | "meeting-moved"
+  | "meeting-cancelled"
+  | "ballot"
+  | "letter"
+  | "message"
+  | "request"
+  | "results";
 
 /** What a send that fell short is called in its toast. */
 const NOTICE_LABEL: Record<NoticeKind, string> = {
   announcement: "Emailing the announcement",
   meeting: "Emailing the meeting notice",
+  "meeting-moved": "Emailing the notice of the new date",
+  "meeting-cancelled": "Emailing the notice of the cancellation",
   ballot: "Emailing the ballot notice",
   letter: "Emailing the letter",
   message: "Emailing the message",
   request: "Emailing the update",
+  results: "Emailing the results",
 };
 
 /** Where the thing still lives when its email did not go. */
 const SAVED_WHERE: Record<NoticeKind, string> = {
   announcement: "The announcement is posted in Messages",
   meeting: "The meeting is on Meetings",
+  "meeting-moved": "The new date is on Meetings",
+  "meeting-cancelled": "The cancellation is on Meetings",
   ballot: "The vote is on Voting",
   letter: "The letter is saved on the home",
   message: "The message is saved in Messages",
   request: "The update is saved on the request",
+  results: "The result is on Voting",
 };
 
 /**

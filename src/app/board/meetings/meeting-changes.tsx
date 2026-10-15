@@ -69,9 +69,11 @@ function ChangeDateForm({ meeting: m, onClose }: { meeting: Meeting; onClose: ()
     setError(null);
     setSaving(true);
     try {
-      const ok = await rescheduleMeeting(m.id, { date, time: checked.time, location });
-      if (ok) {
-        notify(`${m.title} moved to ${formatDate(date, "long")}.`);
+      // The sentence says both halves: the new date, and where the notice
+      // of it got to, the way the meeting notice's toast does.
+      const said = await rescheduleMeeting(m.id, { date, time: checked.time, location });
+      if (said) {
+        notify(said);
         onClose();
       }
     } catch (e) {
@@ -150,9 +152,9 @@ function CancelForm({ meeting: m, onClose }: { meeting: Meeting; onClose: () => 
     setError(null);
     setSaving(true);
     try {
-      const ok = await cancelMeeting(m.id, reason);
-      if (ok) {
-        notify(`${m.title} is cancelled.`);
+      const said = await cancelMeeting(m.id, reason);
+      if (said) {
+        notify(said);
         onClose();
       }
     } catch (e) {

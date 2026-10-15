@@ -91,7 +91,7 @@ export default async function OpsPage() {
 /* ---------------------------------------------------------------- pieces */
 
 function when(iso: string): string {
-  // Absolute, in UTC, because a Vercel log line is in UTC and the two should
+  // Absolute, in UTC, because a server log line is in UTC and the two should
   // read side by side.
   return iso.replace("T", " ").slice(0, 16) + "Z";
 }
@@ -179,7 +179,7 @@ function CronRuns({ report }: { report: OpsReport }) {
     <Card>
       <CardHeader
         title="Crons"
-        subtitle="Latest call per job. Each runs once a day (vercel.json on Vercel, the scheduled jobs on Azure); a run older than a day is the alarm."
+        subtitle="Latest call per job. Each runs once a day (the scheduled jobs in infra/apps.bicep); a run older than a day is the alarm."
       />
       <Table
         head={["Job", "Started", "Took", "Result", "Summary", "Reference"]}

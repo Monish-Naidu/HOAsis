@@ -17,6 +17,7 @@ import type {
   MeetingAttendee,
   MessageThread,
   Home,
+  Office,
   PhotoVantage,
   ThreadAddress,
   VendorInvoice,
@@ -443,13 +444,21 @@ export interface AppState {
   setWorkOrder: (requestId: string, workOrder: WorkOrder | null) => void;
   /** Whether the signed in person is coming to a meeting. */
   rsvpMeeting: (meetingId: string, response: "yes" | "no") => Promise<boolean>;
-  /** Moves a meeting that has not happened. Refused in the past; resolves false if nothing was kept. */
+  /**
+   * Moves a meeting that has not happened. Refused in the past. Resolves to
+   * the sentence to toast: the new date, and how the notice of the move got
+   * to owners. False when nothing was kept.
+   */
   rescheduleMeeting: (
     meetingId: string,
     to: { date: string; time?: string; location?: string },
-  ) => Promise<boolean>;
-  /** Cancels a meeting that has not happened; it stays on the record with the reason. */
-  cancelMeeting: (meetingId: string, reason: string) => Promise<boolean>;
+  ) => Promise<string | false>;
+  /**
+   * Cancels a meeting that has not happened; it stays on the record with the
+   * reason. Resolves to the sentence to toast: the fact, and how the notice
+   * of the cancellation got to owners. False when nothing was kept.
+   */
+  cancelMeeting: (meetingId: string, reason: string) => Promise<string | false>;
   /** Minutes and who came, for a meeting that was held. Saving again replaces them. */
   recordMinutes: (
     meetingId: string,
@@ -529,6 +538,27 @@ export interface AppState {
   }) => Violation;
   /** Ends voting. The tally as it stands is the result. */
   closeBallot: (ballotId: string) => void;
+  /**
+   * A vote the board types in from a paper ballot or a proxy, for one home.
+   * Throws a ValidationError for a home that already voted either way, or a
+   * past-due home on a ballot that needs dues to be current. Resolves true
+   * once it is saved.
+   */
+  enterPaperVote: (input: {
+    ballotId: string;
+    homeId: string;
+    optionIds: string[];
+    method: "paper" | "proxy";
+    proxyHolder?: string;
+  }) => Promise<boolean>;
+  /**
+   * Seats the winners of a closed election in the offices picked for them,
+   * keyed by option id. Resolves with who was seated, in words, or false.
+   * Once per ballot.
+   */
+  seatWinners: (ballotId: string, offices: Record<string, Office | "">) => Promise<string | false>;
+  /** Emails a closed owner vote's result to every home, once. Resolves with the toast's words. */
+  emailResults: (ballotId: string) => Promise<string | false>;
   /**
    * A notice from a city or county agency, logged by the board. Not hearsay,
    * so it needs nobody to go and look; the deadline is the whole point.

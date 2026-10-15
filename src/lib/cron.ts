@@ -4,9 +4,10 @@ import { after, type NextRequest } from "next/server";
  * Bounded runs for the daily crons.
  *
  * Each cron used to read every live row and walk the lot inside one
- * function call. Vercel ends a function at its limit (60 seconds on Hobby,
- * longer on Pro, but never unbounded) and the rows past that point were
- * simply never visited, with nothing in the response to say so. With a few
+ * function call. The host ends a call at its limit (a minute, on the old
+ * serverless host; the Container App has a request timeout too) and the
+ * rows past that point were simply never visited, with nothing in the
+ * response to say so. With a few
  * hundred associations and Stripe in the loop, that is a real morning.
  *
  * So a run takes a page at a time in id order, keeps an eye on the clock,
@@ -55,20 +56,18 @@ export function continuationUrl(url: string, lastId: string): string {
   return next.toString();
 }
 
-/** Vercel serves the app on the apex and on every preview's `*.vercel.app`. */
-const VERCEL_HOSTS = ["vercel.app"];
-
 /**
- * The host names a continuation may be aimed at: Vercel's own, plus whatever
- * a deployment names in `CRON_ALLOWED_HOSTS`, comma separated. The Azure
- * Container App, when it comes, is not a `*.vercel.app` and says so there.
+ * The host names a continuation may be aimed at: whatever the deployment
+ * names in `CRON_ALLOWED_HOSTS`, comma separated (`provision.sh` names the
+ * Container App's own address and the site). Nothing is allowed by default,
+ * so a job that does not name its own host runs one page a day.
  */
 export function continuationHosts(raw: string | undefined): string[] {
   const named = (raw ?? "")
     .split(",")
     .map((host) => host.trim().toLowerCase())
     .filter(Boolean);
-  return [...VERCEL_HOSTS, ...named];
+  return named;
 }
 
 /** The host of a URL, lowercased, or null when it is not a URL at all. */

@@ -141,9 +141,10 @@ environment that happens to be free.
 - `output: "standalone"` when `BUILD_STANDALONE=1`; `Dockerfile` and
   `.dockerignore`. The standalone server was started locally and served
   `/`, `/pricing`, the CSS and `/api/health`.
-- `src/lib/deploy-env.ts`: `APP_ENV` beside `VERCEL_ENV`, so the shared
-  sender warning and the test tools' refusal work on Azure. Unit tested.
-- Apple Pay domains skip `*.azurecontainerapps.io` as they skip
+- `src/lib/deploy-env.ts`: `APP_ENV` (beside `VERCEL_ENV` then; alone since
+  the Vercel project went), so the shared sender warning and the test
+  tools' refusal work on Azure. Unit tested.
+- Apple Pay domains skip `*.azurecontainerapps.io` as they skipped
   `*.vercel.app`.
 - `infra/platform.bicep`, `infra/apps.bicep` (both compile with
   `az bicep build`), the Caddyfile, the migration SQL and the `dbtools`
@@ -159,7 +160,8 @@ database); the five jobs; Postgres 17 `psql-hoasis-lnitot` (empty);
 registry `crhoasislnitot`; vault `kv-hoasis-lnitot` with every secret; the
 budget. Stripe has webhook endpoints for the Azure host. The browser suite
 ran against it: 144 passed, 10 skipped, none failed. GitHub's three
-variables are set, so a merge to `main` deploys to Azure as well as Vercel.
+variables are set, so a merge to `main` deploys to Azure (and, until the
+project was deleted on 2026-10-15, to Vercel as well).
 
 The commands, for the record or for a second environment:
 
@@ -185,8 +187,7 @@ prints the web app's address and the three values for GitHub. Then:
 4. `E2E_BASE=https://<web host> pnpm e2e`.
 5. GitHub: Settings, Secrets and variables, Actions, Variables:
    `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` from the
-   script's output. From then on every merge to `main` deploys to Azure
-   as well as Vercel.
+   script's output. From then on every merge to `main` deploys to Azure.
 6. Cloudflare: `staging` CNAME to the web app's address, DNS only (grey
    cloud); then
    `az containerapp hostname add -g rg-hoasis -n ca-hoasis-web --hostname staging.yourhoasis.com`
@@ -263,6 +264,12 @@ Vercel and the hosted Supabase project are untouched and stay for thirty
 days. Rolling back is the two records back to `76.76.21.21` and
 `cname.vercel-dns.com`; anything written on Azure in between would need
 copying the other way.
+
+Later the same day Monish had the Vercel project deleted (`vercel project
+rm expresshoa`), so the rollback is now the paused Supabase project alone,
+and `expresshoa.com` no longer redirects anywhere. The code's last Vercel
+assumptions went with it: `vercel.json`, the `VERCEL_ENV` fallbacks, the
+`*.vercel.app` allowances in the cron and Stripe host lists.
 
 The plan as it was written, for the record:
 

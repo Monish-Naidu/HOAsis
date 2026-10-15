@@ -5,10 +5,6 @@
  * money. That is not a checkbox somewhere in a form, it is a constraint, so it
  * holds even when a bug or a forged link tries to write the row directly.
  */
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { loadEnv } from "./env.mjs";
 import { createHarness, day } from "./lib/harness.mjs";
 
@@ -237,8 +233,9 @@ try {
  * Resend's shared onboarding@resend.dev sender delivers to the account owner
  * and nobody else, and an empty EMAIL_FROM is refused outright, so either
  * one in production means every resident's mail is silently lost. The value
- * is read from Vercel when the CLI is linked, and from this shell when
- * VERCEL_ENV says this already is production.
+ * is read from `.env.azure` (what `scripts/azure/secrets.sh` loads into the
+ * vault) when that file is here, and from this shell when APP_ENV says this
+ * already is production.
  */
 function senderProblem(from) {
   const value = (from ?? "").trim();
@@ -250,20 +247,13 @@ function senderProblem(from) {
 }
 
 function productionSender() {
-  if (process.env.VERCEL_ENV === "production")
+  if (process.env.APP_ENV === "production")
     return { from: process.env.EMAIL_FROM, source: "this environment" };
-  const dir = mkdtempSync(join(tmpdir(), "hoasis-env-"));
   try {
-    const file = join(dir, "prod.env");
-    execFileSync("vercel", ["env", "pull", "--environment=production", "--yes", file], {
-      stdio: "ignore",
-      timeout: 60_000,
-    });
-    return { from: loadEnv(new URL(`file://${file}`)).EMAIL_FROM, source: "Vercel production" };
+    const azure = loadEnv(new URL("../.env.azure", import.meta.url));
+    return { from: azure.EMAIL_FROM, source: ".env.azure" };
   } catch {
     return null;
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
   }
 }
 
@@ -279,7 +269,7 @@ if (production) {
   );
 } else {
   console.log(
-    "  note  could not read Vercel's production EMAIL_FROM (vercel CLI not linked); local value is " +
+    "  note  could not read production EMAIL_FROM (no .env.azure here); local value is " +
       JSON.stringify(env.EMAIL_FROM ?? ""),
   );
 }

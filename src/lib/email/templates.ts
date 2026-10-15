@@ -397,6 +397,54 @@ export function inviteEmail(input: {
 }
 
 /**
+ * The board's notice that somebody asked to join.
+ *
+ * One email per request, to every officer who can manage homeowners, so a
+ * request never waits on the board happening to open Homeowners. The
+ * officer's next move is on that page, so the one link goes straight there.
+ */
+export function joinRequestEmail(input: {
+  associationName: string;
+  officerName: string;
+  requesterName: string;
+  requesterEmail: string;
+  /** The home the person says is theirs. Empty when they typed none. */
+  unitLabel: string;
+  /** What the person wrote for the board. Empty when they wrote nothing. */
+  note: string;
+  url: string;
+}) {
+  const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
+  const officer = input.officerName.trim().split(/\s+/)[0] || "there";
+  const requester = oneLine(input.requesterName) || "Somebody";
+  const home = input.unitLabel.trim()
+    ? ` They say their home is ${escapeHtml(input.unitLabel.trim())}.`
+    : "";
+  const note = input.note.trim() ? ` They wrote: "${escapeHtml(input.note.trim())}"` : "";
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
+      ${escapeHtml(requester)} asked to join
+    </h1>
+    <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
+      Hi ${escapeHtml(officer)}. ${escapeHtml(requester)} (${escapeHtml(input.requesterEmail)}) used
+      the join code and is waiting on the board's answer.${home}${note}
+    </p>`;
+  return {
+    subject: `${requester} asked to join ${input.associationName}`,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `${requester} is waiting on the board of ${input.associationName}.`,
+      body,
+      cta: { label: "Review their request", url: input.url },
+      footer:
+        "Sent to the officers who manage the roster, through Your HOAsis. " +
+        "Requests wait on the Homeowners page until they are decided.",
+    }),
+    text: `Hi ${officer}. ${requester} (${input.requesterEmail}) used the join code and is waiting on the board's answer.${home ? ` They say their home is ${input.unitLabel.trim()}.` : ""}${note ? ` They wrote: "${input.note.trim()}"` : ""}\n\nReview their request: ${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/**
  * Makes typed words safe to sit in HTML, as text or inside a double-quoted
  * attribute. Subjects and the plain text part are not HTML and never go
  * through this, or "&amp;" shows up in an inbox.
@@ -742,6 +790,103 @@ export function meetingNoticeEmail(
   };
 }
 
+/**
+ * A meeting has moved. Statutory, like the notice it follows: the new date is
+ * the subject, so an owner scanning a phone knows when it now is. The body
+ * carries the whole meeting again (where, how to join, the agenda), because
+ * the old notice in the same inbox now names a day that is wrong.
+ *
+ * `was` is the date the meeting was first noticed for, when the board has
+ * moved it before. A move that only changed the time or the place has none,
+ * and the email says what is new without it.
+ */
+export function meetingMovedEmail(
+  input: NoticeEmailInput & {
+    title: string;
+    was?: string;
+    date: string;
+    time: string;
+    location: string;
+    dialIn?: string;
+    passcode?: string;
+    /** The link everyone joins by, from `lib/meetings/video.ts`. */
+    videoUrl?: string;
+    agenda: string[];
+  },
+) {
+  const when = `${longDate(input.date)} at ${input.time}`;
+  const subject = `${input.title} moved to ${when} · ${input.associationName}`;
+  const phone = input.dialIn
+    ? `dial ${input.dialIn}${input.passcode ? ` (passcode ${input.passcode})` : ""}`
+    : "";
+  const lines = [
+    input.was
+      ? `It was ${longDate(input.was)} and is now ${when}, ${input.location}.`
+      : `It is now ${when}, ${input.location}.`,
+    input.videoUrl
+      ? `Join by video: ${input.videoUrl}${phone ? `, or ${phone}` : ""}.`
+      : phone
+        ? `Join by phone: ${phone}.`
+        : "",
+  ].filter(Boolean);
+  const agenda = input.agenda.length
+    ? `<p style="margin:12px 0 4px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#6b7789;">Agenda</p><ol style="margin:0 0 10px;padding-left:20px;font-size:15px;line-height:1.6;color:#3d4a5e;">${input.agenda
+        .map((a) => `<li>${escapeHtml(a)}</li>`)
+        .join("")}</ol>`
+    : "";
+  const body = `${heading(`${input.title} has moved`)}${paragraphs(lines.join("\n\n"))}${agenda}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: input.was
+        ? `Now ${when}, ${input.location}.`
+        : `The time or the place has changed. Now ${when}, ${input.location}.`,
+      body,
+      cta: { label: "See the meeting", url: input.url },
+      signsIn: input.hasAccount !== false,
+      footer: noticeFooter(input, "This is notice of a meeting of the association."),
+    }),
+    text: `${input.title} has moved\n\n${lines.join("\n")}${
+      input.agenda.length
+        ? `\n\nAgenda:\n${input.agenda.map((a, i) => `${i + 1}. ${a}`).join("\n")}`
+        : ""
+    }\n\n${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/**
+ * A meeting is cancelled. Statutory: the fact and the day are the subject.
+ * The board's own reason goes out as typed, because "no quorum" and
+ * "storm warning" are one line each and the owner can read the board's
+ * words without an intermediary.
+ */
+export function meetingCancelledEmail(
+  input: NoticeEmailInput & {
+    title: string;
+    date: string;
+    time: string;
+    reason: string;
+  },
+) {
+  const when = `${longDate(input.date)} at ${input.time}`;
+  const subject = `${input.title} on ${longDate(input.date)} is cancelled · ${input.associationName}`;
+  const lines = [`${input.title} on ${when} is cancelled.`, input.reason.trim()].filter(Boolean);
+  const body = `${heading(`${input.title} is cancelled`)}${paragraphs(lines.join("\n\n"))}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `The meeting on ${longDate(input.date)} is cancelled.`,
+      body,
+      cta: { label: "See the meeting", url: input.url },
+      signsIn: input.hasAccount !== false,
+      footer: noticeFooter(input, "This is notice about a meeting of the association."),
+    }),
+    text: `${input.title} is cancelled\n\n${lines.join("\n\n")}\n\n${input.url}\n\n${input.associationName}`,
+  };
+}
+
 /** A vote is open. Statutory: the closing date is in the subject. */
 export function ballotOpenEmail(
   input: NoticeEmailInput & { title: string; body: string[]; closesDate: string },
@@ -764,6 +909,45 @@ export function ballotOpenEmail(
     text: `${input.title}\n\nVoting is open until ${closes}. One vote per home.\n\n${input.body.join(
       "\n\n",
     )}\n\nVote: ${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/**
+ * The result of a vote, to every home once it has closed. Statutory, like
+ * the notice that opened it. The lines are worded by `resultsSummary`
+ * (src/lib/voting.ts) so the email says what the Voting page says.
+ */
+export function ballotResultsEmail(
+  input: NoticeEmailInput & {
+    title: string;
+    headline: string;
+    turnout: string;
+    entered: string | null;
+    quorum: string | null;
+    options: { label: string; votes: number }[];
+  },
+) {
+  const subject = `Results: ${input.title} · ${input.associationName}`;
+  const counts = input.options.map(
+    (o) => `${o.label}: ${o.votes} ${o.votes === 1 ? "vote" : "votes"}`,
+  );
+  const lines = [
+    `${input.headline}.`,
+    [input.turnout, input.entered].filter(Boolean).join(" "),
+    input.quorum ?? "",
+    counts.join("\n"),
+  ].filter(Boolean);
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `${input.headline}. ${input.turnout}`,
+      body: `${heading(input.title)}${paragraphs(lines.join("\n\n"))}`,
+      cta: { label: "See the results", url: input.url },
+      signsIn: input.hasAccount !== false,
+      footer: noticeFooter(input, "This is the result of a vote of the association."),
+    }),
+    text: `${input.title}\n\n${lines.join("\n\n")}\n\nResults: ${input.url}\n\n${input.associationName}`,
   };
 }
 

@@ -23,7 +23,7 @@ import { recordCronRun } from "@/lib/cron-runs";
 /**
  * The daily autopay pass.
  *
- * Vercel calls this once a day with CRON_SECRET, after the billing sweep. For
+ * The daily job calls this once a day with CRON_SECRET, after the billing sweep. For
  * every current membership with a plan it asks decideAutopay what today means
  * for that home, and acts on a "charge" or a "skip" by writing one
  * autopay_runs row for the month and, for a charge, confirming an off-session

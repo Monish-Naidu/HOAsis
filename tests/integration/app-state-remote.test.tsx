@@ -777,7 +777,7 @@ describe("letting somebody in on a home already on the register", () => {
     expect(fetched.map((f) => f.url)).toEqual(["/api/email/invite"]);
   });
 
-  it("as a second owner sends no welcome, which would reach the first owner too", async () => {
+  it("as a second owner sends the welcome to the newcomer alone", async () => {
     const { result } = renderApp();
     await act(async () => {
       await result.current.seatJoinRequest(request().id, plainHome().id, true);
@@ -785,7 +785,19 @@ describe("letting somebody in on a home already on the register", () => {
 
     expect((writes()[0].values as { p_as_second: boolean }).p_as_second).toBe(true);
     expect(targets()).toEqual(["rpc:seat_join_request", "update join_requests"]);
-    expect(fetched).toEqual([]);
+    // onlyEmail keeps the note from reaching the first owner, who would
+    // otherwise be told they are in a second time.
+    expect(fetched).toEqual([
+      {
+        url: "/api/email/invite",
+        body: {
+          associationId: ASSOCIATION,
+          unitIds: [plainHome().id],
+          kind: "welcome",
+          onlyEmail: request().email,
+        },
+      },
+    ]);
   });
 
   it("leaves the request waiting when the database says the home has an owner", async () => {
@@ -835,6 +847,57 @@ describe("letting somebody in on a home already on the register", () => {
       p_old_email: target.email,
       p_new_email: "fixed@example.com",
     });
+  });
+});
+
+describe("asking to join", () => {
+  // A code no demo association carries, so the ask reaches the database.
+  const ask = (result: ReturnType<typeof renderApp>["result"]) =>
+    result.current.requestToJoin({
+      code: " pine12 ",
+      name: " Nadia Bell ",
+      email: " nadia@example.com ",
+      unit: " 115 ",
+      note: " Closed last week ",
+    });
+
+  it("asks the database, then asks for the board to be told", async () => {
+    db.answer = (s) => (s.target === "rpc:request_to_join" ? { data: "Maple Ridge" } : undefined);
+    const { result } = renderApp();
+    let outcome: Awaited<ReturnType<typeof ask>> | undefined;
+    await act(async () => {
+      outcome = await ask(result);
+    });
+
+    expect(outcome).toEqual({ ok: true, association: "Maple Ridge" });
+    expect(writes()[0].values).toEqual({
+      p_code: "PINE12",
+      p_name: "Nadia Bell",
+      p_email: "nadia@example.com",
+      p_unit: "115",
+      p_note: "Closed last week",
+    });
+    // Fire and forget: the notice is asked for on every submit, and the
+    // once-per-request rule is kept by the route, which claims the request
+    // in the database before anybody is written to.
+    expect(fetched).toEqual([
+      { url: "/api/join/notify", body: { code: "PINE12", email: "nadia@example.com" } },
+    ]);
+  });
+
+  it("does not ask for the board to be told when the ask itself was refused", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:request_to_join"
+        ? { error: { message: "No association has that code" } }
+        : undefined;
+    const { result } = renderApp();
+    let outcome: Awaited<ReturnType<typeof ask>> | undefined;
+    await act(async () => {
+      outcome = await ask(result);
+    });
+
+    expect(outcome).toEqual({ ok: false, error: "No association has that code" });
+    expect(fetched).toEqual([]);
   });
 });
 
@@ -2333,6 +2396,60 @@ describe("a meeting after the notice", () => {
       p_minutes: "Approved the budget.",
       p_attended: [{ name: "Arya Mehr", unit: "7", role: null, channel: "in-person" }],
     });
+    // A move and then a cancellation each send their own notice, in that
+    // order, so an owner hears first of the new date and then of the end.
+    expect(fetched).toMatchObject([
+      { url: "/api/email/notify", body: { kind: "meeting-moved", id: upcoming().id } },
+      { url: "/api/email/notify", body: { kind: "meeting-cancelled", id: upcoming().id } },
+    ]);
+  });
+  it("emails one notice per move, once the new date is on the record", async () => {
+    const { result } = renderApp();
+    let said: string | false = false;
+    await act(async () => {
+      said = await result.current.rescheduleMeeting(upcoming().id, { date: "2030-01-05" });
+    });
+    await act(async () => {
+      await result.current.rescheduleMeeting(upcoming().id, { date: "2030-02-02" });
+    });
+    // Two moves in a row, two notices: each says the date the row then held.
+    expect(fetched.filter((f) => f.url === "/api/email/notify").map((f) => f.body)).toMatchObject([
+      { kind: "meeting-moved", id: upcoming().id },
+      { kind: "meeting-moved", id: upcoming().id },
+    ]);
+    // The toast carries both halves: what changed, and where the notice got
+    // to. The route answered here having sent to nobody.
+    expect(said).toBe(
+      `${upcoming().title} moved to January 5, 2030. No owner has an email address on file.`,
+    );
+  });
+  it("emails nobody about a move the database refused", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:reschedule_meeting"
+        ? { error: { message: "That meeting is over" } }
+        : undefined;
+    const { result } = renderApp();
+    let said: string | false = "unset";
+    await act(async () => {
+      said = await result.current.rescheduleMeeting(upcoming().id, { date: "2030-01-05" });
+    });
+    expect(said).toBe(false);
+    expect(fetched).toEqual([]);
+    expect(errors).toEqual(["Changing the date: That meeting is over"]);
+  });
+  it("emails the cancellation, and says when the email could not go", async () => {
+    route = () => ({ ok: false, body: { error: "The sending domain is not verified" } });
+    const { result } = renderApp();
+    let said: string | false = false;
+    await act(async () => {
+      said = await result.current.cancelMeeting(upcoming().id, "Storm warning");
+    });
+    expect(fetched.filter((f) => f.url === "/api/email/notify").map((f) => f.body)).toMatchObject([
+      { kind: "meeting-cancelled", id: upcoming().id },
+    ]);
+    expect(said).toBe(
+      `${upcoming().title} is cancelled. Email did not go out: email is not set up to send to owners yet (the sending domain is not verified).`,
+    );
   });
 
   it("writes nothing for a past day, a blank reason or thin minutes", async () => {

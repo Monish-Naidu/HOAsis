@@ -60,3 +60,6 @@ next-env.d.ts
 test-results/
 playwright-report/
 scripts/.qa/
+
+# Association exports (scripts/export-association.mjs): personal data, never committed
+/exports/

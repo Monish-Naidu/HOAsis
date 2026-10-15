@@ -85,8 +85,15 @@ describe("the board's Voting page", () => {
     // Out of the Open list, so there is no Close now to press.
     expect(screen.queryByRole("button", { name: "End voting now" })).not.toBeInTheDocument();
     expect(screen.getByText("Nothing is open for a vote")).toBeInTheDocument();
-    // A ballot already closed in the record has nothing left to write.
-    expect(row("sealed").queryByRole("button")).not.toBeInTheDocument();
+    // A ballot already closed in the record has no close left to write,
+    // only its result to email to the homes.
+    expect(
+      row("sealed").queryByRole("button", { name: "Record the result" }),
+    ).not.toBeInTheDocument();
+    expect(row("sealed").getByRole("button", { name: "Email the results" })).toBeInTheDocument();
+    expect(
+      row("ran-out").queryByRole("button", { name: "Email the results" }),
+    ).not.toBeInTheDocument();
 
     await userEvent
       .setup()

@@ -3,13 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const resend = vi.fn();
-vi.mock("@/app/join/resend", () => ({ resendConfirmation: resend }));
+vi.mock("@/components/app/resend-confirmation", () => ({ resendConfirmation: resend }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const { ResendLine } = await import("@/app/join/join-panel");
+const { ResendLine } = await import("@/components/app/resend-line");
 
 beforeEach(() => resend.mockReset());
 

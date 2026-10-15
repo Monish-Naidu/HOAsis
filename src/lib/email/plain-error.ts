@@ -59,6 +59,25 @@ export function noticeToast(o: SendOutcome): string {
   return "Notice posted. No owner has an email address on file.";
 }
 
+/**
+ * The email half of a toast about a change the board saved (a moved or
+ * cancelled meeting), in the same words `noticeToast` uses for the outcome.
+ * The caller writes the half that says what changed, and appends this.
+ */
+export function changeEmailSentence(o: SendOutcome): string {
+  if (o.sent > 0) {
+    const missed = o.failed + o.remaining;
+    return `Emailed ${o.sent} ${o.sent === 1 ? "owner" : "owners"}.${
+      missed > 0 ? ` ${missed} ${missed === 1 ? "email" : "emails"} did not go out.` : ""
+    }`;
+  }
+  if (!o.answered || o.failed > 0 || o.remaining > 0 || o.reason) {
+    return `Email did not go out: ${reasonFragment(o.reason)}.`;
+  }
+  if (o.already > 0) return "Every owner already had this email in the last hour.";
+  return "No owner has an email address on file.";
+}
+
 /** How a board reply's email went. "none": no email was attempted (the demo, or no household). */
 export type ReplyEmail = "sent" | "failed" | "none";
 

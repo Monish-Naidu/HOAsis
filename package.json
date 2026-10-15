@@ -28,11 +28,12 @@
     "email:test": "node scripts/send-test-email.mjs",
     "db:verify": "node scripts/verify-all.mjs",
     "db:verify:staging": "ENV_FILE=../.env.staging node scripts/verify-all.mjs",
-    "staging:setup": "node scripts/setup-staging.mjs --vercel",
+    "staging:setup": "node scripts/setup-staging.mjs",
     "shots": "node scripts/product-shots.mjs",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "db:playground": "node scripts/seed-playground.mjs",
+    "db:export": "node scripts/export-association.mjs",
     "stripe:setup": "node scripts/setup-stripe.mjs && node scripts/setup-stripe-portal.mjs",
     "prepare": "husky"
   },

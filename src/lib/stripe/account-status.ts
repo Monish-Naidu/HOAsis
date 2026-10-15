@@ -121,7 +121,6 @@ function payDomains(requestHost?: string | null): string[] {
     if (
       !host ||
       host.includes("localhost") ||
-      host.endsWith(".vercel.app") ||
       host.endsWith(".azurecontainerapps.io") ||
       host === "127.0.0.1"
     )

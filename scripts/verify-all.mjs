@@ -46,6 +46,7 @@ const SUITES = [
   "fiscal-years",
   "attachments",
   "meetings",
+  "voting",
   "fines",
   "sign-out",
 ];
