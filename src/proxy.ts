@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabase } from "@/lib/supabase/env";
-import { communityPath, slugFromHost } from "@/lib/community-links";
+import { apexForWww, communityPath, slugFromHost } from "@/lib/community-links";
 import { REQUEST_ID_HEADER, requestIdFrom } from "@/lib/log";
 
 /**
- * Session refresh on every request, and the vanity host alias.
+ * Session refresh on every request, the www redirect, and the vanity host alias.
  *
  * Named `proxy` rather than `middleware`: Next 16 renamed the convention, and
  * every Supabase guide still says middleware. Same behaviour, different file.
@@ -29,8 +29,16 @@ import { REQUEST_ID_HEADER, requestIdFrom } from "@/lib/log";
  * docs/observability.md.
  */
 export async function proxy(request: NextRequest) {
-  const slug = slugFromHost(request.headers.get("x-forwarded-host") ?? request.headers.get("host"));
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const url = request.nextUrl;
+
+  // One address: www goes to the apex, permanently, path and query kept.
+  const apex = apexForWww(host);
+  if (apex) {
+    return NextResponse.redirect(new URL(`${url.pathname}${url.search}`, `https://${apex}`), 308);
+  }
+
+  const slug = slugFromHost(host);
   const aliasRoot = slug && url.pathname === "/";
 
   const requestId = requestIdFrom(request.headers);

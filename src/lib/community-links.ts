@@ -128,6 +128,25 @@ export function slugFromHost(
 }
 
 /**
+ * The host to send `www.` traffic to, or null when the host is already the
+ * one to use. One address per page: `www.yourhoasis.com/pricing` is
+ * `yourhoasis.com/pricing`, for people, their sessions and search engines.
+ * Vercel did this redirect for us; on Azure the proxy does it. Only the
+ * product's own roots; a vanity host or a preview address is left alone.
+ */
+export function apexForWww(
+  host: string | null | undefined,
+  roots: readonly string[] = VANITY_ROOTS,
+): string | null {
+  if (!host) return null;
+  const bare = host.toLowerCase().replace(/:\d+$/, "");
+  for (const root of roots) {
+    if (bare === `www.${root}` && root !== "localhost") return root;
+  }
+  return null;
+}
+
+/**
  * The canonical path for a page inside an association. `path` is the route
  * as the app knows it (`/board/settings`); the result is what goes in an
  * email or on a clipboard.
