@@ -5,12 +5,13 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
 
 ## Before the first stranger signs up
 
-1. **Resend domain.** resend.com → Domains → Add `yourhoasis.com`. Copy the
-   three records (MX and TXT on the `send` subdomain, DKIM TXT on
-   `resend._domainkey`) into Cloudflare → yourhoasis.com → DNS, proxy off.
-   Click Verify in Resend. Until this is done every email except yours is
-   silently dropped: sign-up confirmations, invites, bills, receipts.
-   `EMAIL_FROM` is set in `.env.azure` to `Your HOAsis <hello@yourhoasis.com>`.
+1. ~~**Resend domain.**~~ Done 2026-10-15: `yourhoasis.com` is in Resend
+   (us-east-1) with its four records in Cloudflare (DKIM TXT on
+   `resend._domainkey`, CNAMEs `send` and `rsend`, DMARC `p=none`), the
+   webhook for `/api/email/webhook` listens to every email event, and
+   `.env.azure` carries `EMAIL_FROM="Your HOAsis <hello@yourhoasis.com>"`
+   and `RESEND_WEBHOOK_SECRET`. Resend's status page for the domain is the
+   place to look if a send fails with a domain error.
 2. **Support mailbox.** Cloudflare → Email → Email Routing → route
    `support@yourhoasis.com` to your inbox. The Help item in every account
    menu, the error page, and the Terms and Privacy pages already point at it.
@@ -48,18 +49,12 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
 Monish asked "is there anything else I need to wire up?" Beyond the nine
 above, in the order they matter:
 
-10. **Supabase auth emails through your own domain.** Sign-up confirmations,
-    magic links, password resets and the new email-change links are sent by
-    Supabase's own mailer today, limited to a few an hour and from a
-    Supabase address. Once Resend's domain is verified (item 1):
-    supabase.com → project → Authentication → SMTP Settings → enable custom
-    SMTP with Resend's host (`smtp.resend.com`, port 465), username
-    `resend`, password a Resend API key, sender `Your HOAsis
-<hello@yourhoasis.com>`. Then Authentication → URL Configuration: Site
-    URL `https://yourhoasis.com`, and `https://yourhoasis.com/auth/callback`
-    in the redirect list. Since the move to Azure these are GoTrue's
-    environment variables in the Supabase stack (`infra/supabase`), not the
-    hosted dashboard.
+10. ~~**Supabase auth emails through your own domain.**~~ Nothing to click
+    since 2026-10-15: the auth service on Azure sends through Resend's SMTP
+    with the address in `EMAIL_FROM` (`infra/apps.bicep` derives it), so
+    sign-up confirmations, magic links, password resets and email-change
+    links come from `hello@yourhoasis.com` once item 1 is verified. The
+    site URL and redirect list are parameters of the same template.
     three regions, every five minutes, emails you after two failures in a
     row). The daily digest (`/api/ops/digest`, since 2026-10-06) tells you
     what failed; the uptime check tells you when the site is down and

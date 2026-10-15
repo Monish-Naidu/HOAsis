@@ -150,25 +150,16 @@ Small, known, and not blocking a push. Each was found by a reviewer.
 | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GitHub Actions runs the checks on every push and pull request                                                                                             | done 2026-10-04: first green run on pull request #4 (check 4 minutes, browser suite 7). The browser suite runs on pull requests only, to stay inside the 2,000 free minutes a month. Nothing is billed while the account's spending limit is $0                                                                                                         |
 | Stripe billing page with cancellation on (`pnpm stripe:setup` now creates it)                                                                             | done in test mode; run again with the live key                                                                                                                                                                                                                                                                                                          |
-| Resend: verify yourhoasis.com, set `EMAIL_FROM` on Vercel                                                                                                 | parked by Monish 2026-10-04, pick up below                                                                                                                                                                                                                                                                                                              |
+| Resend: verify yourhoasis.com, set `EMAIL_FROM` on Vercel                                                                                                 | done 2026-10-15: domain verified on the root, four records in Cloudflare, webhook with its secret in Key Vault, `EMAIL_FROM` is `hello@yourhoasis.com` on Azure; `docs/email.md` has the records                                                                                                                                                        |
 | A staging copy: second Supabase project, Vercel preview pointed at it, Stripe test keys. Test associations move there and production holds only real ones | one click left for Monish: accept Supabase's marketplace terms at https://vercel.com/monish-naidus-projects/~/integrations/accept-terms/supabase?source=cli (legal terms are his to accept). Then Claude creates the free project through Vercel and runs `pnpm staging:setup`. Supabase's own API refuses the token on this machine (tried three ways) |
 | `ALLOW_TEST_RESET` removed from `.env.local`                                                                                                              | done by Monish                                                                                                                                                                                                                                                                                                                                          |
 
 ### Picking up Resend
 
-Nothing reaches an owner's inbox until this is done; boards see a toast
-saying so on every send. `docs/email.md` has the full walk. Two ways:
-
-1. By hand, about ten minutes: Resend > Domains > Add `yourhoasis.com`
-   (accept the `send` subdomain), copy the three DNS records into
-   Cloudflare with the cloud grey, press Verify, then set `EMAIL_FROM` on
-   Vercel to `Your HOAsis <hello@send.yourhoasis.com>` and redeploy.
-2. Two tokens in `.env.local`, then Claude does the rest:
-   `RESEND_ADMIN_KEY` (Resend > API Keys, full access) and
-   `CLOUDFLARE_API_TOKEN` (Cloudflare, "Edit zone DNS" for yourhoasis.com).
-
-Afterwards: `pnpm email:setup` again, `node scripts/send-test-email.mjs
-someone-else@example.com`, and `pnpm db:verify` goes fully green.
+Done 2026-10-15 by hand in the dashboards; `docs/email.md` records what
+is set. Left for later: `node scripts/send-test-email.mjs
+someone-else@example.com` from a machine with the new `EMAIL_FROM` in
+`.env.local`, and a `reply_to` or a route for `hello@yourhoasis.com`.
 
 ### Picking up staging
 
