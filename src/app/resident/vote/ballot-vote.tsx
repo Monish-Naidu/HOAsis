@@ -9,6 +9,7 @@ import { voteCountLine } from "@/lib/home-choice";
 import { ballotPhase } from "@/lib/phases";
 import type { Ballot } from "@/lib/types";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
+import { ownerVoteNotice, quorumLine } from "@/lib/voting";
 
 /**
  * A question and its choices. Tapping a choice is the vote.
@@ -20,7 +21,7 @@ import { cn, formatDate, relativeDays } from "@/lib/utils";
  * record for anyone who asks; they are no longer the first thing shown.
  */
 export function BallotVote({ ballot }: { ballot: Ballot }) {
-  const { settings, castVote, mySeats } = useAppState();
+  const { settings, castVote, mySeats, community } = useAppState();
   const [expanded, setExpanded] = useState(false);
   const seats = Math.max(1, ballot.seats ?? 1);
   const marked = ballot.myVoteOptionIds ?? (ballot.myVoteOptionId ? [ballot.myVoteOptionId] : []);
@@ -35,6 +36,12 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
   const cast = ballot.homesVoted ?? Math.round(votes / seats);
   const showResults = closed || settings.showLiveVoteResults;
   const changed = draft.length !== marked.length || draft.some((id) => !marked.includes(id));
+  // The homes this person holds a seat on, so the ballot says plainly
+  // whether they can vote at all: the dues rule, and a vote the board
+  // entered from paper, each keep a home's row out.
+  const myHomes = community.homes.filter((h) => mySeats.some((s) => s.homeId === h.id));
+  const notice = ownerVoteNotice(ballot, myHomes, ballot.myVoteEntered);
+  const quorum = quorumLine(ballot);
 
   return (
     <Card className="overflow-hidden">
@@ -83,10 +90,22 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
             ) : null}
           </>
         ) : null}
+        {/* The quorum this ballot needs, live while it runs and final once
+            it ends. */}
+        {quorum ? <p className="mt-2 text-footnote text-fg-muted">{quorum}</p> : null}
       </div>
 
       {!closed ? (
         <div className="space-y-2 border-t border-border px-4 py-3">
+          {notice.line ? (
+            notice.canVote ? (
+              <p className="text-footnote text-fg-muted">{notice.line}</p>
+            ) : (
+              <div className="rounded-lg bg-surface-2 px-3 py-2.5">
+                <p className="text-footnote text-fg">{notice.line}</p>
+              </div>
+            )
+          ) : null}
           {ballot.options.map((o) => {
             const picked = seats > 1 ? draft.includes(o.id) : mine === o.id;
             const full = seats > 1 && !picked && draft.length >= seats;
@@ -95,7 +114,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
                 key={o.id}
                 type="button"
                 aria-pressed={picked}
-                disabled={full}
+                disabled={full || !notice.canVote}
                 onClick={() => {
                   if (seats > 1) {
                     setDraft(picked ? draft.filter((id) => id !== o.id) : [...draft, o.id]);
@@ -137,7 +156,7 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
               <Button
                 variant="primary"
                 size="sm"
-                disabled={!draft.length || !changed}
+                disabled={!draft.length || !changed || !notice.canVote}
                 onClick={() => castVote(ballot.id, draft)}
               >
                 {mine ? "Update my vote" : "Cast my vote"}

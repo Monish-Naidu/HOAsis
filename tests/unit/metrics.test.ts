@@ -4,7 +4,9 @@ import type { Community } from "@/lib/data/community";
 import type { ChargeLine } from "@/lib/types";
 import {
   agingBuckets,
+  budgetAdoptedOn,
   budgetVariance,
+  categoryFlows,
   compareYears,
   delinquency,
   duesCollection,
@@ -568,6 +570,93 @@ describe("budgetVariance", () => {
     for (const r of v.expense) expect(r.varianceCents).toBe(r.toDateCents - r.ytdActualCents);
     for (const r of v.income) expect(r.varianceCents).toBe(r.ytdActualCents - r.toDateCents);
     expect(v.expenseTotal.ytdActualCents).toBe(v.expense.reduce((t, r) => t + r.ytdActualCents, 0));
+  });
+});
+
+describe("budget actuals", () => {
+  const entry = (
+    id: string,
+    date: string,
+    category: Community["ledger"][number]["category"],
+    amountCents: number,
+    status: "cleared" | "needs-review" = "cleared",
+  ): Community["ledger"][number] => ({
+    id,
+    date,
+    description: "Test line",
+    counterparty: "Test",
+    category,
+    accountId: "acct-operating",
+    amountCents,
+    status,
+  });
+
+  it("reads each line's actual off the books, the same rows Finances shows", () => {
+    const v = budgetVariance(mehrMeadows);
+    const flows = new Map(
+      categoryFlows(mehrMeadows, "2026-01-01", "2026-12-31").map((f) => [f.category, f]),
+    );
+    for (const r of [...v.income, ...v.expense]) {
+      const row = flows.get(r.category);
+      expect(r.ytdActualCents).toBe(
+        r.kind === "income" ? (row?.inCents ?? 0) : (row?.outCents ?? 0),
+      );
+    }
+  });
+
+  it("counts a reserve transfer against the reserve line, never as spending", () => {
+    const v = budgetVariance(mehrMeadows);
+    const reserve = v.expense.find((r) => r.category === "Reserve transfer");
+    const spending = spendingBetween(mehrMeadows, "2026-01-01", "2026-12-31");
+    // What Finances says beside its spending total is what the budget line
+    // reads, so the two screens cannot disagree about the move to savings.
+    expect(reserve?.ytdActualCents).toBe(spending.reserveCents);
+    expect(spending.rows.map((r) => r.category)).not.toContain("Reserve transfer");
+  });
+
+  it("holds a line waiting on review out of the actuals, and other years too", () => {
+    const c: Community = {
+      ...mehrMeadows,
+      ledger: [
+        entry("led-a", "2026-03-01", "Landscaping", -100_00),
+        entry("led-b", "2026-04-01", "Landscaping", -50_00, "needs-review"),
+        entry("led-c", "2025-06-01", "Landscaping", -400_00),
+      ],
+      budget: [{ category: "Landscaping", annualCents: 1_000_00, kind: "expense" }],
+    };
+    expect(budgetVariance(c).expense[0].ytdActualCents).toBe(100_00);
+  });
+
+  it("measures the fiscal year the association keeps, not the calendar year", () => {
+    const c: Community = {
+      ...mehrMeadows,
+      asOf: "2026-10-05",
+      association: { ...mehrMeadows.association, fiscalYearStart: "07-01" },
+      ledger: [
+        entry("led-a", "2026-01-05", "Landscaping", -100_00),
+        entry("led-b", "2026-08-01", "Landscaping", -50_00),
+      ],
+      budget: [{ category: "Landscaping", annualCents: 500_00, kind: "expense" }],
+    };
+    expect(budgetVariance(c).expense[0].ytdActualCents).toBe(50_00);
+  });
+
+  it("names the day the board adopted the budget, where the lines say one", () => {
+    expect(budgetAdoptedOn(mehrMeadows.budget)).toBe("2025-11-18");
+    expect(
+      budgetAdoptedOn([
+        {
+          category: "Landscaping",
+          annualCents: 1_000_00,
+          approvedOn: "2026-11-02",
+          kind: "expense",
+        },
+        { category: "Utilities", annualCents: 900_00, kind: "expense" },
+      ]),
+    ).toBe("2026-11-02");
+    expect(budgetAdoptedOn([{ category: "Utilities", annualCents: 900_00, kind: "expense" }])).toBe(
+      undefined,
+    );
   });
 });
 

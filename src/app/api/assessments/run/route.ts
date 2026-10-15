@@ -9,11 +9,14 @@ import { recordCronRun } from "@/lib/cron-runs";
 /**
  * The daily dues run.
  *
- * Vercel calls this each morning before the autopay run, with CRON_SECRET.
+ * The daily job calls this each morning before the autopay run, with CRON_SECRET.
  * For every live association it asks duesToIssue whether a period fell due
  * today (or in the last week, if a day was missed) and, if so, bills every
  * home through issue_assessment, which refuses to bill the same due date
- * twice. Nothing else here writes anything. Add ?dry=1 to see what would go.
+ * twice and bills each period at the rates of its due date. After billing it
+ * applies a scheduled rate change whose day has come (apply_dues_change),
+ * which is the only hand that moves dues_cents outside the settings screen.
+ * Add ?dry=1 to see what would go.
  *
  * Associations are walked in id order a page at a time with a time budget
  * (src/lib/cron.ts); a run that cannot finish answers with `next` and
@@ -47,6 +50,7 @@ export async function GET(request: NextRequest) {
     billed: [] as string[],
     quiet: [] as string[],
     lateFees: [] as string[],
+    applied: [] as string[],
     errors: [] as string[],
     complete: true,
     next: null as string | null,
@@ -58,7 +62,7 @@ export async function GET(request: NextRequest) {
       let query = admin
         .from("associations")
         .select(
-          "id, name, dues_cents, dues_cadence, due_day, fiscal_year_start, created_at, billing_starts_on, subscription_status, past_due_since, trial_ends_at, billing_subscription_id",
+          "id, name, dues_cents, dues_cadence, due_day, fiscal_year_start, created_at, billing_starts_on, subscription_status, past_due_since, trial_ends_at, billing_subscription_id, dues_change_on",
         )
         .is("deleted_at", null)
         .order("id")
@@ -99,25 +103,44 @@ export async function GET(request: NextRequest) {
         // association is later than the row was created.
         since: a.billing_starts_on ?? a.created_at,
       });
-      if (!period) {
+      if (period) {
+        if (dryRun) {
+          report.billed.push(`${a.name}: would bill ${period.label} due ${period.dueOn}`);
+        } else {
+          const { data: count, error: issueError } = await admin.rpc("issue_assessment", {
+            p_association_id: a.id,
+            p_label: period.label,
+            p_due_on: period.dueOn,
+          });
+          if (issueError) {
+            log.error("issue_assessment failed", { associationId: a.id, err: issueError.message });
+            report.errors.push(`${a.name}: ${issueError.message}`);
+          } else {
+            report.billed.push(`${a.name}: ${period.label} due ${period.dueOn}, ${count} homes`);
+          }
+        }
+      } else {
         report.quiet.push(a.name);
-        return;
       }
-      if (dryRun) {
-        report.billed.push(`${a.name}: would bill ${period.label} due ${period.dueOn}`);
-        return;
+      // A rate change whose day has come is applied after billing, so a
+      // catch-up run for a period that closed before the day still bills
+      // the old rate, and the next one bills the new rate. The function
+      // only answers true once; a run that comes twice changes nothing.
+      if (a.dues_change_on && a.dues_change_on <= today) {
+        if (dryRun) {
+          report.applied.push(`${a.name}: would apply the new dues rate`);
+          return;
+        }
+        const { data: applied, error: applyError } = await admin.rpc("apply_dues_change", {
+          p_association_id: a.id,
+        });
+        if (applyError) {
+          log.error("apply_dues_change failed", { associationId: a.id, err: applyError.message });
+          report.errors.push(`${a.name}: dues change: ${applyError.message}`);
+        } else if (applied) {
+          report.applied.push(`${a.name}: new dues rate applied`);
+        }
       }
-      const { data: count, error: issueError } = await admin.rpc("issue_assessment", {
-        p_association_id: a.id,
-        p_label: period.label,
-        p_due_on: period.dueOn,
-      });
-      if (issueError) {
-        log.error("issue_assessment failed", { associationId: a.id, err: issueError.message });
-        report.errors.push(`${a.name}: ${issueError.message}`);
-        return;
-      }
-      report.billed.push(`${a.name}: ${period.label} due ${period.dueOn}, ${count} homes`);
     },
   );
 
@@ -126,6 +149,7 @@ export async function GET(request: NextRequest) {
     billed: report.billed.length,
     quiet: report.quiet.length,
     lateFees: report.lateFees.length,
+    applied: report.applied.length,
     errors: report.errors.length,
     complete: walk.complete,
     after: plan.after,

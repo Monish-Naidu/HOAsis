@@ -17,6 +17,24 @@ type Role = "resident" | "board";
 /** The kind of home. Same values as the onboarding answer. */
 export type HomeType = "single-family" | "townhomes" | "condos";
 
+/**
+ * A new set of dues and the first day they bill from. Held on the
+ * association until the daily run moves it into `duesCents` and `duesByType`
+ * (apply_dues_change, migration 0117), so one rate change can be adopted
+ * in budget season and take effect on the day the board picked.
+ */
+export interface DuesChange {
+  /** The new standard rate, in cents. */
+  duesCents: Cents;
+  /** The new rates by kind of home, or absent when every kind pays one rate. */
+  duesByType?: Partial<Record<HomeType, Cents>>;
+  /**
+   * The first day the new rates bill: a period due on or after it bills the
+   * new rate, a period due before it the old one.
+   */
+  effectiveOn: ISODate;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Association                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -35,6 +53,13 @@ export interface Association {
    * listed pays `duesCents`. Read through `duesFor`, never directly.
    */
   duesByType?: Partial<Record<HomeType, Cents>>;
+  /**
+   * A new rate the board has scheduled and the daily run has not applied
+   * yet (migration 0117). Read through `duesTerms`, never directly: the rate
+   * of the day comes from here once the day has come, so screens and bills
+   * never disagree.
+   */
+  duesChange?: DuesChange;
   duesCadence: "monthly" | "quarterly" | "annually";
   addressLine: string;
   managedBy: "self" | "professional";
@@ -809,6 +834,39 @@ interface BallotOption {
   label: string;
   detail?: string;
   votes: number;
+  /** A candidate's home on the register, so the winner can be seated from the result. */
+  homeId?: ID;
+}
+
+/** How a home's vote reached the ballot. Online is the owner's own; the rest the board entered. */
+type VoteMethod = "online" | "paper" | "proxy";
+
+/**
+ * A vote the board entered for a home from a paper ballot or a proxy (0118).
+ * Which choice it was is not kept here: the board sees that a home voted
+ * and how it reached them, never how it voted.
+ */
+interface EnteredVote {
+  homeId: ID;
+  unit: string;
+  method: Exclude<VoteMethod, "online">;
+  /** The officer who typed it in. */
+  enteredBy: string;
+  enteredDate: ISODate;
+  /** Who held the proxy, for a proxy. */
+  proxyHolder?: string;
+}
+
+/** One winner of an election and what seating them did. */
+export interface SeatedWinner {
+  optionId: ID;
+  name: string;
+  unit?: string;
+  /** The office picked for them; absent for a winner who could not be seated. */
+  office?: Office;
+  seated: boolean;
+  /** Why they were not seated, when they were not. */
+  reason?: string;
 }
 
 export interface Ballot {
@@ -851,6 +909,26 @@ export interface Ballot {
   certifiedDate?: ISODate;
   /** Owners see live tallies only when the board opts in. */
   liveResultsVisible: boolean;
+  /** A home past due on its dues cannot vote while this is on. */
+  duesCurrentRequired?: boolean;
+  /** Votes the board entered, one per home. Read by the board only. */
+  entered?: EnteredVote[];
+  /** The signed in person's own homes whose vote the board entered. */
+  myVoteEntered?: { homeId: ID; method: Exclude<VoteMethod, "online"> }[];
+  /** Homes whose vote the board entered, counted for everyone. */
+  paperHomes?: number;
+  proxyHomes?: number;
+  /**
+   * Homes known to have voted online, kept by the demo so it can refuse a
+   * paper vote for one the way the database does. Absent signed in.
+   */
+  votedHomeIds?: ID[];
+  /** When the winners of an election were seated, by whom, and how it went. */
+  winnersSeatedDate?: ISODate;
+  winnersSeatedBy?: string;
+  seated?: SeatedWinner[];
+  /** When the results went to every home. Once per ballot. */
+  resultsEmailedDate?: ISODate;
 }
 
 export interface MeetingAttendee {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button, Card, CardHeader, Select, fieldClass } from "@/components/ui/primitives";
-import { cn } from "@/lib/utils";
+import { cn, todayIsoDate } from "@/lib/utils";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
 import type { LedgerCategory } from "@/lib/types";
@@ -31,6 +31,7 @@ export function AddBudgetLine() {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("Landscaping");
   const [annual, setAnnual] = useState("");
+  const [adopted, setAdopted] = useState("");
 
   const field = cn(fieldClass, "w-auto");
   const cents = Math.round((Number(annual) || 0) * 100);
@@ -39,13 +40,14 @@ export function AddBudgetLine() {
     addBudgetLine({
       category,
       annualCents: cents,
-      // Nothing spent against it yet. A board entering next year's budget
-      // has no actuals, and inventing one would be a lie in every report
-      // that reads this.
-      ytdActualCents: 0,
+      // Where the board says the day they adopted the plan this line belongs
+      // to. Optional: a line entered before any vote carries no day, and the
+      // screen says nothing about one.
+      approvedOn: adopted || undefined,
       kind: "expense",
     });
     setAnnual("");
+    setAdopted("");
     setOpen(false);
     notify(`${category} added to the budget`);
   }
@@ -103,6 +105,17 @@ export function AddBudgetLine() {
             onChange={(e) => setAnnual(e.target.value)}
             placeholder="18000"
             aria-label="Annual amount"
+            className={`mt-1.5 w-40 ${field}`}
+          />
+        </label>
+        <label className="block">
+          <span className="text-footnote font-semibold text-fg-muted">Adopted on</span>
+          <input
+            type="date"
+            value={adopted}
+            max={todayIsoDate()}
+            onChange={(e) => setAdopted(e.target.value)}
+            aria-label="Day the budget was adopted"
             className={`mt-1.5 w-40 ${field}`}
           />
         </label>

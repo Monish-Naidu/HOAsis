@@ -31,6 +31,7 @@ const { OpeningBalances } = await import("@/app/board/money/opening-balances");
 const { DraftField } = await import("@/app/board/settings/settings-screen");
 const { CollectionsLadder } = await import("@/components/app/collections-ladder");
 const { collectionsLadder, policyFor } = await import("@/lib/collections");
+const { addDays, todayIsoDate } = await import("@/lib/utils");
 
 /**
  * Board forms that said more than they did, or did more than they said.
@@ -580,6 +581,28 @@ describe("a home's own dues in the browser copy", () => {
     expect(seen.state.community.homes.find((o) => o.id === home.id)!.duesCents).toBeUndefined();
   });
 
+  it("typing the standard rate back clears the home's own amount", async () => {
+    const user = userEvent.setup();
+    wrap(<HomeownersScreen />);
+    act(() => seen.state.signIn("acct-arya"));
+    const home = seen.state.community.homes.find((o) => !o.placeholder)!;
+    const standard = homeDues(seen.state.community.association, { homeType: home.homeType });
+    await act(async () => {
+      await seen.state.setHomeDues([{ homeId: home.id, cents: standard + 10_000 }]);
+    });
+    await user.click(screen.getByRole("button", { name: `Message ${home.displayName}` }));
+    await user.click(
+      screen.getByRole("button", { name: `Change the dues for ${home.displayName}` }),
+    );
+    await user.clear(screen.getByLabelText("Dues for this home"));
+    await user.type(screen.getByLabelText("Dues for this home"), String(standard / 100));
+    await user.click(screen.getByRole("button", { name: "Save dues" }));
+    // The standard rate typed back in means "no longer its own amount", not
+    // an override that happens to match: an override would stay behind when
+    // the rate changed, a scheduled change included.
+    expect(seen.state.community.homes.find((o) => o.id === home.id)!.duesCents).toBeUndefined();
+  });
+
   it("the form offers the standard rate only to a home that has its own amount", () => {
     render(
       <ChangeDuesForm
@@ -650,20 +673,27 @@ describe("a home's own dues in the browser copy", () => {
 
   it("the association rate field refuses what the home form refuses", () => {
     wrap(<DuesSettings />);
-    const field = screen.getByLabelText(/^Each home, per month/);
-    const save = screen.getByRole("button", { name: "Save dues" });
+    const field = screen.getByLabelText(/^New rate, per month/);
+    const schedule = screen.getByRole("button", { name: "Schedule the change" });
+    // A change carries the day it starts, so the day is picked first and the
+    // amount is judged with it.
+    fireEvent.change(screen.getByLabelText("The day the new dues start"), {
+      target: { value: addDays(todayIsoDate(), 30) },
+    });
     for (const typed of ["99999999", "285.555", "12e3"]) {
       fireEvent.change(field, { target: { value: typed } });
-      expect(save).toBeDisabled();
+      expect(schedule).toBeDisabled();
     }
     fireEvent.change(field, { target: { value: "290" } });
-    expect(save).toBeEnabled();
+    expect(schedule).toBeEnabled();
   });
 
   it("the dues settings card says how many homes pay their own amount, with a link", async () => {
     wrap(<DuesSettings />);
     expect(screen.queryByText(/pay their own amount|pays its own amount/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/^Each home, per month/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^New rate, per month/)).toBeInTheDocument();
+    // What every home pays today, before anything is typed.
+    expect(screen.getByText("Every home")).toBeInTheDocument();
 
     const [a, b, c] = seen.state.community.homes;
     await act(async () => {
@@ -678,7 +708,8 @@ describe("a home's own dues in the browser copy", () => {
       "href",
       "/board/homeowners",
     );
-    // The standard rate is still its own field, no longer "each home".
-    expect(screen.getByLabelText(/^Standard rate, per month/)).toBeInTheDocument();
+    // The rate of the day is still named, now as the standard rate the homes
+    // with an amount of their own sit outside.
+    expect(screen.getByText("Standard rate")).toBeInTheDocument();
   });
 });

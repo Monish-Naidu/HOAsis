@@ -2,8 +2,8 @@ import type { Community } from "@/lib/data/community";
 import { renderTemplate, type MessageTemplate } from "@/lib/data/templates";
 import { type CollectionPolicy, type CollectionStage, stageFor } from "@/lib/collections";
 import type { Home } from "@/lib/types";
-import { money } from "@/lib/utils";
-import { homeDues } from "@/lib/home-types";
+import { money, todayIsoDate } from "@/lib/utils";
+import { duesTerms, homeDues } from "@/lib/home-types";
 
 /**
  * Which letter a household is owed, and what it says once filled in.
@@ -60,7 +60,9 @@ function letterFields(
     balance: money(home.balanceCents),
     days_past_due: String(home.daysPastDue),
     association: community.settings.displayName,
-    dues: money(homeDues(community.association, home)),
+    // The rate of the day, so a letter sent after a change took effect never
+    // quotes the amount before it.
+    dues: money(homeDues(duesTerms(community.association, todayIsoDate()), home)),
     portal_link: "yourhoasis.com/resident/pay",
   };
 }

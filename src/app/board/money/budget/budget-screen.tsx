@@ -4,8 +4,8 @@ import { Badge, Card, CardHeader, Meter, PageHeader } from "@/components/ui/prim
 import { AddBudgetLine } from "@/components/app/add-budget-line";
 import { StatTile } from "@/components/app/finance-ui";
 import { useAppState } from "@/lib/app-state";
-import { budgetVariance } from "@/lib/metrics";
-import { cn, money, pluralize, todayIsoDate } from "@/lib/utils";
+import { budgetAdoptedOn, budgetVariance, fiscalMonth, periodRange } from "@/lib/metrics";
+import { cn, formatDate, money, pluralize } from "@/lib/utils";
 
 type Row = ReturnType<typeof budgetVariance>["expense"][number];
 type Total = ReturnType<typeof budgetVariance>["expenseTotal"];
@@ -13,21 +13,33 @@ type Total = ReturnType<typeof budgetVariance>["expenseTotal"];
 /**
  * Budget against actual, one line at a time.
  *
- * The yardstick is the share of the year gone. A line that has used more of
- * its budget than that is flagged; the rest is a bar and a signed variance,
- * positive when the news is good on either kind of line.
+ * The actual figure is what the books say over the fiscal year, the same rows
+ * the Finances screens read, so the two cannot disagree. The yardstick for
+ * pace is the share of the year gone. A line that has used more of its budget
+ * than that is flagged; the rest is a bar and a signed variance, positive when
+ * the news is good on either kind of line.
  */
 export function BudgetScreen() {
   const { community } = useAppState();
   const v = budgetVariance(community);
-  const year = todayIsoDate().slice(0, 4);
+  const year = periodRange(
+    "this-year",
+    community.asOf,
+    fiscalMonth(community.association.fiscalYearStart),
+  ).from.slice(0, 4);
   const elapsedPct = Math.round(v.yearElapsed * 100);
+  const adoptedOn = budgetAdoptedOn(community.budget);
 
   return (
     <>
       <PageHeader
         title="Budget"
-        description={`The ${year} budget compared with actual spending, with ${elapsedPct}% of the year gone.`}
+        description={
+          <>
+            {`The ${year} budget against actual spending, with ${elapsedPct}% of the year gone.`}
+            {adoptedOn ? ` Adopted ${formatDate(adoptedOn, "medium")}.` : ""}
+          </>
+        }
         action={<AddBudgetLine />}
       />
 
@@ -88,9 +100,9 @@ export function BudgetScreen() {
           />
 
           <p className="mt-4 text-footnote text-fg-muted">
-            Pace is the share of a line&apos;s annual budget used so far, against {elapsedPct}% of
-            the year gone. Difference is against the budget so far, positive when the association is
-            ahead.
+            Actuals are the books, the same figures Finances shows for money in and out. Pace is the
+            share of a line&apos;s annual budget used so far, against {elapsedPct}% of the year
+            gone. Difference is against the budget so far, positive when the association is ahead.
           </p>
         </>
       )}

@@ -14,6 +14,7 @@ import type {
   Home,
   HomeType,
   LedgerEntry,
+  Office,
   Payout,
 } from "@/lib/types";
 import type {
@@ -442,6 +443,7 @@ export async function loadCommunity(
     termRows,
     activityRows,
     fiscalYearRows,
+    enteredRows,
   ] = await Promise.all([
     supabase.from("associations").select("*").eq("id", associationId).single(),
     // A retired home (0099) keeps its records but is off the register.
@@ -509,10 +511,9 @@ export async function loadCommunity(
     supabase.from("ballots").select("*").eq("association_id", associationId).order("closes_on"),
     supabase.from("ballot_options").select("*").order("position"),
     supabase.from("ballot_tallies").select("*"),
-    supabase
-      .from("ballot_turnout")
-      .select("ballot_id, homes_voted")
-      .eq("association_id", associationId),
+    // Every column, so a build that reaches a database before 0118 (which
+    // adds the paper and proxy counts) still reads the turnout.
+    supabase.from("ballot_turnout").select("*").eq("association_id", associationId),
     supabase.from("votes").select("*"),
     supabase
       .from("posts")
@@ -631,6 +632,9 @@ export async function loadCommunity(
       .select("*")
       .eq("association_id", associationId)
       .order("starts_on", { ascending: false }),
+    // Votes the board typed in (0118): which home, how, and by whom, never
+    // the choice. Empty for anybody without the voting capability.
+    supabase.from("ballot_entered_votes").select("*").eq("association_id", associationId),
   ]);
 
   const urlByPath = documents.urlByPath;
@@ -814,15 +818,6 @@ export async function loadCommunity(
       views: caps((m.views ?? []) as Capability[]),
     }));
 
-  // The first day of this fiscal year. A budget's actuals are this year's
-  // alone; summing every year on the books read five years of landscaping
-  // against one year's budget line.
-  const thisYearStart = `${today.slice(0, 4)}-${a.fiscal_year_start ?? "01-01"}`;
-  const fiscalYearFrom =
-    thisYearStart <= today
-      ? thisYearStart
-      : `${Number(today.slice(0, 4)) - 1}-${a.fiscal_year_start}`;
-
   // Statements keyed by home, each line carrying the balance after it. The
   // running figure starts from the balance the server carried into the
   // window and walks the same rows the balance view sums, so the statement
@@ -931,6 +926,14 @@ export async function loadCommunity(
       fiscalYearStart: a.fiscal_year_start,
       duesCents: a.dues_cents,
       duesByType: (a.dues_by_type ?? {}) as Community["association"]["duesByType"],
+      duesChange: a.dues_change_cents
+        ? {
+            duesCents: a.dues_change_cents,
+            duesByType: (a.dues_change_by_type ??
+              undefined) as Community["association"]["duesByType"],
+            effectiveOn: a.dues_change_on,
+          }
+        : undefined,
       duesCadence: a.dues_cadence,
       addressLine: `${a.city}, ${a.state}`,
       managedBy: "self",
@@ -1074,18 +1077,11 @@ export async function loadCommunity(
       ? (budgetRows.data ?? []).map((line) => ({
           category: line.category as Community["budget"][number]["category"],
           annualCents: Number(line.annual_cents),
-          // Actuals come from the books, never from a typed number, so the
-          // budget screen and the ledger cannot disagree.
-          ytdActualCents: funds
-            ? fundsActual(funds, line.category, line.kind as "income" | "expense")
-            : (ledger.data ?? [])
-                // Confirmed lines only: one waiting on review is held out
-                // of every report, and association_funds leaves it out too.
-                .filter((e) => Boolean(e.confirmed_at))
-                .filter((e) => e.category === line.category && e.occurred_on >= fiscalYearFrom)
-                .filter((e) => (line.kind === "income" ? e.amount_cents > 0 : e.amount_cents < 0))
-                .reduce((total, e) => total + Math.abs(e.amount_cents), 0),
+          approvedOn: line.approved_on ?? undefined,
           kind: line.kind as "income" | "expense",
+          // No actual figure is stored on a line any more: the budget's
+          // actuals are derived from the books (categoryFlows in metrics),
+          // the same rows the Finances screens read.
         }))
       : [
           {
@@ -1106,17 +1102,6 @@ export async function loadCommunity(
                   ),
                 0,
               ) * (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1),
-            ytdActualCents: funds
-              ? fundsActual(funds, "Assessments", "income")
-              : (ledger.data ?? [])
-                  .filter(
-                    (e) =>
-                      Boolean(e.confirmed_at) &&
-                      e.category === "Assessments" &&
-                      e.amount_cents > 0 &&
-                      e.occurred_on >= fiscalYearFrom,
-                  )
-                  .reduce((total, e) => total + e.amount_cents, 0),
             kind: "income",
           },
         ],
@@ -1381,6 +1366,14 @@ export async function loadCommunity(
       // One row per candidate marked, so a two seat race has two.
       const marks = (myVotes.data ?? []).filter((v) => v.ballot_id === b.id);
       const mine = marks[0];
+      const counted = (turnout.data ?? []).find((t) => t.ballot_id === b.id);
+      // A home's own vote rows say how it reached the ballot, so an owner
+      // whose vote the board typed in is told so rather than asked to vote.
+      const enteredForMe = new Map<string, "paper" | "proxy">();
+      for (const v of marks) {
+        if (v.method === "paper" || v.method === "proxy") enteredForMe.set(v.unit_id, v.method);
+      }
+      const seatedRows = Array.isArray(b.winners_seated) ? b.winners_seated : [];
       return {
         id: b.id,
         reference: b.id.slice(0, 8).toUpperCase(),
@@ -1401,6 +1394,7 @@ export async function loadCommunity(
             id: o.id,
             label: o.label,
             detail: o.detail ?? undefined,
+            homeId: o.unit_id ?? undefined,
             // Counted by the database, so no two screens can disagree.
             votes: (tallies.data ?? []).find((t) => t.option_id === o.id)?.votes ?? 0,
           })),
@@ -1408,7 +1402,38 @@ export async function loadCommunity(
         // A person with two homes has a row per home for the same pick, so the
         // options are listed once.
         myVoteOptionIds: marks.length ? [...new Set(marks.map((v) => v.option_id))] : undefined,
-        homesVoted: (turnout.data ?? []).find((t) => t.ballot_id === b.id)?.homes_voted ?? 0,
+        homesVoted: counted?.homes_voted ?? 0,
+        paperHomes: counted?.paper_homes ?? undefined,
+        proxyHomes: counted?.proxy_homes ?? undefined,
+        duesCurrentRequired: b.dues_current_required ?? false,
+        entered: (enteredRows.data ?? [])
+          .filter((e) => e.ballot_id === b.id)
+          .map((e) => ({
+            homeId: e.unit_id,
+            unit: e.unit_label ?? "",
+            method: e.method as "paper" | "proxy",
+            enteredBy: e.entered_by_name ?? "The board",
+            enteredDate: e.entered_on,
+            proxyHolder: e.proxy_holder ?? undefined,
+          })),
+        myVoteEntered: enteredForMe.size
+          ? [...enteredForMe].map(([homeId, method]) => ({ homeId, method }))
+          : undefined,
+        winnersSeatedDate: b.winners_seated_on ?? undefined,
+        winnersSeatedBy: b.winners_seated_by ?? undefined,
+        seated: seatedRows.length
+          ? seatedRows.map((r: Record<string, unknown>) => ({
+              optionId: String(r.option_id ?? ""),
+              name: String(r.name ?? ""),
+              unit: typeof r.unit === "string" ? r.unit : undefined,
+              office: typeof r.office === "string" ? (r.office as Office) : undefined,
+              seated: r.seated === true,
+              reason: typeof r.reason === "string" ? r.reason : undefined,
+            }))
+          : undefined,
+        resultsEmailedDate: b.results_emailed_at
+          ? String(b.results_emailed_at).slice(0, 10)
+          : undefined,
         myVoteReceipt: mine?.receipt ?? undefined,
         meetingId: b.meeting_id ?? undefined,
         certifiedBy: b.certified_by ?? undefined,

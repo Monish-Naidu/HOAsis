@@ -1,8 +1,8 @@
 /**
  * One line per meaningful step, as JSON, with a request id on every line.
  *
- * Why JSON lines: Vercel keeps function logs as text and a log drain (Axiom,
- * Better Stack) indexes whatever is on the line. A line that is already an
+ * Why JSON lines: the host keeps container logs as text and Log Analytics
+ * indexes whatever is on the line. A line that is already an
  * object becomes a filter (`route = stripe/webhook and level = error`)
  * instead of a regex. See docs/observability.md.
  *

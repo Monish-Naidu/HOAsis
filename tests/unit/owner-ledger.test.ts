@@ -3,6 +3,7 @@ import { buildHomeLedger } from "@/lib/data/owner-ledger";
 import { allCommunities } from "@/lib/data/communities";
 import type { Home } from "@/lib/types";
 import { buildCommunity } from "@/lib/data/new-community";
+import { budgetVariance } from "@/lib/metrics";
 
 const base: Home = {
   id: "own-001",
@@ -140,7 +141,9 @@ describe("a community built through onboarding", () => {
     const c = buildCommunity(draft, "2026-08-24");
     expect(c.budget).toHaveLength(1);
     expect(c.budget[0].annualCents).toBe(4_500 * 12 * 3);
-    expect(c.budget[0].ytdActualCents).toBe(0);
+    // Nothing has been spent or collected yet: the actual is read from the
+    // books, and a new community has none.
+    expect(budgetVariance(c).incomeTotal.ytdActualCents).toBe(0);
   });
 
   it("bills on the next occurrence of the due day", () => {

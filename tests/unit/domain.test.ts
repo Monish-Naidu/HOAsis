@@ -12,7 +12,6 @@ import {
 import { monthGrid, openingMonth, upcomingFrom, type CalendarEntry } from "@/lib/calendar";
 import { renderTemplate } from "@/lib/data/templates";
 import {
-  budgetSummary,
   cashPosition,
   delinquency,
   insuranceExposure,
@@ -24,6 +23,7 @@ import {
   association,
   homes,
 } from "@/lib/data";
+import { budgetVariance } from "@/lib/metrics";
 import { complianceRegister } from "@/lib/compliance";
 import { mehrMeadows } from "@/lib/data/communities";
 
@@ -148,11 +148,15 @@ describe("association arithmetic", () => {
     expect(savingsOffers).toHaveLength(0);
   });
 
-  it("reports budget pace against the elapsed year", () => {
-    const budget = budgetSummary();
-    expect(budget.netYtd).toBe(budget.incomeYtd - budget.expenseYtd);
-    expect(budget.yearElapsed).toBeGreaterThan(0);
-    expect(budget.yearElapsed).toBeLessThan(1);
+  it("reports budget pace against the elapsed year, with actuals off the books", () => {
+    const v = budgetVariance(mehrMeadows);
+    expect(v.yearElapsed).toBeGreaterThan(0);
+    expect(v.yearElapsed).toBeLessThan(1);
+    // The actual figures are the books, the same rows the Finances screens
+    // read, so a budget line can never disagree with the ledger it measures.
+    expect(v.incomeTotal.ytdActualCents).toBeGreaterThan(0);
+    expect(v.expenseTotal.ytdActualCents).toBeGreaterThan(0);
+    expect(v.income.find((r) => r.category === "Assessments")!.ytdActualCents).toBeGreaterThan(0);
   });
 
   it("treats a past due date as overdue, never as the next deadline", () => {

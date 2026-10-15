@@ -62,7 +62,7 @@ describe("slugFromHost", () => {
     expect(slugFromHost("api.yourhoasis.com")).toBeNull();
     expect(slugFromHost("localhost:3000")).toBeNull();
     expect(slugFromHost("a.b.yourhoasis.com")).toBeNull();
-    expect(slugFromHost("your-hoasis-abc.vercel.app")).toBeNull();
+    expect(slugFromHost("ca-hoasis-web.westus.azurecontainerapps.io")).toBeNull();
     expect(slugFromHost(null)).toBeNull();
   });
 });

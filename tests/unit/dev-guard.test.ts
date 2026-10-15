@@ -49,7 +49,7 @@ describe("environmentBlocks", () => {
 
   it("never opens in production, whatever else is set", () => {
     expect(environmentBlocks({ ...OPEN, NODE_ENV: "production" })).toMatch(/production/);
-    expect(environmentBlocks({ ...OPEN, VERCEL_ENV: "production" })).toMatch(/production/);
+    expect(environmentBlocks({ ...OPEN, APP_ENV: "production" })).toMatch(/production/);
   });
 
   it("stays shut without the flag", () => {
@@ -148,7 +148,7 @@ const { NextRequest } = await import("next/server");
 
 function open() {
   for (const [name, value] of Object.entries(OPEN)) vi.stubEnv(name, value);
-  vi.stubEnv("VERCEL_ENV", "");
+  vi.stubEnv("APP_ENV", "");
 }
 
 const deleteOne = () =>

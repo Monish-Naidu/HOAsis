@@ -203,16 +203,10 @@ export function useMoneyActions(deps: AppDeps) {
         ...all,
       ]);
 
-      // Income against budget is what tells a board whether collections are on
-      // pace. Moving cash without moving this is how a dashboard ends up
-      // reporting a full bank account and nothing collected.
-      sliceStore(communityId, "budget").update((all) =>
-        all.map((line) =>
-          line.kind === "income" && line.category === "Assessments"
-            ? { ...line, ytdActualCents: line.ytdActualCents + input.amountCents }
-            : line,
-        ),
-      );
+      // Income against budget is read from the ledger by a selector
+      // (categoryFlows), so a payment that reaches the books is counted
+      // against the Assessments line by construction, and no stored figure
+      // can drift from it.
 
       if (operating) {
         sliceStore(communityId, "bankAccounts").update((all) =>
@@ -393,13 +387,8 @@ export function useMoneyActions(deps: AppDeps) {
         },
         ...all,
       ]);
-      sliceStore(communityId, "budget").update((all) =>
-        all.map((line) =>
-          line.kind === "income" && line.category === "Assessments"
-            ? { ...line, ytdActualCents: line.ytdActualCents - amountCents }
-            : line,
-        ),
-      );
+      // The Assessments actual on the budget falls with this by construction:
+      // it is read from the ledger (categoryFlows), never stored.
       if (operating) {
         sliceStore(communityId, "bankAccounts").update((all) =>
           all.map((a) =>
@@ -1241,13 +1230,8 @@ export function useMoneyActions(deps: AppDeps) {
           ),
         );
       }
-      sliceStore(communityId, "budget").update((all) =>
-        all.map((line) =>
-          line.kind === "expense" && line.category === category
-            ? { ...line, ytdActualCents: line.ytdActualCents + payout.amountCents }
-            : line,
-        ),
-      );
+      // The category's actual on the budget rises with this by construction:
+      // it is read from the books (categoryFlows), never stored on a line.
       return true;
     },
     [can, remote.community, communityId],
@@ -1341,13 +1325,8 @@ export function useMoneyActions(deps: AppDeps) {
           ),
         );
       }
-      sliceStore(communityId, "budget").update((all) =>
-        all.map((line) =>
-          line.kind === "expense" && line.category === category
-            ? { ...line, ytdActualCents: line.ytdActualCents + payout.amountCents }
-            : line,
-        ),
-      );
+      // As above: the budget's actual for the category is the books, so
+      // nothing more is written here.
     },
     [remote.community, communityId],
   );
@@ -1494,13 +1473,16 @@ export function useMoneyActions(deps: AppDeps) {
       if (remote.community) {
         const rc = remote.community;
         void remoteWrite("Adding the budget line", () =>
-          supabaseBrowser().from("budget_lines").insert({
-            association_id: rc.id,
-            category: line.category,
-            annual_cents: line.annualCents,
-            kind: line.kind,
-            position: rc.budget.length,
-          }),
+          supabaseBrowser()
+            .from("budget_lines")
+            .insert({
+              association_id: rc.id,
+              category: line.category,
+              annual_cents: line.annualCents,
+              kind: line.kind,
+              approved_on: line.approvedOn ?? null,
+              position: rc.budget.length,
+            }),
         );
         return;
       }

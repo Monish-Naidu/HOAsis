@@ -16,7 +16,13 @@
 import type { Community } from "@/lib/data/community";
 import type { AccountRole } from "@/lib/types";
 import { ROLE_LABEL } from "@/lib/types";
-import { ledgerTotals, budgetSummary, reserveSummary, vendorPaidThisYear } from "@/lib/metrics";
+import {
+  budgetSummary,
+  budgetVariance,
+  ledgerTotals,
+  reserveSummary,
+  vendorPaidThisYear,
+} from "@/lib/metrics";
 import { policyFor } from "@/lib/collections";
 import { duesFor, HOME_TYPE_LABEL } from "@/lib/home-types";
 import { money } from "@/lib/utils";
@@ -141,12 +147,15 @@ export function completeRecordsFiles(c: Community, rows: CompleteRecords): Recor
     Notes: i.notes ?? "",
   }));
 
-  const budgetRows: RecordsRow[] = c.budget.map((line) => ({
+  // Actuals are the books, derived through the one selector every Finances
+  // reader uses, so the file cannot disagree with the Budget screen.
+  const variance = budgetVariance(c);
+  const budgetRows: RecordsRow[] = [...variance.income, ...variance.expense].map((line) => ({
     Category: line.category,
     Kind: line.kind === "income" ? "Income" : "Expense",
     Annual: dollars(line.annualCents),
     "Year to date": dollars(line.ytdActualCents),
-    Remaining: dollars(line.annualCents - line.ytdActualCents),
+    Remaining: dollars(line.remainingCents),
   }));
 
   const reserveRows: RecordsRow[] = c.reserveComponents.map((component) => ({

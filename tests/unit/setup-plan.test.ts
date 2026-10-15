@@ -520,16 +520,16 @@ describe("invite the owners", () => {
 });
 
 describe("records owners can ask for", () => {
-  it("hides Budget what you spend while the Budget page is off, and brings it back", () => {
-    expect(MODULES["money-budget"].on).toBe(false);
+  it("shows Budget what you spend while the Budget page is on, and hides it with the module off", () => {
+    expect(MODULES["money-budget"].on).toBe(true);
     const keys = planOf(signedIn()).phases.flatMap((p) => p.tasks.map((t) => t.key));
-    expect(keys).not.toContain("budget");
-    MODULES["money-budget"].on = true;
+    expect(keys).toContain("budget");
+    MODULES["money-budget"].on = false;
     try {
-      const back = planOf(signedIn()).phases.flatMap((p) => p.tasks.map((t) => t.key));
-      expect(back).toContain("budget");
+      const hidden = planOf(signedIn()).phases.flatMap((p) => p.tasks.map((t) => t.key));
+      expect(hidden).not.toContain("budget");
     } finally {
-      MODULES["money-budget"].on = false;
+      MODULES["money-budget"].on = true;
     }
   });
 
@@ -554,14 +554,22 @@ describe("records owners can ask for", () => {
     ).toBe("Get a reserve study");
   });
 
-  it("says nothing about the Budget page anywhere in the plan while it is off", () => {
-    const text = planOf(signedIn())
-      .phases.flatMap((p) => p.tasks)
-      .map((t) => `${t.label} ${t.detail} ${t.because ?? ""}`)
-      .join(" ");
-    // The reasons mention "the annual budget report", which is a state's rule
-    // and not a page; what a board reads on a row never sends it to the page.
-    expect(text).not.toMatch(/budget/i);
+  it("names the Budget page only while that page is on", () => {
+    const text = () =>
+      planOf(signedIn())
+        .phases.flatMap((p) => p.tasks)
+        .map((t) => `${t.label} ${t.detail} ${t.because ?? ""}`)
+        .join(" ");
+    // The step is back with the page, and it is what tells a board the state
+    // entitles owners to see the budget.
+    expect(text()).toMatch(/Budget what you spend/);
+    MODULES["money-budget"].on = false;
+    try {
+      // With the page off, nothing a board reads on a row sends it there.
+      expect(text()).not.toMatch(/budget/i);
+    } finally {
+      MODULES["money-budget"].on = true;
+    }
   });
 });
 

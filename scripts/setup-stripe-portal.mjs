@@ -12,7 +12,7 @@
  * the plan is off, because the number of homes is ours to count.
  *
  *   node scripts/setup-stripe-portal.mjs
- *   node scripts/setup-stripe-portal.mjs https://preview-branch.vercel.app
+ *   node scripts/setup-stripe-portal.mjs https://ca-hoasis-web.yellowwater-f911a709.westus.azurecontainerapps.io
  */
 import Stripe from "stripe";
 import { loadEnv } from "./env.mjs";

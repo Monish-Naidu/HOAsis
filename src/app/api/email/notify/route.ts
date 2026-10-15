@@ -50,6 +50,7 @@ const KINDS: NotifyKind[] = [
   "letter",
   "message",
   "request",
+  "results",
 ];
 
 /**
@@ -71,6 +72,7 @@ const ALLOWED: Record<NotifyKind, ("communications" | "finances" | "requests" | 
   letter: ["communications", "finances"],
   message: ["communications", "finances"],
   request: ["communications", "requests"],
+  results: ["communications", "voting"],
 };
 
 export async function POST(request: NextRequest) {

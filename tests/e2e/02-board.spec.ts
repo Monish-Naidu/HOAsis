@@ -524,11 +524,14 @@ test.describe("a board can actually run a vote", () => {
     await page.getByRole("button", { name: "New ballot" }).click();
 
     // Three things since the launch scope: the question, the choices, the
-    // day it ends. Nothing about quorum stands between a volunteer and a vote.
+    // day it ends. Quorum and the dues rule are folded under the bylaws, so
+    // nothing about quorum stands between a volunteer and a vote.
     await page.getByLabel("Ballot title").fill("Replace the pool fence");
     await page.getByLabel("Ballot detail").fill("The current fence fails inspection.");
-    const preview = await inspect(page);
-    expect(preview.text, "the form still asks about quorum").not.toMatch(/quorum/i);
+    await expect(
+      page.getByRole("textbox", { name: "Quorum" }),
+      "the form still asks about quorum",
+    ).toBeHidden();
 
     await page.getByRole("button", { name: "Open the ballot" }).click();
     await expect(page.getByRole("button", { name: "Open the ballot" })).toBeHidden();
@@ -549,6 +552,43 @@ test.describe("a board can actually run a vote", () => {
     await page.getByLabel("Ballot title").fill("A question");
     await page.getByLabel("Choice 2").fill("");
     await expect(open, "a ballot with one choice could be opened").toBeDisabled();
+  });
+
+  test("a paper vote counts once, and the same home cannot be entered twice", async ({ page }) => {
+    await page.goto("/board/voting");
+    await page.waitForLoadState("networkidle");
+    const cookout = page.locator("#ballot-bal-2026-05");
+
+    await cookout.getByText("Enter a paper or proxy vote").click();
+    await cookout.getByLabel("The home the vote is for").selectOption({ index: 1 });
+    await cookout.getByText("October 11").last().click();
+    await cookout.getByRole("button", { name: "Enter the vote" }).click();
+    await expect(page.getByText(/Vote entered for /)).toBeVisible();
+    await expect(cookout.getByText("1 on paper, entered by the board.")).toBeVisible();
+
+    await cookout.getByLabel("The home the vote is for").selectOption({ index: 1 });
+    await expect(cookout.getByRole("alert")).toContainText(
+      "already has a vote entered by the board",
+    );
+    await expect(cookout.getByRole("button", { name: "Enter the vote" })).toBeDisabled();
+  });
+
+  test("the winners of an election are seated once, and the President is passed over", async ({
+    page,
+  }) => {
+    await page.goto("/board/voting");
+    await page.waitForLoadState("networkidle");
+    const election = page.locator("#ballot-bal-2026-01");
+
+    await election.getByRole("button", { name: "Seat the winners" }).click();
+    await expect(
+      election.getByText("Holds the presidency. Hand it over in Settings first."),
+    ).toBeVisible();
+    await election.getByLabel("Office for Sofia Bergman").selectOption("treasurer");
+    await election.getByRole("button", { name: "Seat the winners" }).click();
+    await expect(page.getByRole("status").getByText("Sofia Bergman as Treasurer.")).toBeVisible();
+    await expect(election.getByText(/Winners seated .* Sofia Bergman as Treasurer/)).toBeVisible();
+    await expect(election.getByRole("button", { name: "Seat the winners" })).toHaveCount(0);
   });
 });
 

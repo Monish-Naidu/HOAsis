@@ -81,6 +81,12 @@ export const activityWords = {
     cents === null
       ? `Dues for ${home} set back to the standard amount`
       : `Dues for ${home} set to ${money(cents)}`,
+  // A scheduled change, worded as schedule_dues_change writes it (0117). The
+  // day goes in as stored; activityText reads it with formatDate.
+  duesChange: (cents: number, cadence: string, on: string) =>
+    `Dues set to ${money(cents)} ${cadence} from ${on}`,
+  duesChangeByKind: (on: string) => `Dues for each kind of home set from ${on}`,
+  duesChangeCancelled: (was: string) => `Dues change set for ${was} cancelled`,
   email: (home: string, from: string, to: string) =>
     `Email for ${home} changed from ${from} to ${to}`,
   vendor: (name: string) => `Vendor ${name} added`,

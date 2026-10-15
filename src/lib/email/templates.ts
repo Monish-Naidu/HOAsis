@@ -913,6 +913,45 @@ export function ballotOpenEmail(
 }
 
 /**
+ * The result of a vote, to every home once it has closed. Statutory, like
+ * the notice that opened it. The lines are worded by `resultsSummary`
+ * (src/lib/voting.ts) so the email says what the Voting page says.
+ */
+export function ballotResultsEmail(
+  input: NoticeEmailInput & {
+    title: string;
+    headline: string;
+    turnout: string;
+    entered: string | null;
+    quorum: string | null;
+    options: { label: string; votes: number }[];
+  },
+) {
+  const subject = `Results: ${input.title} · ${input.associationName}`;
+  const counts = input.options.map(
+    (o) => `${o.label}: ${o.votes} ${o.votes === 1 ? "vote" : "votes"}`,
+  );
+  const lines = [
+    `${input.headline}.`,
+    [input.turnout, input.entered].filter(Boolean).join(" "),
+    input.quorum ?? "",
+    counts.join("\n"),
+  ].filter(Boolean);
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `${input.headline}. ${input.turnout}`,
+      body: `${heading(input.title)}${paragraphs(lines.join("\n\n"))}`,
+      cta: { label: "See the results", url: input.url },
+      signsIn: input.hasAccount !== false,
+      footer: noticeFooter(input, "This is the result of a vote of the association."),
+    }),
+    text: `${input.title}\n\n${lines.join("\n\n")}\n\nResults: ${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/**
  * A message from the board to one household: a reply on a thread, a note
  * from the roster, or a dues letter written in the product. The subject is
  * the board's own; the body goes out as typed. A dues letter is statutory
