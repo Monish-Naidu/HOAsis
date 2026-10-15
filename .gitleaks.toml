@@ -1,0 +1,26 @@
+# What the secret scan should not call a secret.
+#
+# Read by gitleaks in .github/workflows/security.yml. The default rules stay
+# in force; this file only subtracts the findings that are wrong.
+#
+# The one that made the scan red: the generic-api-key rule is entropy on a
+# string that sits near a word like "key", and infra/platform.bicep holds the
+# ids of Azure's built-in roles. `roleKeyVaultSecretsUser` is a GUID
+# Microsoft publishes in its own docs, not a credential. A bare lowercase
+# GUID is never a secret in this repository, so the rule below says so once,
+# for every file, rather than in a comment beside each of them.
+#
+# The allowlist is in gitleaks' single `[allowlist]` form on purpose: the
+# plural `[[allowlists]]` form is silently ignored by the 8.24 build the
+# action runs, proven both ways with the binary before this note was written.
+# Real credentials stay caught: an AWS-style key and a Stripe-style secret in
+# one scratch file were both still reported under this config.
+title = "yourhoasis"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "A bare lowercase GUID is a public id, not a credential."
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$''']

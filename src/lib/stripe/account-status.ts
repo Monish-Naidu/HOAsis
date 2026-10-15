@@ -118,7 +118,13 @@ function payDomains(requestHost?: string | null): string[] {
       .replace(/^https?:\/\//, "")
       .replace(/\/.*$/, "")
       .replace(/:\d+$/, "");
-    if (!host || host.includes("localhost") || host.endsWith(".vercel.app") || host === "127.0.0.1")
+    if (
+      !host ||
+      host.includes("localhost") ||
+      host.endsWith(".vercel.app") ||
+      host.endsWith(".azurecontainerapps.io") ||
+      host === "127.0.0.1"
+    )
       continue;
     hosts.add(host);
   }
