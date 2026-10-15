@@ -35,6 +35,7 @@ const SUITES = [
   "join-flow",
   "roster-import",
   "late-fees",
+  "dues-change",
   "access",
   "sale-privacy",
   "owners",

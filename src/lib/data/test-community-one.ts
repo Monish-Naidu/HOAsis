@@ -402,12 +402,12 @@ export const testCommunityOne: Community = {
   ],
 
   budget: [
-    { category: "Assessments", annualCents: 1_800_00, ytdActualCents: 330_00, kind: "income" },
-    { category: "Late fees", annualCents: 30_00, ytdActualCents: 15_00, kind: "income" },
-    { category: "Landscaping", annualCents: 1_200_00, ytdActualCents: 200_00, kind: "expense" },
-    { category: "Insurance", annualCents: 420_00, ytdActualCents: 0, kind: "expense" },
-    { category: "Management", annualCents: 240_00, ytdActualCents: 40_00, kind: "expense" },
-    { category: "Repairs & maintenance", annualCents: 300_00, ytdActualCents: 0, kind: "expense" },
+    { category: "Assessments", annualCents: 1_800_00, kind: "income" },
+    { category: "Late fees", annualCents: 30_00, kind: "income" },
+    { category: "Landscaping", annualCents: 1_200_00, kind: "expense" },
+    { category: "Insurance", annualCents: 420_00, kind: "expense" },
+    { category: "Management", annualCents: 240_00, kind: "expense" },
+    { category: "Repairs & maintenance", annualCents: 300_00, kind: "expense" },
   ],
   // Two months into the 2027 fiscal year.
   yearElapsed: 2 / 12,

@@ -1,5 +1,5 @@
 import type { Community } from "@/lib/data/community";
-import type { CommunityHistory, LedgerCategory, LedgerEntry } from "@/lib/types";
+import type { CommunityHistory, ISODate, LedgerCategory, LedgerEntry } from "@/lib/types";
 import { complianceRegister } from "@/lib/compliance";
 import { ballotPhase } from "@/lib/phases";
 import {
@@ -119,17 +119,18 @@ export function pastDueHint(households: number, feesCents: number): string {
 
 /** Budget income and expense, annual and year to date, with how the year is pacing. */
 export function budgetSummary(c: Community) {
-  const income = c.budget.filter((b) => b.kind === "income");
-  const expense = c.budget.filter((b) => b.kind === "expense");
-  const sum = (rows: typeof c.budget, key: "annualCents" | "ytdActualCents") =>
-    rows.reduce((total, r) => total + r[key], 0);
-  const incomeYtd = sum(income, "ytdActualCents");
-  const expenseYtd = sum(expense, "ytdActualCents");
+  const actualOf = budgetActualsOf(c);
+  const income = c.budget.filter((b) => b.kind === "income").map(withActual(actualOf));
+  const expense = c.budget.filter((b) => b.kind === "expense").map(withActual(actualOf));
+  const annual = (rows: typeof income) => rows.reduce((total, r) => total + r.annualCents, 0);
+  const ytd = (rows: typeof income) => rows.reduce((total, r) => total + r.ytdActualCents, 0);
+  const incomeYtd = ytd(income);
+  const expenseYtd = ytd(expense);
   return {
     income,
     expense,
-    incomeAnnual: sum(income, "annualCents"),
-    expenseAnnual: sum(expense, "annualCents"),
+    incomeAnnual: annual(income),
+    expenseAnnual: annual(expense),
     incomeYtd,
     expenseYtd,
     netYtd: incomeYtd - expenseYtd,
@@ -138,12 +139,72 @@ export function budgetSummary(c: Community) {
      * to measure against. A new association has an income line and no expense
      * lines, and dividing by that zero printed "NaN% of budget".
      */
-    incomePace: sum(income, "annualCents") > 0 ? incomeYtd / sum(income, "annualCents") : undefined,
-    expensePace:
-      sum(expense, "annualCents") > 0 ? expenseYtd / sum(expense, "annualCents") : undefined,
-    netAnnual: sum(income, "annualCents") - sum(expense, "annualCents"),
+    incomePace: annual(income) > 0 ? incomeYtd / annual(income) : undefined,
+    expensePace: annual(expense) > 0 ? expenseYtd / annual(expense) : undefined,
+    netAnnual: annual(income) - annual(expense),
     yearElapsed: c.yearElapsed,
   };
+}
+
+/**
+ * What the books say came in and went out of each category over a window,
+ * the same rows the Finances screens read: one selector for both, so the
+ * budget's actuals and the money in and out figures cannot disagree.
+ *
+ * The same lines the charts hold to: nothing waiting on review, opening
+ * balances left out, a reversed or refunded payment netted out of money in
+ * rather than read as spending. A reserve transfer stays in as its own
+ * category, because the budget's reserve line measures what was moved to
+ * savings, while the Finances charts leave it out of spending and say it
+ * beside the total instead.
+ */
+export function categoryFlows(
+  c: Community,
+  from: string,
+  to: string,
+): { category: string; inCents: number; outCents: number }[] {
+  const totals = new Map<string, { inCents: number; outCents: number }>();
+  for (const e of ledgerFlows(c)) {
+    if (e.category === "Opening balance") continue;
+    if (e.date < from || e.date > to) continue;
+    const row = totals.get(e.category) ?? { inCents: 0, outCents: 0 };
+    if (e.amountCents >= 0 || isPaymentReturn(e)) row.inCents += e.amountCents;
+    else row.outCents += -e.amountCents;
+    totals.set(e.category, row);
+  }
+  return [...totals.entries()].map(([category, cents]) => ({ category, ...cents }));
+}
+
+/**
+ * Actual money against each budget line, from the books, over the fiscal
+ * year the budget measures. A line whose category has nothing in the window
+ * reads zero, which is the honest answer: the budget and the books were two
+ * numbers typed in different rooms until now.
+ */
+function budgetActualsOf(c: Community) {
+  const window = periodRange("this-year", c.asOf, fiscalMonth(c.association.fiscalYearStart));
+  const flows = new Map(categoryFlows(c, window.from, window.to).map((f) => [f.category, f]));
+  return (line: Community["budget"][number]) =>
+    line.kind === "income"
+      ? (flows.get(line.category)?.inCents ?? 0)
+      : (flows.get(line.category)?.outCents ?? 0);
+}
+
+/** A budget line with its actual figure attached. */
+function withActual(actualOf: (line: Community["budget"][number]) => number) {
+  return (line: Community["budget"][number]) => ({ ...line, ytdActualCents: actualOf(line) });
+}
+
+/**
+ * The day the board adopted the budget, where the lines say one: the latest
+ * day any line carries, or undefined. A line entered later keeps the day it
+ * was entered, and the day the budget was finished is the adoption.
+ */
+export function budgetAdoptedOn(budget: Community["budget"]): ISODate | undefined {
+  let latest: ISODate | undefined;
+  for (const line of budget)
+    if (line.approvedOn && (!latest || line.approvedOn > latest)) latest = line.approvedOn;
+  return latest;
 }
 
 /** How much of the reserve components' replacement cost is funded, and which are due soonest. */
@@ -894,6 +955,10 @@ export function agingBuckets(c: Community) {
 /**
  * Budget against actual, line by line.
  *
+ * The actual figure is what the books say, over the fiscal year, from the
+ * same rows the Finances screens read (categoryFlows), so the two screens
+ * agree by construction and not by coincidence.
+ *
  * Pace is the share of the annual figure used so far. A line is over pace
  * when it has used more of its budget than the year has used of itself, with
  * two points of slack so a bill that landed a day early is not a flag.
@@ -902,7 +967,7 @@ export function agingBuckets(c: Community) {
  */
 export function budgetVariance(c: Community) {
   const elapsed = c.yearElapsed;
-  const rows = c.budget.map((line) => {
+  const rows = c.budget.map(withActual(budgetActualsOf(c))).map((line) => {
     const pace = line.annualCents > 0 ? line.ytdActualCents / line.annualCents : 0;
     const toDateCents = Math.round(line.annualCents * elapsed);
     const varianceCents =

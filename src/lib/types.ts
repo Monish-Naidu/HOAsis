@@ -17,6 +17,24 @@ type Role = "resident" | "board";
 /** The kind of home. Same values as the onboarding answer. */
 export type HomeType = "single-family" | "townhomes" | "condos";
 
+/**
+ * A new set of dues and the first day they bill from. Held on the
+ * association until the daily run moves it into `duesCents` and `duesByType`
+ * (apply_dues_change, migration 0117), so one rate change can be adopted
+ * in budget season and take effect on the day the board picked.
+ */
+export interface DuesChange {
+  /** The new standard rate, in cents. */
+  duesCents: Cents;
+  /** The new rates by kind of home, or absent when every kind pays one rate. */
+  duesByType?: Partial<Record<HomeType, Cents>>;
+  /**
+   * The first day the new rates bill: a period due on or after it bills the
+   * new rate, a period due before it the old one.
+   */
+  effectiveOn: ISODate;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Association                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -35,6 +53,13 @@ export interface Association {
    * listed pays `duesCents`. Read through `duesFor`, never directly.
    */
   duesByType?: Partial<Record<HomeType, Cents>>;
+  /**
+   * A new rate the board has scheduled and the daily run has not applied
+   * yet (migration 0117). Read through `duesTerms`, never directly: the rate
+   * of the day comes from here once the day has come, so screens and bills
+   * never disagree.
+   */
+  duesChange?: DuesChange;
   duesCadence: "monthly" | "quarterly" | "annually";
   addressLine: string;
   managedBy: "self" | "professional";

@@ -209,8 +209,8 @@ function applies(task: SetupTask, p: AssociationProfile, c: Community): boolean 
     case "opening-balances":
       return switching(p);
 
-    // The Budget page is switched off, so a task that sends a board there
-    // is not shown. It returns the day the module does.
+    // Only while the Budget page is switched on (module `money-budget`): a
+    // task that sends a board to a page that is off is not shown.
     case "budget":
       return moduleOn("money-budget");
 

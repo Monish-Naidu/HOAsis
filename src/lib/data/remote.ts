@@ -805,15 +805,6 @@ export async function loadCommunity(
       views: caps((m.views ?? []) as Capability[]),
     }));
 
-  // The first day of this fiscal year. A budget's actuals are this year's
-  // alone; summing every year on the books read five years of landscaping
-  // against one year's budget line.
-  const thisYearStart = `${today.slice(0, 4)}-${a.fiscal_year_start ?? "01-01"}`;
-  const fiscalYearFrom =
-    thisYearStart <= today
-      ? thisYearStart
-      : `${Number(today.slice(0, 4)) - 1}-${a.fiscal_year_start}`;
-
   // Statements keyed by home, each line carrying the balance after it. The
   // running figure starts from the balance the server carried into the
   // window and walks the same rows the balance view sums, so the statement
@@ -922,6 +913,14 @@ export async function loadCommunity(
       fiscalYearStart: a.fiscal_year_start,
       duesCents: a.dues_cents,
       duesByType: (a.dues_by_type ?? {}) as Community["association"]["duesByType"],
+      duesChange: a.dues_change_cents
+        ? {
+            duesCents: a.dues_change_cents,
+            duesByType: (a.dues_change_by_type ??
+              undefined) as Community["association"]["duesByType"],
+            effectiveOn: a.dues_change_on,
+          }
+        : undefined,
       duesCadence: a.dues_cadence,
       addressLine: `${a.city}, ${a.state}`,
       managedBy: "self",
@@ -1065,18 +1064,11 @@ export async function loadCommunity(
       ? (budgetRows.data ?? []).map((line) => ({
           category: line.category as Community["budget"][number]["category"],
           annualCents: Number(line.annual_cents),
-          // Actuals come from the books, never from a typed number, so the
-          // budget screen and the ledger cannot disagree.
-          ytdActualCents: funds
-            ? fundsActual(funds, line.category, line.kind as "income" | "expense")
-            : (ledger.data ?? [])
-                // Confirmed lines only: one waiting on review is held out
-                // of every report, and association_funds leaves it out too.
-                .filter((e) => Boolean(e.confirmed_at))
-                .filter((e) => e.category === line.category && e.occurred_on >= fiscalYearFrom)
-                .filter((e) => (line.kind === "income" ? e.amount_cents > 0 : e.amount_cents < 0))
-                .reduce((total, e) => total + Math.abs(e.amount_cents), 0),
+          approvedOn: line.approved_on ?? undefined,
           kind: line.kind as "income" | "expense",
+          // No actual figure is stored on a line any more: the budget's
+          // actuals are derived from the books (categoryFlows in metrics),
+          // the same rows the Finances screens read.
         }))
       : [
           {
@@ -1097,17 +1089,6 @@ export async function loadCommunity(
                   ),
                 0,
               ) * (a.dues_cadence === "monthly" ? 12 : a.dues_cadence === "quarterly" ? 4 : 1),
-            ytdActualCents: funds
-              ? fundsActual(funds, "Assessments", "income")
-              : (ledger.data ?? [])
-                  .filter(
-                    (e) =>
-                      Boolean(e.confirmed_at) &&
-                      e.category === "Assessments" &&
-                      e.amount_cents > 0 &&
-                      e.occurred_on >= fiscalYearFrom,
-                  )
-                  .reduce((total, e) => total + e.amount_cents, 0),
             kind: "income",
           },
         ],

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadCommunity } from "@/lib/data/remote";
+import { budgetVariance } from "@/lib/metrics";
+import { duesTerms } from "@/lib/home-types";
 
 /**
  * Loading a real association, against a database double.
@@ -48,7 +50,7 @@ function database(
     const builder: Record<string, unknown> = {
       single: async (): Promise<Result> =>
         table === "associations" && !failing[table]
-          ? { data: ASSOCIATION, error: null }
+          ? { data: rows.associations?.[0] ?? ASSOCIATION, error: null }
           : answer(table),
       then: (done: (value: Result) => unknown, failed?: (reason: unknown) => unknown) =>
         Promise.resolve(answer(table)).then(done, failed),
@@ -131,9 +133,47 @@ describe("loadCommunity", () => {
       ["held", "needs-review"],
       ["kept", "cleared"],
     ]);
-    // Only the confirmed one is income so far this fiscal year.
+    // Only the confirmed one is income so far this fiscal year: the actuals
+    // are derived from the books, never stored on a line.
     expect(community.budget).toHaveLength(1);
-    expect(community.budget[0]).toMatchObject({ category: "Assessments", ytdActualCents: 28_500 });
+    expect(community.budget[0].approvedOn).toBeUndefined();
+    const v = budgetVariance(community);
+    expect(v.income[0].ytdActualCents).toBe(28_500);
+  });
+
+  it("reads a scheduled dues change onto the association, when one is waiting", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-04T18:00:00Z"));
+    const community = await loadCommunity(
+      database(
+        {},
+        {
+          associations: [
+            {
+              ...ASSOCIATION,
+              dues_change_cents: 33_000,
+              dues_change_by_type: { townhomes: 35_000 },
+              dues_change_on: "2027-01-01",
+            },
+          ],
+        },
+      ),
+      "assoc-1",
+    );
+
+    expect(community.association.duesChange).toEqual({
+      duesCents: 33_000,
+      duesByType: { townhomes: 35_000 },
+      effectiveOn: "2027-01-01",
+    });
+    // The rate of the day follows it, the way the bills will.
+    expect(duesTerms(community.association, "2026-10-04").duesCents).toBe(30_000);
+    expect(duesTerms(community.association, "2027-01-01").duesCents).toBe(33_000);
+  });
+
+  it("reads no scheduled change when none is waiting", async () => {
+    const community = await loadCommunity(database(), "assoc-1");
+    expect(community.association.duesChange).toBeUndefined();
   });
 
   it("shows a saved bank or card only while whoever saved it still holds a seat on the home", async () => {

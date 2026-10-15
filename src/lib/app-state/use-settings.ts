@@ -1,6 +1,12 @@
 import { useCallback, useMemo } from "react";
 import type { Community } from "@/lib/data/community";
-import { DUES_HIGH_MESSAGE, MAX_DUES_CENTS } from "@/lib/input-checks";
+import {
+  DUES_HIGH_MESSAGE,
+  DUES_ZERO_MESSAGE,
+  MAX_DUES_CENTS,
+  duesEffectiveProblem,
+} from "@/lib/input-checks";
+import type { Cents, HomeType, ISODate } from "@/lib/types";
 import { todayIsoDate } from "@/lib/utils";
 import {
   type AppDeps,
@@ -9,6 +15,7 @@ import {
   dismissStore,
   isUuid,
   latest,
+  logDemoActivity,
   MUTABLE_SLICES,
   newId,
   remoteWrite,
@@ -17,6 +24,7 @@ import {
   sessionUserId,
   sliceStore,
 } from "./core";
+import { activityWords } from "@/lib/activity";
 import { saveCreatedCommunity } from "@/lib/data/created-communities";
 import {
   loadRemote,
@@ -523,6 +531,82 @@ export function useSettingsActions(deps: AppDeps) {
     [remote.community, communityId],
   );
 
+  /**
+   * A new rate and the day it bills from, or null to cancel the one waiting.
+   *
+   * Signed in, one SQL function holds it (schedule_dues_change, migration
+   * 0117): the amount, the day, the billing lock and the activity row. A
+   * second schedule replaces the change waiting, because nothing has billed
+   * at it yet. The demo writes the same facts on the association slice and
+   * the same lines in its activity store; in both worlds the daily run is
+   * what moves a change into `duesCents` once its day has come.
+   */
+  const scheduleDuesChange = useCallback(
+    (
+      input: {
+        duesCents: Cents;
+        duesByType?: Partial<Record<HomeType, Cents>>;
+        effectiveOn: ISODate;
+      } | null,
+    ) => {
+      if (input) {
+        const rates = [input.duesCents, ...Object.values(input.duesByType ?? {})];
+        if (rates.some((c) => c <= 0)) {
+          reportRemoteError(DUES_ZERO_MESSAGE);
+          return false;
+        }
+        if (rates.some((c) => c > MAX_DUES_CENTS)) {
+          reportRemoteError(DUES_HIGH_MESSAGE);
+          return false;
+        }
+        const dayProblem = duesEffectiveProblem(input.effectiveOn, todayIsoDate());
+        if (dayProblem) {
+          reportRemoteError(dayProblem);
+          return false;
+        }
+      }
+      if (remote.community) {
+        const rc = remote.community;
+        return remoteWrite(
+          input ? "Scheduling the dues change" : "Cancelling the dues change",
+          () =>
+            supabaseBrowser().rpc("schedule_dues_change", {
+              p_association_id: rc.id,
+              p_dues_cents: input?.duesCents ?? null,
+              p_dues_by_type: input?.duesByType ?? null,
+              p_effective_on: input?.effectiveOn ?? null,
+            }),
+        );
+      }
+      const association = sliceStore(communityId, "association");
+      if (input) {
+        logDemoActivity(
+          communityId,
+          "association",
+          input.duesByType
+            ? activityWords.duesChangeByKind(input.effectiveOn)
+            : activityWords.duesChange(
+                input.duesCents,
+                association.getSnapshot().duesCadence,
+                input.effectiveOn,
+              ),
+        );
+        association.update((current) => ({ ...current, duesChange: input }));
+      } else {
+        const waiting = association.getSnapshot().duesChange;
+        if (!waiting) return true;
+        logDemoActivity(
+          communityId,
+          "association",
+          activityWords.duesChangeCancelled(waiting.effectiveOn),
+        );
+        association.update((current) => ({ ...current, duesChange: undefined }));
+      }
+      return true;
+    },
+    [remote.community, communityId],
+  );
+
   const saveTemplate = useCallback(
     (template: Community["templates"][number]) => {
       if (remote.community) {
@@ -583,6 +667,7 @@ export function useSettingsActions(deps: AppDeps) {
     restoreSetupTask,
     createCommunity,
     updateAssociation,
+    scheduleDuesChange,
     saveTemplate,
   };
 }
