@@ -10,6 +10,7 @@
 #   scripts/azure/provision.sh                              # phase 2: adds the Supabase services; web app still on the hosted database
 #   WEB_ON_AZURE_DB=true scripts/azure/provision.sh         # after the data has moved: web app on the Azure stack
 #   APPS_ONLY=true scripts/azure/provision.sh               # a settings or gateway change: apps and jobs only, same image
+#   PLATFORM_ONLY=true scripts/azure/provision.sh           # the platform template alone (an alert, a firewall rule), nothing else
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 require_login
@@ -96,7 +97,7 @@ fi
 client_ip=$(curl -fsS --max-time 5 https://api.ipify.org || true)
 
 work=$(mktemp -d)
-params "$work/platform.json" postgresAdminPassword="$pg_password" clientIp="$client_ip" budgetEmail="$budget_email"
+params "$work/platform.json" postgresAdminPassword="$pg_password" clientIp="$client_ip" budgetEmail="$budget_email" uptimeUrl="$(read_env UPTIME_URL)"
 az deployment group create -g "$AZ_RG" -n platform --template-file "$ROOT/infra/platform.bicep" \
   --parameters "@$work/platform.json" --only-show-errors --query "properties.outputs" -o json > "$work/platform-out.json"
 acr=$(out "$work/platform-out.json" acrName)
@@ -106,6 +107,7 @@ github_client=$(out "$work/platform-out.json" githubClientId)
 storage_account=$(out "$work/platform-out.json" storageAccountName)
 echo "   registry $acr, vault $kv, environment domain $env_domain"
 urls
+if [ "${PLATFORM_ONLY:-false}" = "true" ]; then echo "Platform done."; rm -rf "$work"; exit 0; fi
 
 # The vault is in RBAC mode, which means even the subscription owner needs a
 # data-plane role to write a secret. Grant it to whoever is running this.
