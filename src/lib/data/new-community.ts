@@ -730,7 +730,6 @@ export function buildCommunity(draft: CommunityDraft, asOf: ISODate): Community 
       {
         category: "Assessments",
         annualCents: annualDues(draft),
-        ytdActualCents: 0,
         kind: "income",
       },
     ],

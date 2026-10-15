@@ -48,7 +48,7 @@ import { useToast } from "@/components/app/toast";
 import { TestModeGuide } from "@/components/app/test-mode-guide";
 import { policyFor } from "@/lib/collections";
 import { moduleOn } from "@/lib/modules";
-import { homeDues } from "@/lib/home-types";
+import { duesTerms, homeDues } from "@/lib/home-types";
 
 const REFERENCE = { year: today().getUTCFullYear(), month: today().getUTCMonth() + 1 };
 
@@ -73,9 +73,10 @@ export function PayFlow() {
   } = useAppState();
   const collections = policyFor(settings);
   // This home's own amount: in a mixed community a condo and a townhome
-  // can pay different dues.
-  const duesCents = homeDues(community.association, home ?? undefined);
+  // can pay different dues. The rate of the day the next bill falls due, so
+  // paying ahead of a scheduled change pays what that bill will be.
   const nextCharge = community.nextChargeDate;
+  const duesCents = homeDues(duesTerms(community.association, nextCharge), home ?? undefined);
   const { notify } = useToast();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);

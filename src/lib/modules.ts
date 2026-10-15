@@ -58,8 +58,7 @@ export const MODULES: Record<ModuleKey, ModuleFlag> = {
   money: { label: "Finances", on: true },
   "money-budget": {
     label: "Budget",
-    on: false,
-    note: "Line by line against the share of the year gone. Comes back with the first budget season.",
+    on: true,
   },
   "money-trends": {
     label: "Trends",
@@ -109,8 +108,9 @@ export const MODULES: Record<ModuleKey, ModuleFlag> = {
   },
   "vendor-tax-forms": {
     label: "Vendor tax paperwork",
-    on: false,
-    note: "W-9 and 1099 warnings. Comes back before the first January.",
+    // On since the 1099 list shipped: the W-9 badge, the missing-W-9 warning
+    // and the list of vendors paid $600 or more in a calendar year.
+    on: true,
   },
   "documents-disclosure": {
     label: "New owner disclosure",

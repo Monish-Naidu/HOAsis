@@ -228,6 +228,19 @@ export const BOARD_ROUTES: BoardRoute[] = [
     need: ["finances"],
   },
   {
+    href: "/board/money/annual-records",
+    hidden: true,
+    parent: "money",
+    // A records request is a money question more often than not (the books,
+    // the statements, who was paid), and it is the treasurer who gets asked,
+    // so it sits under Finances beside Statements.
+    label: "Annual records",
+    icon: Banknote,
+    key: "money-annual-records",
+    tint: "teal",
+    need: ["finances"],
+  },
+  {
     href: "/board/shared-costs",
     hidden: true,
     parent: "money",

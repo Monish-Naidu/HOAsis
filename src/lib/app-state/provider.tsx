@@ -151,6 +151,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     restoreSetupTask,
     createCommunity,
     updateAssociation,
+    scheduleDuesChange,
     saveTemplate,
   } = useSettingsActions(deps);
 
@@ -449,6 +450,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     uploadDocuments,
     addGoverningArticles,
     updateAssociation,
+    scheduleDuesChange,
     addPayout,
     addBallot,
     addMeeting,

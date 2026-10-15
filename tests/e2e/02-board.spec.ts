@@ -473,6 +473,45 @@ test.describe("money is one place", () => {
   });
 });
 
+test.describe("a board can hand over its records", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+  });
+
+  test("one year downloads as one zip of a CSV per area", async ({ page }) => {
+    await page.goto("/board/money/annual-records");
+    await page.waitForLoadState("networkidle");
+
+    // Every area is listed whatever the year holds, so the count on screen is
+    // the count in the archive.
+    await expect(page.getByText(/^9 files for /)).toBeVisible();
+
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download the year" }).click();
+    const file = await download;
+
+    // Named for the association, not hardcoded, and a zip rather than the
+    // thirty separate downloads this replaced.
+    expect(file.suggestedFilename()).toMatch(/\.zip$/);
+    expect(file.suggestedFilename()).toContain("willow-creek-estates-records-");
+  });
+
+  test("the whole association downloads from Settings", async ({ page }) => {
+    await page.goto("/board/settings");
+    await page.waitForLoadState("networkidle");
+
+    const card = page.getByTestId("records-export");
+    await expect(card).toBeVisible();
+
+    const download = page.waitForEvent("download");
+    await card.getByRole("button", { name: "Download everything" }).click();
+    const file = await download;
+
+    expect(file.suggestedFilename()).toMatch(/\.zip$/);
+    expect(file.suggestedFilename()).toContain("willow-creek-estates-records-");
+  });
+});
+
 test.describe("a board can actually run a vote", () => {
   test.beforeEach(async ({ page }) => {
     await seedSession(page, { seat: SEATS.president, view: "board" });

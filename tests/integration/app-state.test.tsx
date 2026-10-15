@@ -9,6 +9,7 @@ import {
   useMyRequests,
 } from "@/lib/app-state";
 import type { ChargeLine, HomeRequest } from "@/lib/types";
+import { budgetVariance } from "@/lib/metrics";
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <AppStateProvider>{children}</AppStateProvider>
@@ -1259,15 +1260,15 @@ const lastPayment = (lines: { kind: string }[]) =>
   lines.find((l) => l.kind === "payment") as ChargeLine;
 
 describe("taking a payment", () => {
-  it("writes the statement, the balance, the books, the budget, and the bank together", () => {
+  it("writes the statement, the balance, the books and the bank together, and the budget follows the books", () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
     const home = result.current.community.homes.find((o) => o.balanceCents > 0)!;
     const operating = result.current.community.bankAccounts.find((a) => a.kind === "operating")!;
     const bankBefore = operating.balanceCents;
     const ledgerBefore = result.current.ledger.length;
-    const incomeBefore = result.current.community.budget
-      .filter((b) => b.kind === "income")
-      .reduce((t, b) => t + b.ytdActualCents, 0);
+    // The budget's actuals are derived from the books (categoryFlows), so the
+    // figure is read through the selector the Budget screen reads.
+    const incomeBefore = budgetVariance(result.current.community).incomeTotal.ytdActualCents;
 
     act(() => {
       result.current.recordPayment({
@@ -1292,10 +1293,9 @@ describe("taking a payment", () => {
     expect(result.current.ledger.length).toBe(ledgerBefore + 2);
     expect(result.current.ledger[0].amountCents).toBe(-35);
     expect(result.current.ledger[1].amountCents).toBe(home.balanceCents);
-    // Budget performance.
-    const incomeAfter = after.budget
-      .filter((b) => b.kind === "income")
-      .reduce((t, b) => t + b.ytdActualCents, 0);
+    // Budget performance: the payment reached the books, so the Assessments
+    // actual the budget reads rose with it, with nothing written on the line.
+    const incomeAfter = budgetVariance(after).incomeTotal.ytdActualCents;
     expect(incomeAfter).toBe(incomeBefore + home.balanceCents);
     // And the bank the board reconciles against.
     expect(after.bankAccounts.find((a) => a.id === operating.id)!.balanceCents).toBe(

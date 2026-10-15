@@ -273,7 +273,7 @@ test.describe("the plan is built from the answers", () => {
     expect(health.text, "amenities missing after picking a pool and a gym").toContain("reserve");
   });
 
-  test("the plan leaves the budget out while that page is switched off", async ({ page }) => {
+  test("the plan names the state on obligations", async ({ page }) => {
     await onboard(page, {
       name: "Sunset Townhomes",
       state: "California",
@@ -284,12 +284,9 @@ test.describe("the plan is built from the answers", () => {
 
     await page.goto("/board/setup");
     const health = await expectHealthy(page, "plan for a California association");
-    // The one step that named the state was the budget, and the Budget page
-    // is switched off for launch, so the step is too. When it comes back
-    // this goes back to checking for "California".
-    expect(health.text, "the plan points at a page that is switched off").not.toContain(
-      "Budget what you spend",
-    );
+    // The budget step is back with the Budget page, and it is the one that
+    // names the state: owners in California are entitled to see the budget.
+    expect(health.text, "the plan never mentions their state").toContain("California");
     expect(health.text, "the records group is missing").toContain("Records owners can ask for");
   });
 });

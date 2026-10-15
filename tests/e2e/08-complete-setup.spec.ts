@@ -137,8 +137,15 @@ async function completeEverything(page: Page, property: Kind) {
     await uploadDoc(page, "Structural inspection report.pdf");
   }
 
-  // Budget: nothing to do. The Budget page is switched off for launch, so the
-  // plan no longer lists "Budget what you spend" (it returns with the module).
+  // Budget: one expense line, which is what the step asks for. Dues income is
+  // already there from the wizard, so the overview is in its pace view with no
+  // adder; the Budget tab keeps one in its header.
+  await page.goto("/board/money/budget");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Add a budget line" }).click();
+  await page.getByLabel("Annual amount").fill("18000");
+  await page.getByRole("button", { name: "Add budget line" }).click();
+  await expect(page.getByText("Landscaping").first()).toBeVisible();
 
   // Reserves: one component.
   await page.goto("/board/reserves");

@@ -119,6 +119,7 @@ describe("sections", () => {
       "Budget",
       "Trends",
       "Statements",
+      "Annual records",
       "Shared costs",
     ]);
     expect(tabs("requests")).toEqual(["Requests", "Notices"]);

@@ -1,4 +1,4 @@
-import { money } from "@/lib/utils";
+import { addDays, money } from "@/lib/utils";
 
 /**
  * Small checks that a form and its test share.
@@ -150,7 +150,8 @@ export function duesProblem(cents: number | undefined): string | null {
  * What to store for a home's dues: its own amount, or null to use the
  * standard rate. Typing the standard rate back into the field means "no
  * longer its own amount", not "its own amount, which happens to match";
- * stored as an override it would stay behind when the rate changed.
+ * stored as an override it would stay behind when the rate changed, and a
+ * scheduled change moves the standard rate while it stayed.
  */
 export function homeDuesToStore(cents: number, standardCents: number): number | null {
   return cents === standardCents ? null : cents;
@@ -312,4 +313,23 @@ export const CLOSING_DATE_MESSAGE = "Pick a closing date after today.";
 
 export function closingDateProblem(closesOn: string, today: string): string | null {
   return closesOn > today ? null : CLOSING_DATE_MESSAGE;
+}
+
+/* Dues changes */
+
+export const DUES_DAY_MESSAGE = "Pick the day the new dues start.";
+export const DUES_DAY_PAST_MESSAGE = "Pick a day from today on.";
+export const DUES_DAY_FAR_MESSAGE = "Pick a day within the next year.";
+
+/**
+ * What is wrong with the day new dues start, or null. Today is allowed: a
+ * change can take effect at once, and the daily run applies it today. The
+ * past is not, because no bill can be reissued at it, and a year is the same
+ * window add_charge_to_all holds (migration 0117 refuses both).
+ */
+export function duesEffectiveProblem(on: string, today: string): string | null {
+  if (!on) return DUES_DAY_MESSAGE;
+  if (on < today) return DUES_DAY_PAST_MESSAGE;
+  if (on > addDays(today, 366)) return DUES_DAY_FAR_MESSAGE;
+  return null;
 }

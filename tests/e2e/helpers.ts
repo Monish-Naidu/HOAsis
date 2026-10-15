@@ -211,9 +211,19 @@ export const ADMIN_TABS = [
 
 /** The pages folded under a sidebar row, as the tabs along its top. */
 export const BOARD_SECTION_TABS: Record<string, { row: string; tabs: string[] }> = {
+  // Budget joins the row the day the money-budget module is on; before that
+  // the tab was hidden and the step linked straight to the page.
   "/board/money": {
     row: "Finances",
-    tabs: ["Overview", "Transactions", "Past due", "Reserves", "Statements"],
+    tabs: [
+      "Overview",
+      "Transactions",
+      "Past due",
+      "Reserves",
+      "Budget",
+      "Statements",
+      "Annual records",
+    ],
   },
   "/board/requests": { row: "Requests", tabs: ["Requests", "Notices"] },
   "/board/communications": { row: "Messages", tabs: ["Inbox", "Announcements", "Community"] },
