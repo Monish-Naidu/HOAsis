@@ -8,10 +8,12 @@ import type {
   AutopayPlan,
   BankAccount,
   Capability,
+  Cents,
   DocumentRecord,
   ForumPost,
   HomeRequest,
   HomeType,
+  ISODate,
   MeetingAttendee,
   MessageThread,
   Home,
@@ -376,6 +378,18 @@ export interface AppState {
    */
   /** Association level facts a board edits: insurance, name, dues. */
   updateAssociation: (patch: Partial<Community["association"]>) => boolean | Promise<boolean>;
+  /**
+   * A new rate and the day it bills from, or null to cancel the change
+   * waiting. The daily dues run applies a change on its day; until then the
+   * screens read the rate of the day through `duesTerms`.
+   */
+  scheduleDuesChange: (
+    input: {
+      duesCents: Cents;
+      duesByType?: Partial<Record<HomeType, Cents>>;
+      effectiveOn: ISODate;
+    } | null,
+  ) => boolean | Promise<boolean>;
   /**
    * Records a payment to a vendor.
    *

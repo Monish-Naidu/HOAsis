@@ -13,7 +13,14 @@ import { balanceStanding } from "@/lib/resident-wording";
 import { homeLabel } from "@/lib/wording";
 import { downloadCsv, toCsv } from "@/lib/core/export";
 import { PrintStatementControl } from "@/components/app/statement-print";
-import { HOME_TYPE_LABEL, isMixed, homeDues } from "@/lib/home-types";
+import {
+  HOME_TYPE_LABEL,
+  isMixed,
+  duesChangeWords,
+  duesTerms,
+  homeDues,
+  homeDuesChange,
+} from "@/lib/home-types";
 
 export default function ResidentAccount() {
   const { community } = useAppState();
@@ -38,9 +45,12 @@ export default function ResidentAccount() {
   }
   // The rate is what this home pays a bill from now on; a bill already on the
   // statement keeps the amount it was issued at. Said so when they differ.
-  const rate = homeDues(association, currentHome);
+  const rate = homeDues(duesTerms(association, todayIsoDate()), currentHome);
   const upcoming = balanceSplit(homeCharges, currentHome.balanceCents, todayIsoDate()).upcoming;
   const issuedAtOtherAmount = upcoming && upcoming.amountCents !== rate ? upcoming : null;
+  // A rate change still to come, as this home feels it. A home with its own
+  // amount keeps it, so for that home there is nothing to say.
+  const change = homeDuesChange(association, currentHome, todayIsoDate());
   // The year the ledger is actually in, not a constant.
   const paidYear = homeCharges[0]?.date.slice(0, 4) ?? String(today().getUTCFullYear());
   // That year's payments only. Summing every line was right while a statement
@@ -168,6 +178,11 @@ export default function ResidentAccount() {
             <p className="mt-1 text-footnote text-fg-muted">
               The {formatDate(issuedAtOtherAmount.date, "long")} bill is already issued at{" "}
               {money(issuedAtOtherAmount.amountCents, { cents: false })}.
+            </p>
+          ) : null}
+          {change ? (
+            <p className="mt-1 text-footnote text-fg-muted">
+              {duesChangeWords(change, todayIsoDate())}
             </p>
           ) : null}
         </Card>

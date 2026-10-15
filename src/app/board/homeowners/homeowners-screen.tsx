@@ -75,6 +75,7 @@ import {
   countByType,
   duesSource,
   duesSourceLabel,
+  duesTerms,
   duesVary,
   homeDues,
 } from "@/lib/home-types";
@@ -271,6 +272,9 @@ export function HomeownersScreen() {
   const { notify } = useToast();
 
   const homes = community.homes;
+  // The rates of the day, a scheduled change included, so the roster and the
+  // bills cannot disagree about what a home pays.
+  const terms = duesTerms(community.association, todayIsoDate());
   // Opening balances are for an association that switched here mid-life. A
   // new build starts every home at zero, so for it the screen is noise.
   const showOpeningBalances =
@@ -518,7 +522,7 @@ export function HomeownersScreen() {
       { header: "Phone", value: (o) => o.phone },
       // What each home pays per period, by the one rule: its own amount,
       // else its kind's, else the association's.
-      { header: "Dues", value: (o) => (homeDues(community.association, o) / 100).toFixed(2) },
+      { header: "Dues", value: (o) => (homeDues(terms, o) / 100).toFixed(2) },
       ...(seesMoney
         ? [
             { header: "Balance", value: (o: Home) => (o.balanceCents / 100).toFixed(2) },
@@ -1092,7 +1096,7 @@ export function HomeownersScreen() {
                               // already been said by the write itself.
                               Promise.resolve(setHomeDues([{ homeId: o.id, cents }])).then((ok) => {
                                 if (ok) {
-                                  const pays = homeDues(community.association, {
+                                  const pays = homeDues(terms, {
                                     homeType: o.homeType,
                                     duesCents: cents ?? undefined,
                                   });
@@ -1106,10 +1110,10 @@ export function HomeownersScreen() {
                           : undefined
                       }
                       duesNow={{
-                        cents: homeDues(community.association, o),
-                        sourceLabel: duesSourceLabel(community.association, o),
-                        hasOwn: duesSource(community.association, o) === "own",
-                        standardCents: homeDues(community.association, { homeType: o.homeType }),
+                        cents: homeDues(terms, o),
+                        sourceLabel: duesSourceLabel(terms, o),
+                        hasOwn: duesSource(terms, o) === "own",
+                        standardCents: homeDues(terms, { homeType: o.homeType }),
                         period:
                           community.association.duesCadence === "monthly"
                             ? "month"
@@ -1118,8 +1122,8 @@ export function HomeownersScreen() {
                               : "year",
                       }}
                       duesLine={
-                        duesVary(community.association, community.homes)
-                          ? `${money(homeDues(community.association, o))} ${community.association.duesCadence}`
+                        duesVary(terms, community.homes)
+                          ? `${money(homeDues(terms, o))} ${community.association.duesCadence}`
                           : undefined
                       }
                       onSetKind={

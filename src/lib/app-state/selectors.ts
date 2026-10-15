@@ -3,9 +3,9 @@
 import { useCallback, useMemo } from "react";
 import { seededCommunities } from "@/lib/data/communities";
 import type { Community } from "@/lib/data/community";
-import { daysFromToday } from "@/lib/utils";
+import { daysFromToday, todayIsoDate } from "@/lib/utils";
 import { createdCommunitiesStore } from "@/lib/data/created-communities";
-import { homeDues } from "@/lib/home-types";
+import { duesTerms, homeDues } from "@/lib/home-types";
 import type { ForumPost, Home } from "@/lib/types";
 import type { PaymentInstrument } from "@/lib/payments/instruments";
 import { homeCount } from "@/lib/metrics";
@@ -211,8 +211,8 @@ export function useAssistantContext() {
       association: {
         name: community.association.name,
         // What this owner's home pays, which is the one figure the assistant
-        // says about dues.
-        duesCents: homeDues(community.association, home ?? undefined),
+        // says about dues. The rate of the day, change included.
+        duesCents: homeDues(duesTerms(community.association, todayIsoDate()), home ?? undefined),
         unitCount: homeCount(community),
         operatingCents: cash.operating,
         reserveCents: reserveBalance,

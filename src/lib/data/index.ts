@@ -181,26 +181,6 @@ export function delinquency() {
   };
 }
 
-export function budgetSummary() {
-  const income = budget.filter((b) => b.kind === "income");
-  const expense = budget.filter((b) => b.kind === "expense");
-  const sum = (rows: BudgetLine[], key: "annualCents" | "ytdActualCents") =>
-    rows.reduce((t, r) => t + r[key], 0);
-  const incomeYtd = sum(income, "ytdActualCents");
-  const expenseYtd = sum(expense, "ytdActualCents");
-  return {
-    income,
-    expense,
-    incomeAnnual: sum(income, "annualCents"),
-    expenseAnnual: sum(expense, "annualCents"),
-    incomeYtd,
-    expenseYtd,
-    netYtd: incomeYtd - expenseYtd,
-    netAnnual: sum(income, "annualCents") - sum(expense, "annualCents"),
-    yearElapsed: YEAR_ELAPSED,
-  };
-}
-
 export function reserveSummary() {
   const funded = reserveComponents.reduce((t, c) => t + c.fundedCents, 0);
   const required = reserveComponents.reduce((t, c) => t + c.replacementCostCents, 0);

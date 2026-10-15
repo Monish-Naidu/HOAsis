@@ -27,7 +27,7 @@ import { useAppState, useCurrentHome, useMyRequests, useHomeCharges } from "@/li
 import { HomeSchedule } from "@/components/app/home-schedule";
 import { cn, formatDate, money, pastDueLabel, relativeDays, todayIsoDate } from "@/lib/utils";
 import { balanceSplit } from "@/lib/statement";
-import { homeDues } from "@/lib/home-types";
+import { duesChangeWords, duesTerms, homeDues, homeDuesChange } from "@/lib/home-types";
 import { liveMeetingLine, noticeSummary, openNoticesForHome } from "@/lib/resident-wording";
 import { Announcements } from "./announcements";
 import { HomesNote } from "@/components/app/home-switcher";
@@ -150,23 +150,28 @@ function AccountSummary() {
   const charges = useHomeCharges();
   if (!home) return null;
 
+  const today = todayIsoDate();
   const past = home.daysPastDue > 0;
   const nextCharge = community.nextChargeDate;
   // Two different things: what the statement says is owed, and what this home
   // pays a month. The card and the button follow the statement; the rate only
   // stands in when no bill is posted yet.
-  const split = balanceSplit(charges, home.balanceCents, todayIsoDate());
+  const split = balanceSplit(charges, home.balanceCents, today);
   // Everything owed is a bill that has not fallen due. The daily run posts a
   // bill up to a week early, and calling that "current balance" next to a
   // "Paid up" badge on the board is two answers to one question.
   const early = !past && split.owedNowCents === 0 && split.notYetDueCents > 0;
   const shown = early ? split.notYetDueCents : home.balanceCents;
-  // This home's own amount: in a mixed community kinds pay differently.
+  // This home's own amount: in a mixed community kinds pay differently. The
+  // rate of the day the next bill falls due, so paying ahead of a scheduled
+  // change pays what that bill will be.
+  const rate = duesTerms(community.association, split.upcoming?.date ?? nextCharge);
   const amount =
-    home.balanceCents > 0
-      ? shown
-      : (split.upcoming?.amountCents ?? homeDues(community.association, home));
+    home.balanceCents > 0 ? shown : (split.upcoming?.amountCents ?? homeDues(rate, home));
   const covered = home.autopay && home.balanceCents <= 0;
+  // A rate change still to come, as this home feels it: a home with its own
+  // amount, or a change that moves nothing for this kind, has nothing to read.
+  const change = homeDuesChange(community.association, home, today);
 
   return (
     <Card>
@@ -222,6 +227,9 @@ function AccountSummary() {
                 ? `Due ${formatDate(split.nextBill.date, "long")}`
                 : `Next dues ${formatDate(split.upcoming?.date ?? nextCharge, "long")}`}
           </p>
+          {change ? (
+            <p className="text-footnote text-fg-muted">{duesChangeWords(change, today)}</p>
+          ) : null}
         </div>
         {/* Present even at a zero balance: paying ahead of the next
             assessment is a real thing owners do, and the pay screen

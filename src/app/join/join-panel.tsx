@@ -19,7 +19,7 @@ import { parseInvitation } from "@/lib/invitations";
 import { hasSupabase } from "@/lib/supabase/env";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { joinReturnPath, openInvitedHome } from "./invited";
-import { homeDues } from "@/lib/home-types";
+import { duesTerms, homeDues } from "@/lib/home-types";
 import { isEmail } from "@/lib/input-checks";
 import { cn, money } from "@/lib/utils";
 
@@ -112,7 +112,11 @@ export function JoinPanel() {
         <Row label="Unit" value={home.unit} />
         <Row
           label="Dues"
-          value={`${money(homeDues(community.association, home))} ${community.association.duesCadence}`}
+          value={`${money(
+            // The rate of the day the next bill falls due: what this owner
+            // will actually be billed first, a scheduled change included.
+            homeDues(duesTerms(community.association, community.nextChargeDate), home),
+          )} ${community.association.duesCadence}`}
         />
 
         <Button variant="primary" size="md" className="mt-2 w-full" onClick={accept}>

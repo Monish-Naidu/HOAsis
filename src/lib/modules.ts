@@ -58,8 +58,7 @@ export const MODULES: Record<ModuleKey, ModuleFlag> = {
   money: { label: "Finances", on: true },
   "money-budget": {
     label: "Budget",
-    on: false,
-    note: "Line by line against the share of the year gone. Comes back with the first budget season.",
+    on: true,
   },
   "money-trends": {
     label: "Trends",

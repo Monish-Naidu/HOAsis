@@ -1,5 +1,6 @@
-import type { Association, Cents, Home } from "@/lib/types";
+import type { Association, Cents, DuesChange, Home, ISODate } from "@/lib/types";
 import type { PropertyType } from "@/lib/data/new-community";
+import { formatDate, money } from "@/lib/utils";
 
 /**
  * Communities with more than one kind of home.
@@ -143,6 +144,78 @@ export function totalDues(
   homes: Pick<Home, "homeType" | "duesCents">[],
 ): Cents {
   return homes.reduce((sum, o) => sum + homeDues(association, o), 0);
+}
+
+type DuesChangeSource = Pick<Association, "duesCents" | "duesByType" | "duesChange">;
+
+/**
+ * The rates in effect on a given day.
+ *
+ * A change whose day has come is the rate every screen reads, even before
+ * the daily run has moved it into `duesCents`, so a screen never shows a
+ * rate the bills do not match. The bills make the same choice
+ * (`unit_dues_cents_on`, migration 0117); this is its TypeScript half.
+ */
+export function duesTerms(association: DuesChangeSource, on: ISODate): DuesTerms {
+  const change = association.duesChange;
+  if (change && on >= change.effectiveOn) {
+    return { duesCents: change.duesCents, duesByType: change.duesByType };
+  }
+  return { duesCents: association.duesCents, duesByType: association.duesByType };
+}
+
+/**
+ * Whether two sets of rates are the same rates, so a form can tell a change
+ * from a re-typing of what is already on file. Compared rate by rate rather
+ * than entry by entry: a kind that pays the standard rate is at the same rate
+ * whether it is absent from the map or named in it, and a community that
+ * records no kinds of home still has its standard rate compared.
+ */
+export function sameDuesTerms(a: DuesTerms, b: DuesTerms): boolean {
+  if (a.duesCents !== b.duesCents) return false;
+  const kinds = new Set([...Object.keys(a.duesByType ?? {}), ...Object.keys(b.duesByType ?? {})]);
+  return [...kinds].every((k) => duesFor(a, k as PropertyType) === duesFor(b, k as PropertyType));
+}
+
+/**
+ * The change still to come, or null when none is waiting or its day has
+ * passed. The day it passes the rate is already the change, so only a future
+ * change is news.
+ */
+export function upcomingDuesChange(
+  association: DuesChangeSource,
+  today: ISODate,
+): DuesChange | null {
+  const change = association.duesChange;
+  return change && today < change.effectiveOn ? change : null;
+}
+
+/**
+ * A coming change as one home feels it, or null when nothing changes for
+ * that home: a home with its own amount keeps it, and a change may hold a
+ * kind's rate where it already is.
+ */
+export function homeDuesChange(
+  association: DuesChangeSource,
+  home: Pick<Home, "homeType" | "duesCents"> | undefined,
+  today: ISODate,
+): { fromCents: Cents; toCents: Cents; effectiveOn: ISODate } | null {
+  const change = upcomingDuesChange(association, today);
+  if (!change) return null;
+  const fromCents = homeDues(association, home);
+  const toCents = homeDues({ duesCents: change.duesCents, duesByType: change.duesByType }, home);
+  return fromCents === toCents ? null : { fromCents, toCents, effectiveOn: change.effectiveOn };
+}
+
+/** "From January 1, dues are $310." The one sentence an owner reads. */
+export function duesChangeWords(
+  change: { toCents: Cents; effectiveOn: ISODate },
+  today: ISODate,
+): string {
+  const day = change.effectiveOn === today ? "today" : formatDate(change.effectiveOn, "long");
+  return `From ${day}, dues are ${money(change.toCents, {
+    cents: change.toCents % 100 !== 0,
+  })}.`;
 }
 
 /** How many homes of each kind, only kinds that are present. */
