@@ -301,7 +301,7 @@ function LatestErrors({ report }: { report: OpsReport }) {
     <Card>
       <CardHeader
         title="Latest errors"
-        subtitle="Newest 50. The reference is what a person reads off the error screen; search the host's logs or Sentry for it."
+        subtitle="Newest 50. The reference is what a person reads off the error screen; search Application Insights for it."
       />
       <Table
         head={["When", "Reference", "Level", "Source", "Route", "Message", "Association"]}

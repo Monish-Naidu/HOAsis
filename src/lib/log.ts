@@ -1,15 +1,16 @@
 /**
  * One line per meaningful step, as JSON, with a request id on every line.
  *
- * Why JSON lines: the host keeps container logs as text and Log Analytics
- * indexes whatever is on the line. A line that is already an
- * object becomes a filter (`route = stripe/webhook and level = error`)
- * instead of a regex. See docs/observability.md.
+ * Why JSON lines: the container's console goes to Log Analytics as text,
+ * and `parse_json` turns a line that is already an object into a filter
+ * (`route == "stripe/webhook" and level == "error"`) instead of a regex.
+ * See docs/observability.md.
  *
  * Why a request id: a resident reads "Reference K7QM2X4P" off the screen,
  * and that string finds the server line, the row in app_errors, and the
- * Sentry event. It is minted in `src/proxy.ts` for every request, carried in
- * the `x-request-id` header both ways, and printed on every line here.
+ * exception in Application Insights. It is minted in `src/proxy.ts` for
+ * every request, carried in the `x-request-id` header both ways, and
+ * printed on every line here.
  *
  * What never goes out: secrets, tokens, card data, full email addresses.
  * `scrubFields` masks an email to its first letter and domain and redacts
@@ -88,10 +89,15 @@ export function maskEmail(value: string): string {
   return value.replace(EMAIL, (_, first: string, domain: string) => `${first}***@${domain}`);
 }
 
-function scrubString(value: string): string {
+/**
+ * Masks what must never be printed, then cuts to fit. The mask runs first, so
+ * a cut can never leave half an address behind with no domain left to match.
+ * The limit is a parameter because a stack earns more room than a field.
+ */
+function scrubString(value: string, limit = MAX_STRING): string {
   if (SECRET_VALUE.test(value)) return "[redacted]";
   const masked = maskEmail(value);
-  return masked.length > MAX_STRING ? `${masked.slice(0, MAX_STRING)}…` : masked;
+  return masked.length > limit ? `${masked.slice(0, limit)}…` : masked;
 }
 
 function scrubValue(value: unknown, depth: number): unknown {
@@ -103,7 +109,7 @@ function scrubValue(value: unknown, depth: number): unknown {
     return {
       name: value.name,
       message: scrubString(value.message),
-      stack: value.stack ? scrubString(value.stack.slice(0, MAX_STACK)) : undefined,
+      stack: value.stack ? scrubString(value.stack, MAX_STACK) : undefined,
     };
   }
   if (depth >= MAX_DEPTH) return "[…]";
@@ -131,18 +137,31 @@ export function scrubFields(fields: LogFields | undefined): LogFields {
 
 type Sink = (line: LogLine) => void;
 
-function defaultSink(line: LogLine) {
+/** The default: one JSON line on the console, on the stream its level says. */
+export function consoleSink(line: LogLine): void {
   const text = JSON.stringify(line);
   if (line.level === "error") console.error(text);
   else if (line.level === "warn") console.warn(text);
   else console.log(text);
 }
 
-let sink: Sink = defaultSink;
+// On globalThis, not in a module variable: the server bundle holds more than
+// one copy of this module (the instrumentation hook and the routes are
+// separate bundles), and a sink set at start must reach every copy.
+const SINK = Symbol.for("hoasis.log.sink");
+type SinkHolder = { [SINK]?: Sink };
 
-/** Replaces where lines go. Tests capture them; the default is the console. */
+function currentSink(): Sink {
+  return (globalThis as SinkHolder)[SINK] ?? consoleSink;
+}
+
+/**
+ * Replaces where lines go. Tests capture them; Application Insights adds
+ * itself in front of the console (`src/lib/telemetry.ts`); null restores
+ * the console alone.
+ */
 export function setLogSink(next: Sink | null): void {
-  sink = next ?? defaultSink;
+  (globalThis as SinkHolder)[SINK] = next ?? undefined;
 }
 
 /* --------------------------------------------------------------------- logger */
@@ -198,7 +217,7 @@ export function logger(
         ...scrubFields(fields),
       };
       try {
-        sink(line);
+        currentSink()(line);
       } catch {
         // A logger that throws takes the request down with it. Never.
       }

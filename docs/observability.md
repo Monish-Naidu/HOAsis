@@ -1,9 +1,9 @@
 # Observability
 
-How to find bugs and read logs, for one person running this on Azure
-(Container Apps, Postgres, Log Analytics). Written 2026-09-25 against the
-code, moved from Vercel to Azure on 2026-10-15. Short on purpose: the
-decisions are made, the click paths are here, do them in order.
+How to find bugs and read logs, for one person running this on Azure.
+Written 2026-09-25 against Vercel and Sentry, rewritten 2026-10-15 for
+Azure Monitor, which is what runs now. Short on purpose: the decisions are
+made, the queries are here, nothing to click to set it up.
 
 ## The one habit
 
@@ -16,116 +16,117 @@ then:
 
 1. `/admin`, **Latest errors**, find the reference. That gives route, message
    and association.
-2. Azure portal, Log Analytics workspace `log-hoasis`, **Logs**, query
-   `ContainerAppConsoleLogs_CL | where Log_s has "K7QM2X4P" | order by
-TimeGenerated asc`. That gives every line the request wrote, in order,
-   with timings (`durationMs`).
-3. Sentry (once set up), search `reference:K7QM2X4P`. That gives the stack
-   with source maps.
+2. Azure portal, `log-hoasis`, **Logs**, the "one reference" query below.
+   That gives every line the request wrote, in order, with timings
+   (`durationMs`), and the `traceId` of the request.
+3. Azure portal, `appi-hoasis`, **Transaction search**, paste the reference
+   (it is on the exception as `requestId`). That gives the request, the
+   calls it made to the database, Stripe and Resend with their timings, and
+   the stack.
 
 A server error that Next caught also gets a `digest`; the error page shows
 the digest as the reference when it has one, so the same lookup works.
 
-## What exists already, for free
+## What runs, and what it costs
 
-| Where                                                     | What                                                                                                                                                                                                                                | Limits                                                                      |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Log Analytics `log-hoasis`, **Logs**                      | Every `console.*` line from the web app and the five jobs, in `ContainerAppConsoleLogs_CL`. Ours are JSON (`src/lib/log.ts`): `extend j = parse_json(Log_s)` then filter by `j.route`, `j.level`, `j.requestId`, `j.associationId`. | 30 days (`infra/platform.bicep`).                                           |
-| Container App `ca-hoasis-web`, **Metrics**, **Revisions** | Requests, response codes, replica count, restarts, per revision.                                                                                                                                                                    | 93 days of metrics.                                                         |
-| Jobs `caj-hoasis-*`, **Execution history**                | Whether each daily job fired and whether the call succeeded.                                                                                                                                                                        | Recent executions only. Our `cron_runs` table keeps the history.            |
-| Supabase, Project, **Logs**                               | Postgres logs (slow queries, errors), API logs (every PostgREST call with status), Auth logs (sign-ins, failures). Logs Explorer takes SQL.                                                                                         | Free: 1 day. Pro: 7 days.                                                   |
-| Supabase, Project, **Reports**                            | Query performance, index usage, connection count. Where "the page got slow" gets answered.                                                                                                                                          |                                                                             |
-| Stripe, **Developers**, **Events**                        | Every event with its payload. **Webhooks**, an endpoint, an event: every delivery attempt, our status code and response body, with a **Resend** button.                                                                             | 30 days.                                                                    |
-| Resend, **Emails**                                        | Every send, its status ladder (sent, delivered, bounced), the rendered message. **Webhooks** shows deliveries to `/api/email/webhook`.                                                                                              | Free: 1 day of detail (was 3); check the current plan.                      |
-| This app, `email_log`                                     | Every email we sent, per association, with Resend's id and status. Board sees theirs under Communications.                                                                                                                          | Capped at 300 per load on the board side; `/admin` reads failures directly. |
-| This app, `autopay_runs`                                  | One row per home per month the autopay cron decided: charged, skipped, failed, with the reason.                                                                                                                                     |                                                                             |
-| This app, `payments`                                      | `pending` is money Stripe has not settled yet. ACH takes about four days; pending past five is a missed webhook.                                                                                                                    |                                                                             |
-| This app, `app_errors` (new)                              | What the server and the browsers caught, with the reference. Service role only.                                                                                                                                                     |                                                                             |
-| This app, `cron_runs` (new)                               | One row per cron call with a summary (`checked`, `charged`, `errors`...).                                                                                                                                                           |                                                                             |
-| This app, `/api/health` (new)                             | 200 when the database answers and the Stripe, Resend and cron keys are present; 503 with the missing name otherwise.                                                                                                                |                                                                             |
-| This app, `/admin` (new)                                  | All of the above for the last seven days on one page. See below.                                                                                                                                                                    |                                                                             |
+All of it is in `infra/platform.bicep` and `infra/apps.bicep`, deployed by
+`scripts/azure/provision.sh`. Nothing is set up by hand in the portal.
 
-## What to add, in order
+| What                                                   | Where                                                                       | Notes                                                                                                                                                                             |
+| ------------------------------------------------------ | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Console of every container                             | Log Analytics workspace `log-hoasis`, table `ContainerAppConsoleLogs_CL`    | Every `console.*` line from the web app, the five jobs and the Supabase services. Ours are JSON (`src/lib/log.ts`), read with `parse_json(Log_s)`. 30 days. Capped at 1 GB a day. |
+| Requests, dependencies, exceptions, metrics, live view | Application Insights `appi-hoasis` (workspace-based, same workspace)        | Sent by the app itself (`telemetry.mjs`): every request Next handles, every call to Supabase, Stripe and Resend, every warn and error line, CPU and memory. 90 days.              |
+| Uptime                                                 | `uptime-hoasis`, a standard web test on `/api/health` from three US regions | Every five minutes. `alert-hoasis-down` emails after two regions fail in a row.                                                                                                   |
+| Errors inside the app                                  | `alert-hoasis-errors`, a log alert on the workspace                         | Any line at level `error` in fifteen minutes. One email per quiet-to-firing change (auto-mitigates).                                                                              |
+| Server failures                                        | `alert-hoasis-failures`, a log alert on the workspace                       | Three or more answers of 500 and up in fifteen minutes.                                                                                                                           |
+| Who gets the email                                     | Action group `ag-hoasis-owner`                                              | `BUDGET_EMAIL` in `.env.azure`.                                                                                                                                                   |
+| Spend                                                  | Budget `budget-hoasis`                                                      | Emails at half, most and a forecast over the credit (docs/azure-migration-plan.md).                                                                                               |
+| This app, `email_log`                                  | Database                                                                    | Every email we sent, per association, with Resend's id and status. Board sees theirs under Communications.                                                                        |
+| This app, `autopay_runs`, `payments`, `cron_runs`      | Database                                                                    | One row per decision, per payment, per job run. `payments.state = pending` past five days is a missed webhook.                                                                    |
+| This app, `app_errors`                                 | Database                                                                    | What the server and the browsers caught, with the reference. Service role only.                                                                                                   |
+| This app, `/api/health`                                | Route                                                                       | 200 when the database answers and the Stripe, Resend and cron keys are present; 503 with the missing name otherwise. Says whether Application Insights is on.                     |
+| This app, `/admin`                                     | Page, gated on `PLATFORM_OWNER_EMAILS`                                      | All of the above for the last seven days on one page.                                                                                                                             |
+| Daily digest                                           | `/api/ops/digest`, 15:00 UTC                                                | One email to `PLATFORM_OWNER_EMAILS` when a count is non-zero.                                                                                                                    |
+| Stripe, **Developers**, **Events** and **Webhooks**    | Stripe dashboard                                                            | Every event with its payload; every delivery attempt with our status code and a **Resend** button. 30 days.                                                                       |
+| Resend, **Emails**                                     | Resend dashboard                                                            | Every send, its status ladder, the rendered message.                                                                                                                              |
 
-### 1. Sentry (errors and traces, server and client)
+Cost: Log Analytics and Application Insights bill per gigabyte ingested
+(about $2.76 a GB after the first five a month, which this app does not
+reach) and the two log alerts about $1.50 a month between them. The daily
+cap on the workspace is the backstop against a page that loops.
 
-Free tier: 5k errors and 10k spans a month, one person. Enough.
+## Queries
 
-Already wired in the code: `sentry.server.config.ts`, `sentry.edge.config.ts`,
-`src/instrumentation.ts` (`register` + `onRequestError`),
-`src/instrumentation-client.ts`, `withSentryConfig` in `next.config.ts`,
-`Sentry.captureException` in `src/app/global-error.tsx`. With no DSN the SDK
-is `enabled: false`: no network, no console noise, no source map upload.
-Do not run the Sentry wizard; it would duplicate these files.
+Azure portal, `log-hoasis`, **Logs**. Every line the app writes is one row
+of `ContainerAppConsoleLogs_CL` with the JSON in `Log_s`.
 
-Click path:
+One reference, every line, in order:
 
-1. sentry.io, **Create project**, platform **Next.js**, name `your-hoasis`.
-   Copy the DSN.
-2. `.env.azure`: `NEXT_PUBLIC_SENTRY_DSN` = the DSN. `scripts/azure/provision.sh`
-   hands it to the app as both the browser DSN and `SENTRY_DSN`.
-3. Source maps: Sentry, **Settings**, **Auth Tokens**, make one with
-   `project:releases`; put `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
-   `SENTRY_PROJECT` in the image build (`scripts/azure/deploy.sh` build
-   args). Without them errors still arrive, minified.
-4. `scripts/azure/deploy.sh`. Sentry, project, **Alerts**, **Create alert**, "Issues", "a new
-   issue is created", action **Send an email to** you. One alert, that is all.
-5. Sentry, **Settings**, **Projects**, the project, **Client Keys**, add
-   `yourhoasis.com` to allowed domains so nobody else can post to your DSN.
+```kusto
+ContainerAppConsoleLogs_CL
+| where ContainerAppName_s == "ca-hoasis-web"
+| extend line = parse_json(Log_s)
+| where tostring(line.requestId) == "K7QM2X4P"
+| project TimeGenerated, level = tostring(line.level), route = tostring(line.route),
+          msg = tostring(line.msg), durationMs = toint(line.durationMs), traceId = tostring(line.traceId), Log_s
+| order by TimeGenerated asc
+```
 
-Locally, leave the three unset. To test once, put the DSN in `.env.local`,
-open a page that throws, delete it again.
+Errors by route, last day:
 
-### 2. Log queries worth saving (Log Analytics keeps 30 days)
+```kusto
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(1d) and ContainerAppName_s == "ca-hoasis-web"
+| extend line = parse_json(Log_s)
+| where tostring(line.level) == "error"
+| summarize n = count(), last = max(TimeGenerated), sample = any(tostring(line.msg)) by route = tostring(line.route)
+| order by n desc
+```
 
-Every container and job writes to the workspace `log-hoasis` already; there
-is no drain to set up. Save these in the portal's **Logs** blade:
+What each job did this morning:
 
-1. Errors by route, last day:
-   `ContainerAppConsoleLogs_CL | extend j = parse_json(Log_s) | where j.level == "error" | summarize count() by tostring(j.route)`.
-2. One request: `| where Log_s has "K7QM2X4P" | order by TimeGenerated asc`.
-3. A job's last run: `| where ContainerName_s startswith "caj-hoasis" | order by TimeGenerated desc`.
+```kusto
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(1d) and ContainerAppName_s startswith "ca-hoasis-web"
+| extend line = parse_json(Log_s)
+| where tostring(line.route) in ("assessments/run", "autopay/run", "billing/sweep", "email/bills", "ops/digest")
+| project TimeGenerated, route = tostring(line.route), msg = tostring(line.msg), Log_s
+| order by TimeGenerated desc
+```
 
-An alert rule on the first query (count over 10 in 15 minutes, email) is
-the one alert worth having. **Alerts**, **Create**, log search, that query.
+Slowest requests, last day (Application Insights, same workspace):
 
-### 3. Uptime checks
+```kusto
+AppRequests
+| where TimeGenerated > ago(1d)
+| summarize p50 = percentile(DurationMs, 50), p95 = percentile(DurationMs, 95), n = count() by Name
+| order by p95 desc
+```
 
-Two checks: `https://yourhoasis.com/` (200, contains "HOAsis") and
-`https://yourhoasis.com/api/health` (200; the body says what failed on a
-503). **Better Stack Uptime** (free: 10 monitors, 3 minute interval, email and
-phone call) or **UptimeRobot** (free: 50 monitors, 5 minute). Either. Email
-alert only; phone calls for one person's side project are a way to hate it.
+Exceptions with their reference:
 
-`/api/health` costs one select and reads no secrets, so a check every three
-minutes is fine. It also keeps the Supabase free project awake, which is a
-side effect worth knowing.
+```kusto
+AppExceptions
+| where TimeGenerated > ago(1d)
+| project TimeGenerated, OuterMessage, route = tostring(Properties.route), reference = tostring(Properties.requestId), OperationId
+| order by TimeGenerated desc
+```
 
-### 4. A daily "something failed" email
+Every call the app made to Stripe or Supabase that took over a second:
 
-Not built yet, on purpose: `/admin` answers the same question when you look,
-and the crons already log a summary line each morning. Build it when a week
-goes by without opening `/admin`. The cheapest shape: a fourth cron
-(`/api/ops/digest`, 15:00 UTC, after autopay) that runs `loadOpsReport()`
-from `src/lib/ops.ts` and sends one email through Resend to
-`PLATFORM_OWNER_EMAILS` only when a count is non-zero. Supabase
-**Database Webhooks** on `app_errors` insert is the other shape (Supabase,
-**Database**, **Webhooks**, insert on `app_errors`, POST to a route), but it
-fires per error, which is noise the moment one page loops.
+```kusto
+AppDependencies
+| where TimeGenerated > ago(1d) and DurationMs > 1000
+| project TimeGenerated, Target, Name, ResultCode, DurationMs, OperationId
+| order by DurationMs desc
+```
 
-### Not yet
-
-- **Datadog, New Relic, Grafana Cloud.** Real, and a second job to run.
-- **OpenTelemetry.** Sentry's traces cover the question "which query was
-  slow" for now.
-- **Session replay.** It records screens with balances and addresses on
-  them. Off in `instrumentation-client.ts` and stays off.
-- **PagerDuty or on-call.** One email alert from Sentry and one from
-  uptime; the phone is for family.
-- **Supabase Pro** for the sake of logs alone. Buy it when the project
-  pausing or the 60-connection pooler bites, both in `docs/scale.md`.
-- **A logging library** (pino, winston). `src/lib/log.ts` is ninety lines
-  and prints JSON; that is the whole job.
+`OperationId` is the trace: paste it into **Transaction search** on
+`appi-hoasis` to see the request, its dependencies and its exception as one
+timeline. A call to Supabase shows twice, nested: Next's own `fetch` span
+and the undici one under it with the result code; count `AppDependencies`
+by `DependencyType == "HTTP"` when the number matters. The **Live metrics** blade on the same resource shows requests
+and failures as they happen, useful for the minute after a deploy.
 
 ## What is in the code
 
@@ -135,16 +136,39 @@ fires per error, which is noise the moment one page loops.
   `m***@gmail.com` and redacts keys and values that look like secrets
   (`token`, `client_secret`, `sk_`, `whsec_`, `re_`, JWTs, card fields).
   `errorBody(log, message)` is the `{ error, reference }` shape for JSON
-  errors. Tests: `tests/unit/log.test.ts`.
+  errors. `consoleSink` is where lines go by default; `setLogSink` swaps it.
+  Tests: `tests/unit/log.test.ts`.
+- `telemetry.mjs`: starts Microsoft's OpenTelemetry distro when
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` is set and adds the `fetch`
+  (undici) instrumentation the distro lacks. The container loads it before
+  Next (`node --import ./telemetry.mjs server.js`, in the Dockerfile),
+  because the hooks only see `http` and `fetch` if they are in place before
+  Next creates its server; started from inside Next they miss the incoming
+  requests. With no connection string nothing runs, so local dev, the unit
+  tests and the browser suite never touch the network.
+- `src/instrumentation.node.ts`: imports `telemetry.mjs`, which carries its
+  packages into the standalone output (the Dockerfile adds the top-level
+  link pnpm would have made) and, under a plain `next start`, starts the
+  late and partial version; then swaps the log sink for `telemetrySink`.
+  The sink lives on `globalThis` (`src/lib/log.ts`) because the server
+  bundle holds more than one copy of the log module.
+- `src/lib/telemetry.ts`: `telemetrySink` prints the line with the active
+  `traceId` and `spanId` on it, then sends warn and error lines on as log
+  records; a line with `err` arrives as an exception. Info lines stay on
+  the console. Tests: `tests/unit/telemetry.test.ts`.
+- `next.config.ts`: `serverExternalPackages` keeps the telemetry packages
+  out of the server bundle, so the require hooks and the single global
+  OpenTelemetry API instance work.
 - Logged routes: `stripe/webhook`, `billing/webhook`, `stripe/connect`,
   `stripe/payment-intent`, `stripe/setup-intent`, `stripe/instruments`,
-  `autopay/run`, `assessments/run`, `billing/sweep`, `email/invite`,
-  `email/notify`, `email/send`, `email/webhook`, `auth/signup`,
-  `join/lookup`, `log`. One line per meaningful step.
+  `autopay/run`, `assessments/run`, `billing/sweep`, `email/bills`,
+  `email/invite`, `email/notify`, `email/send`, `email/webhook`,
+  `ops/digest`, `auth/signup`, `join/lookup`, `log`. One line per
+  meaningful step.
 - `src/proxy.ts`: mints or keeps `x-request-id`, forwards it to the route,
   returns it on the response.
-- `src/instrumentation.ts`: `onRequestError` sends every server error to
-  Sentry, the log, and `app_errors`.
+- `src/instrumentation.ts`: `onRequestError` writes every server error to
+  the log (hence to Application Insights) and to `app_errors`.
 - `src/app/error.tsx`, `src/app/global-error.tsx`: calm message plus the
   reference; both post to `/api/log`. `ErrorReporter` (root layout) posts
   unhandled promise rejections and window errors, five per page at most.
@@ -155,27 +179,36 @@ fires per error, which is noise the moment one page loops.
   `PLATFORM_OWNER_EMAILS`, 404 for everyone else. Health, latest cron run
   per job (stale after 26 hours), errors grouped by message, latest 50
   errors, email failures, autopay failures, payments pending more than five
-  days. Note: `/admin` used to 308 to `/board`; a browser that cached that
-  redirect needs a hard reload or a private window the first time.
+  days.
 - `supabase/migrations/0052_app_errors_and_cron_runs.sql`: the two tables,
   RLS on, no policies, so only the service role reads them.
 
 ## Env vars
 
-| Name                                                | Where                                       | Value                                               |
-| --------------------------------------------------- | ------------------------------------------- | --------------------------------------------------- |
-| `PLATFORM_OWNER_EMAILS`                             | `.env.azure` and `.env.local`               | `monishnaidu18@gmail.com`; comma separated for more |
-| `NEXT_PUBLIC_SENTRY_DSN`                            | `.env.azure`                                | the project DSN; the server reads the same value    |
-| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | image build args, if source maps are wanted | see Sentry step 3                                   |
+| Name                                    | Where                                                               | Value                                                    |
+| --------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Set on the web app by `infra/apps.bicep` from the platform's output | Never in `.env.local`: local runs send nothing           |
+| `OTEL_SERVICE_NAME`                     | Set on the web app by `infra/apps.bicep`                            | `hoasis-web`, the cloud role name on the application map |
+| `PLATFORM_OWNER_EMAILS`                 | `.env.azure` and `.env.local`                                       | `monishnaidu18@gmail.com`; comma separated for more      |
+| `BUDGET_EMAIL`                          | `.env.azure`                                                        | Where every alert and budget email goes                  |
+| `UPTIME_URL`                            | `.env.azure`                                                        | What the web test calls; empty turns all of this off     |
 
-A changed value reaches the app through `scripts/azure/provision.sh`
-(plain settings) or `scripts/azure/secrets.sh` plus a redeploy (secrets).
+## Not yet
+
+- **Browser-side telemetry** (the Application Insights JavaScript SDK). The
+  error pages already post what the browser caught to `/api/log`; page
+  timings can wait until someone says a page is slow.
+- **Session replay.** It records screens with balances and addresses on
+  them. Stays off.
+- **PagerDuty or on-call.** Three alert emails; the phone is for family.
+- **A logging library** (pino, winston). `src/lib/log.ts` is ninety lines
+  and prints JSON; that is the whole job.
 
 ## Reading a log line
 
 ```json
 {
-  "ts": "2026-09-25T14:30:02.118Z",
+  "ts": "2026-10-15T14:30:02.118Z",
   "level": "warn",
   "msg": "autopay charge failed",
   "requestId": "K7QM2X4P",
@@ -183,13 +216,16 @@ A changed value reaches the app through `scripts/azure/provision.sh`
   "durationMs": 8412,
   "associationId": "8a4f…",
   "unitId": "c1d2…",
-  "month": "2026-09",
+  "month": "2026-10",
   "rail": "ach",
-  "reason": "Insufficient funds"
+  "reason": "Insufficient funds",
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "spanId": "00f067aa0ba902b7"
 }
 ```
 
 `durationMs` is since the route started, so the last line of a request is
 its total. `route` is a fixed name, never a path with ids, so a filter on it
 matches every call. Emails never appear whole; ids do, because ids are how
-you get from a line to a row.
+you get from a line to a row. `traceId` is on the line only when
+Application Insights is on; it is the `OperationId` there.

@@ -30,7 +30,7 @@ param webCustomDomains array = []
 @description('Hosts the cron continuation may fetch, comma separated (src/lib/cron.ts allows nothing by itself): the app own address, where the five jobs point their calls, and any bound domain. Without it a run that spends its 40 second budget stops there and its rows wait for the next day.')
 param cronAllowedHosts string = ''
 
-@description('"production" or "staging"; what the app and Sentry call this deployment.')
+@description('"production" or "staging"; what the app calls this deployment.')
 param appEnv string = 'staging'
 
 // Public configuration of the web app. NEXT_PUBLIC_* values are also compiled
@@ -42,7 +42,8 @@ param supabaseUrl string
 param stackUrl string = ''
 param supabaseAnonKey string
 param stripePublishableKey string = ''
-param sentryDsn string = ''
+@description('Where the web app sends traces, exceptions and metrics; an output of platform.bicep. Empty turns telemetry off.')
+param appInsightsConnectionString string = ''
 param siteHost string = ''
 param authCookieDomain string = ''
 param emailFrom string = ''
@@ -52,8 +53,12 @@ param testLogins string = ''
 // The auth service, mirroring the hosted project's settings (docs/azure-migration-plan.md).
 param gotrueSiteUrl string = 'https://yourhoasis.com'
 param gotrueUriAllowList string = 'https://yourhoasis.com/**,https://www.yourhoasis.com/**,http://localhost:3000/**'
-param smtpAdminEmail string = 'onboarding@resend.dev'
-param smtpSenderName string = 'Your HOAsis'
+// The auth service sends from the same address as the app. EMAIL_FROM is the
+// display form, 'Your HOAsis <hello@yourhoasis.com>'; SMTP wants the bare
+// address and the name apart. Resend's shared sender is the fallback until
+// the domain is verified; it delivers only to the account owner.
+var smtpAdminEmail = empty(emailFrom) ? 'onboarding@resend.dev' : trim(last(split(replace(emailFrom, '>', ''), '<')))
+var smtpSenderName = contains(emailFrom, '<') ? trim(first(split(emailFrom, '<'))) : 'Your HOAsis'
 
 var tags = { product: baseName, managedBy: 'bicep' }
 
@@ -100,6 +105,7 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
         kvSecret(vault, identity.id, 'stripe-billing-webhook-secret')
         kvSecret(vault, identity.id, 'cron-secret')
         kvSecret(vault, identity.id, 'resend-api-key')
+        kvSecret(vault, identity.id, 'resend-webhook-secret')
         kvSecret(vault, identity.id, 'email-token-secret')
       ]
     }
@@ -115,8 +121,8 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'NEXT_PUBLIC_SUPABASE_URL', value: supabaseUrl }
             { name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', value: supabaseAnonKey }
             { name: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', value: stripePublishableKey }
-            { name: 'NEXT_PUBLIC_SENTRY_DSN', value: sentryDsn }
-            { name: 'SENTRY_DSN', value: sentryDsn }
+            { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+            { name: 'OTEL_SERVICE_NAME', value: '${baseName}-web' }
             { name: 'NEXT_PUBLIC_SITE_HOST', value: siteHost }
             { name: 'NEXT_PUBLIC_AUTH_COOKIE_DOMAIN', value: authCookieDomain }
             { name: 'NEXT_PUBLIC_TEST_LOGINS', value: testLogins }
@@ -129,6 +135,7 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'CRON_SECRET', secretRef: 'cron-secret' }
             { name: 'CRON_ALLOWED_HOSTS', value: cronAllowedHosts }
             { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
+            { name: 'RESEND_WEBHOOK_SECRET', secretRef: 'resend-webhook-secret' }
             { name: 'EMAIL_TOKEN_SECRET', secretRef: 'email-token-secret' }
           ]
         }

@@ -5,12 +5,13 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
 
 ## Before the first stranger signs up
 
-1. **Resend domain.** resend.com → Domains → Add `yourhoasis.com`. Copy the
-   three records (MX and TXT on the `send` subdomain, DKIM TXT on
-   `resend._domainkey`) into Cloudflare → yourhoasis.com → DNS, proxy off.
-   Click Verify in Resend. Until this is done every email except yours is
-   silently dropped: sign-up confirmations, invites, bills, receipts.
-   `EMAIL_FROM` is set in `.env.azure` to `Your HOAsis <hello@yourhoasis.com>`.
+1. ~~**Resend domain.**~~ Done 2026-10-15: `yourhoasis.com` is in Resend
+   (us-east-1) with its four records in Cloudflare (DKIM TXT on
+   `resend._domainkey`, CNAMEs `send` and `rsend`, DMARC `p=none`), the
+   webhook for `/api/email/webhook` listens to every email event, and
+   `.env.azure` carries `EMAIL_FROM="Your HOAsis <hello@yourhoasis.com>"`
+   and `RESEND_WEBHOOK_SECRET`. Resend's status page for the domain is the
+   place to look if a send fails with a domain error.
 2. **Support mailbox.** Cloudflare → Email → Email Routing → route
    `support@yourhoasis.com` to your inbox. The Help item in every account
    menu, the error page, and the Terms and Privacy pages already point at it.
@@ -32,10 +33,10 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
 6. **Supabase plan.** supabase.com → project → Settings → Billing → Pro,
    and add Point-in-Time Recovery. The free tier pauses when idle and has no
    usable backups. It paused once already, on 2026-09-19.
-7. **Sentry env.** `NEXT_PUBLIC_SENTRY_DSN` goes in `.env.azure` after
-   creating a Sentry project (free tier); `scripts/azure/provision.sh` hands
-   it to the app as both the browser and the server DSN. Already set there:
-   `EMAIL_FROM`, `PLATFORM_OWNER_EMAILS`, `NEXT_PUBLIC_TEST_LOGINS`.
+7. **Logs and alerts.** Nothing to set up: Application Insights, the uptime
+   test and the three alert emails are provisioned by `infra/platform.bicep`
+   (docs/observability.md). Check that the alert emails are not landing in
+   spam the first time one arrives.
 8. **Lawyer pass** on `/terms` and `/privacy`. Both are marked DRAFT on the
    page; remove the callout in `src/app/terms/page.tsx` and
    `src/app/privacy/page.tsx` when reviewed.
@@ -48,43 +49,36 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
 Monish asked "is there anything else I need to wire up?" Beyond the nine
 above, in the order they matter:
 
-10. **Supabase auth emails through your own domain.** Sign-up confirmations,
-    magic links, password resets and the new email-change links are sent by
-    Supabase's own mailer today, limited to a few an hour and from a
-    Supabase address. Once Resend's domain is verified (item 1):
-    supabase.com → project → Authentication → SMTP Settings → enable custom
-    SMTP with Resend's host (`smtp.resend.com`, port 465), username
-    `resend`, password a Resend API key, sender `Your HOAsis
-<hello@yourhoasis.com>`. Then Authentication → URL Configuration: Site
-    URL `https://yourhoasis.com`, and `https://yourhoasis.com/auth/callback`
-    in the redirect list. Since the move to Azure these are GoTrue's
-    environment variables in the Supabase stack (`infra/supabase`), not the
-    hosted dashboard.
-11. **Sentry DSN** (item 7) and **one uptime check**: betterstack.com or
-    uptimerobot.com, free, pointed at `https://yourhoasis.com/api/health`
-    every five minutes, email you on failure. The daily digest
-    (`/api/ops/digest`, since 2026-10-06) tells you what failed; the uptime
-    check tells you when the site is down and cannot send it.
-12. **Search engines.** `src/app/robots.ts` still blocks every crawler, from
+10. ~~**Supabase auth emails through your own domain.**~~ Nothing to click
+    since 2026-10-15: the auth service on Azure sends through Resend's SMTP
+    with the address in `EMAIL_FROM` (`infra/apps.bicep` derives it), so
+    sign-up confirmations, magic links, password resets and email-change
+    links come from `hello@yourhoasis.com` once item 1 is verified. The
+    site URL and redirect list are parameters of the same template.
+    three regions, every five minutes, emails you after two failures in a
+    row). The daily digest (`/api/ops/digest`, since 2026-10-06) tells you
+    what failed; the uptime check tells you when the site is down and
+    cannot send it.
+11. **Search engines.** `src/app/robots.ts` still blocks every crawler, from
     the prototype days. When you want to be found: allow `/`, `/pricing`,
     `/about`, `/library`, keep `/board`, `/resident`, `/admin`, `/api`
     blocked, add a sitemap, then Google Search Console → add
     `yourhoasis.com` (DNS record in Cloudflare). Nobody finds the site until
     this is done.
-13. **Staging database.** Create a second Supabase project, put its four
+12. **Staging database.** Create a second Supabase project, put its four
     values in `.env.staging`, then `pnpm staging:setup` does the rest. Until then every database check
     runs against the live project with throwaway associations it deletes.
-14. **Stripe live-mode billing portal.** `pnpm stripe:setup` (item 3) also
+13. **Stripe live-mode billing portal.** `pnpm stripe:setup` (item 3) also
     creates the portal configuration in live mode; it exists in test mode
     only today.
-15. **Daily jobs are five** (`infra/apps.bicep`): dues, bills email, billing
+14. **Daily jobs are five** (`infra/apps.bicep`): dues, bills email, billing
     sweep, autopay, digest. `/admin` shows the latest run of each; the Azure
     portal shows each job's execution history. `CRON_SECRET` is set.
-16. **Backups you can restore.** Supabase Pro (item 6) gives daily backups;
+15. **Backups you can restore.** Supabase Pro (item 6) gives daily backups;
     Point-in-Time Recovery is the add-on that makes "undo the last hour"
     possible. Until then, `pg_dump` by hand before anything risky.
 
-17. **Azure.** Done 2026-10-15: `yourhoasis.com` is served from Azure,
+16. **Azure.** Done 2026-10-15: `yourhoasis.com` is served from Azure,
     database and all (`docs/azure-migration-plan.md`). The hosted Supabase
     project is paused and the Vercel project was deleted the same day, so
     expresshoa.com no longer redirects. Still yours: delete the Supabase

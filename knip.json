@@ -6,6 +6,7 @@
     "src/app/**/layout.tsx",
     "src/lib/data/index.ts",
     "src/instrumentation*.ts",
+    "telemetry.mjs",
     "scripts/**/*.mjs",
     "tests/**/*.test.{ts,tsx}",
     "*.config.{mjs,mts,ts}"

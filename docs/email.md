@@ -65,52 +65,48 @@ production value from `.env.azure` and fails when it is empty or a
 on this machine (`~/.wrangler`, `~/.cloudflare`, env, `.env.local` checked),
 so the domain has to be verified by hand.
 
-### Verify yourhoasis.com in Resend
+### yourhoasis.com in Resend (done 2026-10-15)
 
-1. Resend dashboard > Domains > Add domain. Enter `yourhoasis.com`, region
-   US East. Resend suggests sending from a subdomain; accept `send` so the
-   records are `send.yourhoasis.com` and the root domain's own MX and SPF
-   stay untouched.
-2. Add the three records Resend shows in Cloudflare (DNS > Records for
-   yourhoasis.com). Proxy status must be **DNS only** (grey cloud) on all of
-   them. The values below are what Resend issues for a `send` subdomain;
-   copy the exact DKIM value from the dashboard, it is unique to the account.
+The domain is verified in Resend (US East, id
+`499117f1-d72a-4d5d-a68a-35e249c95c85`) on the root, so mail comes from
+`hello@yourhoasis.com`. These are the records in Cloudflare, all **DNS
+only** (grey cloud). Resend issues the CNAME targets and the DKIM value;
+the DKIM value is unique to the account, so a new Resend account means a
+new record.
 
-   | Type | Name                | Value                                                              | Purpose                 |
-   | ---- | ------------------- | ------------------------------------------------------------------ | ----------------------- |
-   | MX   | `send`              | `feedback-smtp.us-east-1.amazonses.com`, priority 10               | Return path for bounces |
-   | TXT  | `send`              | `v=spf1 include:amazonses.com ~all`                                | SPF for the return path |
-   | TXT  | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQ...` (from the dashboard) | DKIM                    |
+| Type  | Name                | Value                                   | Purpose                  |
+| ----- | ------------------- | --------------------------------------- | ------------------------ |
+| TXT   | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEB...` (218 chars) | DKIM                     |
+| CNAME | `send`              | `send.forge.rmta.net`                   | SPF and the return path  |
+| CNAME | `rsend`             | `rsend.forge.rmta.net`                  | Resend's bounce handling |
+| TXT   | `_dmarc`            | `v=DMARC1; p=none;`                     | DMARC, monitor only      |
 
-   Optional, recommended once the above verifies: a DMARC record so Gmail
-   stops treating the domain as unknown.
+Resend's "Auto configure" button is an OAuth grant to Cloudflare; the
+records were added by hand instead. Tightening DMARC to `p=quarantine`
+is a later step, once a month of sends shows nothing else uses the
+domain.
 
-   | Type | Name     | Value                                                  |
-   | ---- | -------- | ------------------------------------------------------ |
-   | TXT  | `_dmarc` | `v=DMARC1; p=none; rua=mailto:monishnaidu18@gmail.com` |
+A webhook (Resend, Webhooks) posts every `email.*` event to
+`https://yourhoasis.com/api/email/webhook`; its signing secret is
+`RESEND_WEBHOOK_SECRET` in `.env.azure`, loaded into Key Vault by
+`scripts/azure/secrets.sh`. The route returns 500 and logs an error
+while that secret is missing, which also fires the errors alert.
 
-3. Back in Resend press Verify. It usually clears within minutes at
-   Cloudflare; up to 72 hours worst case.
-4. One change in `.env.azure`: set `EMAIL_FROM` to
-   `Your HOAsis <hello@send.yourhoasis.com>` (any mailbox on the verified
-   subdomain works; replies will go there, so either watch it or set a
-   `reply_to` later). Then load it into the vault and redeploy so the value
-   is picked up:
+`EMAIL_FROM` in `.env.azure` is `Your HOAsis <hello@yourhoasis.com>`.
+A change to either value is applied with:
 
-   ```bash
-   scripts/azure/secrets.sh
-   scripts/azure/deploy.sh
-   ```
+```bash
+scripts/azure/secrets.sh
+APPS_ONLY=true scripts/azure/provision.sh
+```
 
-5. Put the same value in `.env.local` and run
-   `node scripts/send-test-email.mjs someone-else@example.com` to prove
-   delivery to a non-owner address. Then `pnpm db:verify` passes the
-   sender check.
+Replies go to `hello@yourhoasis.com`; route it in Cloudflare Email
+Routing or set a `reply_to` before boards start writing back.
 
-Supabase Auth's own emails (password reset, magic links minted by the app)
-go through the same Resend SMTP credentials set by `pnpm email:setup`; the
-sender name there is read from `EMAIL_FROM` at the time it runs, so run it
-again after step 4.
+The auth service on Azure sends its own mail (sign-up confirmations,
+magic links, password resets, email-change links) through Resend's SMTP
+with the address and name taken from `EMAIL_FROM` by `infra/apps.bicep`,
+so there is nothing to run after a change beyond the two commands above.
 
 ## Proving it sends today
 

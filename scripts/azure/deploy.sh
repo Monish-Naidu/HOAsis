@@ -16,7 +16,7 @@ image="$acr.azurecr.io/hoasis-web:$tag"
 
 args=()
 for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
-            NEXT_PUBLIC_SENTRY_DSN NEXT_PUBLIC_SITE_HOST NEXT_PUBLIC_AUTH_COOKIE_DOMAIN NEXT_PUBLIC_TEST_LOGINS NEXT_PUBLIC_APP_ENV; do
+            NEXT_PUBLIC_SITE_HOST NEXT_PUBLIC_AUTH_COOKIE_DOMAIN NEXT_PUBLIC_TEST_LOGINS NEXT_PUBLIC_APP_ENV; do
   value=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" \
     --query "properties.template.containers[0].env[?name=='$name'].value | [0]" -o tsv)
   if [ "$name" = NEXT_PUBLIC_TEST_LOGINS ]; then
