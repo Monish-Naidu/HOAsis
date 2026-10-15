@@ -5,6 +5,7 @@ import {
   DUES_ZERO_MESSAGE,
   EMAIL_MESSAGE,
   MAX_ASSOCIATION_NAME,
+  MAX_EMAIL_LENGTH,
   PHONE_MESSAGE,
   RANGE_END_MESSAGE,
   TIME_MESSAGE,
@@ -21,6 +22,7 @@ import {
   emailProblem,
   homeDuesToStore,
   homeOverpayNote,
+  isEmail,
   lateFeeAmountProblem,
   lateFeeDaysProblem,
   overpayNote,
@@ -170,6 +172,30 @@ describe("setup wizard founder and name", () => {
     expect(draftNameProblem(draft)).not.toBeNull();
     draft.name = "Oak Ridge Homeowners Association";
     expect(draftNameProblem(draft)).toBeNull();
+  });
+});
+
+describe("the shape check for an email address", () => {
+  it("takes an ordinary address and refuses the obvious wrong shapes", () => {
+    for (const value of ["pat@example.com", "pat+dues@example.co.uk", "a@b.co"]) {
+      expect(isEmail(value), value).toBe(true);
+    }
+    for (const value of ["notanemail", "a@b", "a b@c.com", "", "@x.com", "x@.com", "x@y."]) {
+      expect(isEmail(value), value).toBe(false);
+    }
+  });
+
+  it("refuses anything past the SMTP limit before the pattern runs", () => {
+    const local = "a".repeat(MAX_EMAIL_LENGTH - "@example.com".length);
+    expect(isEmail(`${local}@example.com`)).toBe(true);
+    expect(isEmail(`${local}a@example.com`)).toBe(false);
+  });
+
+  it("stays off a long adversarial string, the shape the pattern is slow on", () => {
+    // Both are thousands of characters, so neither reaches the pattern.
+    expect(isEmail("!@!.".repeat(5_000))).toBe(false);
+    expect(isEmail(`${"a".repeat(20_000)}@example`)).toBe(false);
+    expect(isEmail(`!@!.${"-".repeat(20_000)}!`)).toBe(false);
   });
 });
 
