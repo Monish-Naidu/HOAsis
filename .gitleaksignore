@@ -1,0 +1,4 @@
+# Fingerprints the secret scan may skip: commit:file:rule:line.
+# The log redaction test holds a made-up Stripe-shaped key so it can prove
+# that keys never reach a log line. It is not a credential.
+a5eeafdfe94c3f3434bbf57af7359ea271f025f3:tests/unit/log.test.ts:stripe-access-token:101
