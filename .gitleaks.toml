@@ -1,0 +1,20 @@
+# What the secret scan should not call a secret.
+#
+# Read by gitleaks in .github/workflows/security.yml. The default rules stay
+# in force; this file only subtracts the findings that are wrong.
+#
+# The one that made the scan red: the generic-api-key rule is entropy on a
+# string that sits near a word like "key", and infra/platform.bicep holds the
+# ids of Azure's built-in roles. `roleKeyVaultSecretsUser` is a GUID
+# Microsoft publishes in its own docs, not a credential. A bare lowercase
+# GUID is never a secret in this repository, so the rule below says so once,
+# for every file, rather than in a comment beside each of them.
+title = "yourhoasis"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Azure built-in role definition ids, and any other bare GUID."
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$''']
