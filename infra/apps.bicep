@@ -53,8 +53,12 @@ param testLogins string = ''
 // The auth service, mirroring the hosted project's settings (docs/azure-migration-plan.md).
 param gotrueSiteUrl string = 'https://yourhoasis.com'
 param gotrueUriAllowList string = 'https://yourhoasis.com/**,https://www.yourhoasis.com/**,http://localhost:3000/**'
-param smtpAdminEmail string = 'onboarding@resend.dev'
-param smtpSenderName string = 'Your HOAsis'
+// The auth service sends from the same address as the app. EMAIL_FROM is the
+// display form, 'Your HOAsis <hello@yourhoasis.com>'; SMTP wants the bare
+// address and the name apart. Resend's shared sender is the fallback until
+// the domain is verified; it delivers only to the account owner.
+var smtpAdminEmail = empty(emailFrom) ? 'onboarding@resend.dev' : trim(last(split(replace(emailFrom, '>', ''), '<')))
+var smtpSenderName = contains(emailFrom, '<') ? trim(first(split(emailFrom, '<'))) : 'Your HOAsis'
 
 var tags = { product: baseName, managedBy: 'bicep' }
 
@@ -101,6 +105,7 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
         kvSecret(vault, identity.id, 'stripe-billing-webhook-secret')
         kvSecret(vault, identity.id, 'cron-secret')
         kvSecret(vault, identity.id, 'resend-api-key')
+        kvSecret(vault, identity.id, 'resend-webhook-secret')
         kvSecret(vault, identity.id, 'email-token-secret')
       ]
     }
@@ -130,6 +135,7 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'CRON_SECRET', secretRef: 'cron-secret' }
             { name: 'CRON_ALLOWED_HOSTS', value: cronAllowedHosts }
             { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
+            { name: 'RESEND_WEBHOOK_SECRET', secretRef: 'resend-webhook-secret' }
             { name: 'EMAIL_TOKEN_SECRET', secretRef: 'email-token-secret' }
           ]
         }

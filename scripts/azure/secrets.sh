@@ -50,6 +50,7 @@ put stripe-webhook-secret "$(read_env STRIPE_WEBHOOK_SECRET)"
 put stripe-billing-webhook-secret "$(read_env STRIPE_BILLING_WEBHOOK_SECRET)"
 put cron-secret "$(read_env CRON_SECRET)"
 put resend-api-key "$(read_env RESEND_API_KEY)"
+put resend-webhook-secret "$(read_env RESEND_WEBHOOK_SECRET)"
 put email-token-secret "$(read_env EMAIL_TOKEN_SECRET)"
 put jwt-secret "$(read_env SUPABASE_JWT_SECRET)"
 
