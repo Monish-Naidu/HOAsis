@@ -541,6 +541,66 @@ try {
     "one seat is open, the buyer's",
     (await openSeats(homes["107 Willow Creek Dr"])).length === 1,
   );
+
+  // 9. The board is told once per request (0116). The send is the notify
+  //    route's; what the database promises is the claim, so this makes the
+  //    claim the way the route makes it.
+  const notifyEmail = mail("waiter");
+  const waiter = await signUp(notifyEmail, "Wes Waits");
+  await waiter.client.rpc("request_to_join", {
+    p_code: code,
+    p_name: "Wes Waits",
+    p_email: notifyEmail,
+    p_unit: "116 Willow Creek Dr",
+    p_note: "Just moved in",
+  });
+  const { data: fresh } = await admin
+    .from("join_requests")
+    .select("id, board_notified_at")
+    .eq("association_id", associationId)
+    .eq("email", notifyEmail)
+    .single();
+  check(
+    "a new request has not told the board yet",
+    Boolean(fresh) && fresh.board_notified_at === null,
+    JSON.stringify(fresh),
+  );
+  const now = new Date().toISOString();
+  const claim = (client) =>
+    client
+      .from("join_requests")
+      .update({ board_notified_at: now })
+      .eq("id", fresh.id)
+      .is("board_notified_at", null)
+      .eq("status", "pending")
+      .select("id");
+  const first = await claim(admin);
+  check(
+    "the first claim takes the request, so the notice goes out once",
+    (first.data ?? []).length === 1 && !first.error,
+    first.error?.message ?? `${(first.data ?? []).length} rows`,
+  );
+  const second = await claim(admin);
+  check(
+    "a second submit claims nothing",
+    (second.data ?? []).length === 0 && !second.error,
+    second.error?.message ?? `${(second.data ?? []).length} rows`,
+  );
+  const byResident = await claim(owner3.client);
+  check(
+    "a resident cannot claim a request",
+    Boolean(byResident.error) || (byResident.data ?? []).length === 0,
+    byResident.error?.message ?? `${(byResident.data ?? []).length} rows`,
+  );
+  const { error: logError } = await admin.from("email_log").insert({
+    association_id: associationId,
+    profile_id: null,
+    unit_id: null,
+    to_email: mail("founder"),
+    category: "join",
+    subject: "Wes Waits asked to join Willow Creek Estates",
+  });
+  check("a join notice is logged under its own email category", !logError, logError?.message ?? "");
 } catch (error) {
   check("suite ran to completion", false, error.message);
 } finally {
