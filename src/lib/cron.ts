@@ -55,11 +55,52 @@ export function continuationUrl(url: string, lastId: string): string {
   return next.toString();
 }
 
+/** Vercel serves the app on the apex and on every preview's `*.vercel.app`. */
+const VERCEL_HOSTS = ["vercel.app"];
+
 /**
- * Fires the next call once this response has gone out. The secret goes
- * with it, because the route it calls is the one that checks it.
+ * The host names a continuation may be aimed at: Vercel's own, plus whatever
+ * a deployment names in `CRON_ALLOWED_HOSTS`, comma separated. The Azure
+ * Container App, when it comes, is not a `*.vercel.app` and says so there.
+ */
+export function continuationHosts(raw: string | undefined): string[] {
+  const named = (raw ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  return [...VERCEL_HOSTS, ...named];
+}
+
+/** The host of a URL, lowercased, or null when it is not a URL at all. */
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether a continuation URL is aimed at this deployment. The URL is built
+ * from `request.nextUrl`, so its host is whatever the caller put in the Host
+ * header; a subdomain of an allowed name is allowed with it.
+ */
+export function continuationAllowed(url: string, allowedHosts: string[]): boolean {
+  const host = hostOf(url);
+  if (!host) return false;
+  return allowedHosts.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+}
+
+/**
+ * Fires the next call once this response has gone out. The secret goes with
+ * it, because the route it calls is the one that checks it, so the host is
+ * checked first: a spoofed Host header must not be able to send the secret
+ * to a machine of somebody else's choosing. A refused continuation is not a
+ * lost run, only a delayed one: the next scheduled run starts from the top
+ * and finds the same rows still waiting.
  */
 export function scheduleContinuation(request: NextRequest, url: string): void {
+  if (!continuationAllowed(url, continuationHosts(process.env.CRON_ALLOWED_HOSTS))) return;
   const authorization = request.headers.get("authorization") ?? "";
   after(async () => {
     try {

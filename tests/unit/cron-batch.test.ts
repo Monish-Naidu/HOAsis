@@ -1,8 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
 vi.mock("next/server", () => ({ after: vi.fn() }));
 
-import { continuationUrl, cronPlan, walkPages } from "@/lib/cron";
+import { after } from "next/server";
+import {
+  continuationAllowed,
+  continuationHosts,
+  continuationUrl,
+  cronPlan,
+  scheduleContinuation,
+  walkPages,
+} from "@/lib/cron";
 
 function request(url: string) {
   return { nextUrl: new URL(url) };
@@ -79,5 +88,62 @@ describe("cron batching", () => {
       async () => {},
     );
     expect(result).toEqual({ complete: false, last: null, error: "boom" });
+  });
+});
+
+describe("cron continuation hosts", () => {
+  it("allows Vercel's own hostnames with nothing set", () => {
+    const hosts = continuationHosts(undefined);
+    expect(hosts).toEqual(["vercel.app"]);
+    expect(continuationAllowed("https://your-hoasis.vercel.app/api/billing/sweep", hosts)).toBe(
+      true,
+    );
+    expect(continuationAllowed("https://vercel.app/api/billing/sweep", hosts)).toBe(true);
+  });
+
+  it("reads the named hosts, trimmed and lowercased", () => {
+    expect(continuationHosts(" App.Example.COM ,, hoasis.azurecontainerapps.io ")).toEqual([
+      "vercel.app",
+      "app.example.com",
+      "hoasis.azurecontainerapps.io",
+    ]);
+  });
+
+  it("refuses another host until CRON_ALLOWED_HOSTS names it", () => {
+    const url = "https://app.example.com/api/assessments/run";
+    expect(continuationAllowed(url, continuationHosts(undefined))).toBe(false);
+    expect(continuationAllowed(url, continuationHosts("app.example.com"))).toBe(true);
+  });
+
+  it("is not fooled by a host that only ends the same way", () => {
+    const hosts = continuationHosts("hoasis.azurecontainerapps.io");
+    expect(continuationAllowed("https://hoasis.azurecontainerapps.io/api/autopay/run", hosts)).toBe(
+      true,
+    );
+    expect(
+      continuationAllowed("https://a.hoasis.azurecontainerapps.io/api/autopay/run", hosts),
+    ).toBe(true);
+    expect(
+      continuationAllowed("https://hoasis.azurecontainerapps.io.evil.test/api/autopay/run", hosts),
+    ).toBe(false);
+    expect(continuationAllowed("https://evil.test/?x=hoasis.azurecontainerapps.io", hosts)).toBe(
+      false,
+    );
+    expect(continuationAllowed("https://notvercel.app/api/autopay/run", hosts)).toBe(false);
+  });
+
+  it("refuses anything that is not a URL", () => {
+    expect(continuationAllowed("not a url", continuationHosts(undefined))).toBe(false);
+    expect(continuationAllowed("", continuationHosts(undefined))).toBe(false);
+  });
+
+  it("does not fire the continuation at a host it does not trust", () => {
+    const request = {
+      headers: { get: () => "Bearer secret" },
+    } as unknown as NextRequest;
+    scheduleContinuation(request, "https://evil.test/api/email/bills");
+    expect(after).not.toHaveBeenCalled();
+    scheduleContinuation(request, "https://your-hoasis.vercel.app/api/email/bills");
+    expect(after).toHaveBeenCalledTimes(1);
   });
 });
