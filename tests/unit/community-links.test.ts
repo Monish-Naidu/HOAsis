@@ -8,6 +8,7 @@ import {
   placeLabel,
   sameAssociationName,
   slugFromHost,
+  apexForWww,
   slugify,
   uniqueSlug,
 } from "@/lib/community-links";
@@ -132,5 +133,22 @@ describe("placeLabel", () => {
     expect(placeLabel("Bothell", "WA")).toBe("Bothell, WA");
     expect(placeLabel("", "WA")).toBe("WA");
     expect(placeLabel(null, undefined)).toBe("");
+  });
+});
+
+describe("apexForWww", () => {
+  it("sends www on the product's domain to the apex", () => {
+    expect(apexForWww("www.yourhoasis.com")).toBe("yourhoasis.com");
+    expect(apexForWww("WWW.yourhoasis.com:443")).toBe("yourhoasis.com");
+  });
+
+  it("leaves every other host alone", () => {
+    expect(apexForWww("yourhoasis.com")).toBeNull();
+    expect(apexForWww("oakview-commons.yourhoasis.com")).toBeNull();
+    expect(apexForWww("ca-hoasis-web.yellowwater.westus.azurecontainerapps.io")).toBeNull();
+    expect(apexForWww("www.localhost:3000")).toBeNull();
+    expect(apexForWww("localhost:3000")).toBeNull();
+    expect(apexForWww(null)).toBeNull();
+    expect(apexForWww("")).toBeNull();
   });
 });
