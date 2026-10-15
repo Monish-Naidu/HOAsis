@@ -15,6 +15,7 @@ import {
 } from "@/lib/search";
 import { mehrMeadows } from "@/lib/data/communities";
 import { dueLetter, renderLetter } from "@/lib/letters";
+import { homeLabel } from "@/lib/wording";
 import { policyFor } from "@/lib/collections";
 
 /**
@@ -351,7 +352,7 @@ describe("the letter a household is due", () => {
     expect(letter.subject).not.toContain("{{");
     expect(letter.body).not.toContain("{{");
     expect(letter.body).toContain(home.displayName);
-    expect(letter.body).toContain(`unit ${home.unit}`);
+    expect(letter.body).toContain(homeLabel(mehrMeadows, home.unit));
     expect(letter.body).toContain(String(home.daysPastDue));
   });
 });

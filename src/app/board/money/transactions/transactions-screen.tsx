@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -27,6 +27,7 @@ import {
   ledgerAttachment,
   ledgerCategories,
   ledgerFilterCounts,
+  ledgerSide,
   ledgerTotals,
   totalsByCategory,
   PERIOD_LABEL,
@@ -82,8 +83,8 @@ export function TransactionsScreen() {
   const params = useSearchParams();
 
   // Period, dates, status, category, direction and the search text are in the
-  // URL, so a view can be bookmarked or sent to another officer. Account is
-  // quick narrowing and stays on the page.
+  // URL, so a view can be bookmarked or sent to another officer. So is the
+  // account; one that is not on the register reads as all accounts.
   const pathname = usePathname();
   const clearUrl = useUrlClear();
   const period = usePeriod(PERIODS, DEFAULT_PERIOD);
@@ -92,7 +93,7 @@ export function TransactionsScreen() {
   const [status, setStatus] = useUrlFilter<StatusFilter>("status", STATUSES, "any");
   const [categoryRaw, setCategory] = useUrlFilter<string>("category", null, "all");
   const [search, setSearch] = useUrlFilter<string>("q", null, "");
-  const [accountId, setAccountId] = useState("all");
+  const [accountRaw, setAccountId] = useUrlFilter<string>("account", null, "all");
   const [direction, setDirection] = useUrlFilter<"all" | "in" | "out">(
     "direction",
     DIRECTIONS,
@@ -122,6 +123,7 @@ export function TransactionsScreen() {
       {loadingEarlier ? "Loading" : "Load earlier transactions"}
     </Button>
   );
+  const accountId = community.bankAccounts.some((a) => a.id === accountRaw) ? accountRaw : "all";
   const categories = ledgerCategories(ledger);
   const category = categories.includes(categoryRaw as (typeof categories)[number])
     ? categoryRaw
@@ -145,14 +147,32 @@ export function TransactionsScreen() {
     () => (category === "all" ? pool : filterLedger(pool, { category })),
     [pool, category],
   );
-  const rows = useMemo(
-    () => (direction === "all" ? inCategory : filterLedger(inCategory, { direction })),
-    [inCategory, direction],
+  // Looking at one account, a move between the association's own accounts is
+  // money into or out of that account. Counted in neither it left a reserve
+  // view reading "Money in $0" above two positive lines.
+  const sideOf = useCallback(
+    (e: (typeof ledger)[number]) =>
+      accountId !== "all" && e.category === "Reserve transfer" && e.status !== "needs-review"
+        ? e.amountCents > 0
+          ? "in"
+          : e.amountCents < 0
+            ? "out"
+            : null
+        : ledgerSide(e),
+    [accountId],
   );
-  const totals = ledgerTotals(inCategory);
-  const byCategory = totalsByCategory(
-    direction === "all" ? pool : filterLedger(pool, { direction }),
+  const byDirection = useCallback(
+    (list: typeof ledger) =>
+      direction === "all" ? list : list.filter((e) => sideOf(e) === direction),
+    [direction, sideOf],
   );
+  const rows = useMemo(() => byDirection(inCategory), [inCategory, byDirection]);
+  const counted = ledgerTotals(inCategory);
+  const moved = inCategory.filter((e) => accountId !== "all" && sideOf(e) !== ledgerSide(e));
+  const inCents = counted.inCents + moved.reduce((t, e) => t + Math.max(e.amountCents, 0), 0);
+  const outCents = counted.outCents + moved.reduce((t, e) => t + Math.max(-e.amountCents, 0), 0);
+  const totals = { ...counted, inCents, outCents, netCents: inCents - outCents };
+  const byCategory = totalsByCategory(byDirection(pool));
   const byCategoryMax = Math.max(1, ...byCategory.map((r) => Math.abs(r.inCents - r.outCents)));
   // A dropdown only earns its place when it can change the list: lines
   // waiting on a decision to filter to. One already chosen stays, so it can
@@ -400,8 +420,7 @@ export function TransactionsScreen() {
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    clearUrl(["status", "category", "q", "direction"]);
-                    setAccountId("all");
+                    clearUrl(["status", "category", "q", "direction", "account"]);
                   }}
                 >
                   Clear filters

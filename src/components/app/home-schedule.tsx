@@ -33,7 +33,16 @@ export function HomeSchedule({ entries }: { entries: CalendarEntry[] }) {
     );
   }
 
-  const next = upcomingFrom(entries, community.asOf, 3);
+  // A cancelled meeting stays on the calendar, marked, so nobody turns up for
+  // it. "Next up" is what is still happening, so it is left out here.
+  const cancelled = new Set(
+    community.meetings.filter((m) => m.status === "cancelled").map((m) => `cal-${m.id}`),
+  );
+  const next = upcomingFrom(
+    entries.filter((e) => !cancelled.has(e.id)),
+    community.asOf,
+    3,
+  );
 
   return (
     // The same card and header Recent activity wears, so the two sit side by

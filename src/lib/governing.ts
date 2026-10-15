@@ -74,13 +74,46 @@ export function amendmentThreshold(articles: GoverningArticle[], doc: GoverningD
   const provision = articlesIn(articles, doc).find(
     (a) => /amend/i.test(a.title) || /may be amended/i.test(a.text.join(" ")),
   );
-  const match = provision?.text
-    .join(" ")
-    .match(/([a-z-]+(?:\s+[a-z-]+)?)\s+percent of the total voting interests/i);
+  const share = provision ? shareOfHomes(provision.text.join(" ")) : null;
 
-  if (!match) return `the share stated in your ${GOVERNING_DOCS[doc].label.toLowerCase()}`;
-  const share = `${match[1]} percent of all homes`;
+  if (!share) return `the share stated in your ${GOVERNING_DOCS[doc].label.toLowerCase()}`;
   return doc === "declaration" ? `${share}, then recording with the county` : share;
+}
+
+const UNIT_WORDS = "one|two|three|four|five|six|seven|eight|nine";
+const TEEN_WORDS =
+  "ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen";
+const TENS_WORDS = "twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety";
+const FRACTION_WORDS = `(?:${UNIT_WORDS})-(?:thirds|fourths|fifths|quarters)`;
+const PERCENT_NUMBER = `(?:(?:${TENS_WORDS})(?:-(?:${UNIT_WORDS}))?|${TEEN_WORDS}|${UNIT_WORDS}|one hundred|\\d+(?:\\.\\d+)?)`;
+
+/**
+ * The share of all homes a provision asks for, as the words that name it.
+ *
+ * Only the number is taken. The words in front of it ("not less than",
+ * "more than", "at least") are the qualifier, and putting two words of them
+ * into the sentence a board reads ("Changing this takes than seventy-five
+ * percent") is the bug this guards against. A fraction or a bare majority is
+ * read too, because those are how plenty of declarations state the bar.
+ */
+function shareOfHomes(text: string): string | null {
+  const percent = text.match(
+    new RegExp(
+      `\\b(${PERCENT_NUMBER})\\s+percent\\s+of\\s+the\\s+total\\s+voting\\s+interests`,
+      "i",
+    ),
+  );
+  if (percent) return `${percent[1].toLowerCase()} percent of all homes`;
+
+  const fraction = text.match(
+    new RegExp(`\\b(${FRACTION_WORDS})\\s+of\\s+the\\s+total\\s+voting\\s+interests`, "i"),
+  );
+  if (fraction) return `${fraction[1].toLowerCase()} of all homes`;
+
+  if (/\bmajority\s+of\s+the\s+total\s+voting\s+interests/i.test(text)) {
+    return "a majority of all homes";
+  }
+  return null;
 }
 
 /* -------------------------------------------------------------------------- */

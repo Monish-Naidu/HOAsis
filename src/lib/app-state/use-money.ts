@@ -6,6 +6,7 @@ import {
   isUuid,
   logDemoActivity,
   newId,
+  refuse,
   remoteWrite,
   sessionStore,
   sliceStore,
@@ -18,6 +19,8 @@ import type { Json } from "@/lib/supabase/database.types";
 import type { AutopayPlan, BankAccount, VendorInvoice } from "@/lib/types";
 import { canReverse, correctionCents, reversalLine, withReversals } from "@/lib/ledger-corrections";
 import { chargeProblem } from "@/lib/payments/charges";
+import { creditProblem, handAmountCeiling, openingBalanceProblem } from "@/lib/input-checks";
+import { ledgerCategory } from "@/lib/data/ledger-category";
 import {
   MANUAL_METHOD_LABEL,
   type ManualMethod,
@@ -26,6 +29,8 @@ import {
 } from "@/lib/payments/instruments";
 import {
   type HandMethod,
+  duplicatePaymentWarning,
+  findDuplicatePayment,
   type ManualPaymentRow,
   pairManualPayments,
   parseManualLabel,
@@ -40,6 +45,76 @@ import type { LedgerReversal } from "./types";
 /** Who a payment line names: the household's name when known, else the home ("Lot 7"), never a bare "Owner". */
 function payerName(home: { displayName?: string; unit: string } | undefined): string {
   return home?.displayName?.trim() || (home ? placeLabel(home.unit) : "Unknown home");
+}
+
+/**
+ * One home's checks and cash entered by hand, newest first, ten at most, as
+ * the database holds them now. A payments row carries no date or reference,
+ * so those are read off the statement line written beside it. Row level
+ * security already lets a finance holder read both. Rejects when the read
+ * fails.
+ */
+async function readRemoteManualPayments(homeId: string): Promise<ManualPaymentRow[]> {
+  if (!isUuid(homeId)) return [];
+  const supabase = supabaseBrowser();
+  const [paid, lines] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("id, amount_cents, rail, state, refunded_cents, created_at")
+      .eq("unit_id", homeId)
+      .in("rail", ["check", "cash"])
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("charges")
+      .select("label, amount_cents, due_on")
+      .eq("unit_id", homeId)
+      .eq("kind", "payment")
+      .or("label.like.Check payment*,label.like.Cash payment*")
+      .order("created_at", { ascending: true }),
+  ]);
+  if (paid.error) throw new Error(paid.error.message);
+  if (lines.error) throw new Error(lines.error.message);
+  return recentManualPayments(
+    pairManualPayments(
+      [...(paid.data ?? [])].reverse().map((p) => ({
+        id: p.id,
+        amountCents: p.amount_cents,
+        method: p.rail as HandMethod,
+        reversed: p.state === "refunded" || p.refunded_cents > 0,
+        createdOn: p.created_at.slice(0, 10),
+      })),
+      (lines.data ?? []).map((l) => ({
+        label: l.label,
+        amountCents: -l.amount_cents,
+        date: l.due_on,
+      })),
+    ),
+  );
+}
+
+/** The demo's version: the same rows, read off the home's statement as it is now. */
+function readLocalManualPayments(communityId: string, homeId: string): ManualPaymentRow[] {
+  const lines = sliceStore(communityId, "homeCharges").getSnapshot()[homeId] ?? [];
+  const rows: ManualPaymentRow[] = [];
+  for (const l of lines) {
+    const parsed = l.kind === "payment" ? parseManualLabel(l.label) : null;
+    if (!parsed) continue;
+    rows.push({
+      id: l.id,
+      amountCents: -l.amountCents,
+      method: parsed.method,
+      receivedOn: l.date,
+      reference: parsed.reference,
+      reversed: Boolean(l.reversed),
+    });
+  }
+  return recentManualPayments(rows);
+}
+
+/** Why a hand payment was held back, when it repeats one already on the home. */
+function repeatPaymentMessage(homeLabel: string, row: ManualPaymentRow): string {
+  return `${duplicatePaymentWarning(homeLabel, row)} Choose Record it again to save it anyway.`;
 }
 
 /**
@@ -122,9 +197,21 @@ export function useMoneyActions(deps: AppDeps) {
         remaining -= take;
       }
 
+      const takenNow = new Map(appliedTo.map((a) => [a.chargeId, a.amountCents]));
+      const billed = existing.filter((l) => l.kind === "charge" && l.date <= date);
+      // A statement with no bills on it says nothing either way, so the
+      // home's standing is left to the balance alone.
+      const nothingDueOpen =
+        billed.length > 0 &&
+        !billed.some(
+          (l) => l.amountCents - (paidAgainst.get(l.id) ?? 0) - (takenNow.get(l.id) ?? 0) > 0,
+        );
+
       const homes = sliceStore(communityId, "homes");
       const home = homes.getSnapshot().find((o) => o.id === input.homeId);
-      const balanceAfter = Math.max(0, (home?.balanceCents ?? 0) - input.amountCents);
+      // As record_payment leaves it: an overpayment is a credit, so the
+      // balance goes below zero rather than stopping at it.
+      const balanceAfter = (home?.balanceCents ?? 0) - input.amountCents;
 
       // Placed by its date, after the charges of that day, with the running
       // balances restated: written at the top it sat above a bill dated
@@ -154,9 +241,14 @@ export function useMoneyActions(deps: AppDeps) {
 
       homes.update((all) =>
         all.map((o) =>
-          o.id === input.homeId
-            ? { ...o, balanceCents: balanceAfter, daysPastDue: 0, standing: "current" as const }
-            : o,
+          o.id !== input.homeId
+            ? o
+            : // Current only when nothing already due is still open, as the
+              // database works it out from the bills. A part payment leaves
+              // the oldest bill open, and the home as late as it was.
+              balanceAfter <= 0 || nothingDueOpen
+              ? { ...o, balanceCents: balanceAfter, daysPastDue: 0, standing: "current" as const }
+              : { ...o, balanceCents: balanceAfter },
         ),
       );
 
@@ -283,17 +375,55 @@ export function useMoneyActions(deps: AppDeps) {
       method: ManualMethod;
       reference: string;
       receivedOn: string;
-    }) => {
-      if (remote.community) {
-        return remoteWrite("Recording the payment", () =>
-          supabaseBrowser().rpc("record_manual_payment", {
+      /**
+       * The board has seen the repeat warning and chose to record it again.
+       * Without it, a payment that repeats one already on the home (same
+       * amount, same day, not reversed) is held back, whatever the form's
+       * copy of the home's payments said when it opened.
+       */
+      allowRepeat?: boolean;
+    }): boolean | Promise<boolean> => {
+      if (!can("finances")) return false;
+      const homes = remote.community
+        ? remote.community.homes
+        : sliceStore(communityId, "homes").getSnapshot();
+      const home = homes.find((o) => o.id === input.homeId);
+      if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+        return refuse("Enter an amount above $0");
+      }
+      const ceiling = handAmountCeiling(home?.balanceCents ?? 0);
+      if (input.amountCents > ceiling) {
+        return refuse(`The most you can record for this home is ${money(ceiling)}.`);
+      }
+      const homeLabel = home ? payerName(home) : "This home";
+      const rc = remote.community;
+      if (rc) {
+        return remoteWrite("Recording the payment", async () => {
+          // Read when the write's turn comes, after any payment entered a
+          // moment ago has landed. The list the form opened with is older
+          // than that, and two identical payments both went through it.
+          if (!input.allowRepeat) {
+            const repeat = findDuplicatePayment(await readRemoteManualPayments(input.homeId), {
+              amountCents: input.amountCents,
+              receivedOn: input.receivedOn,
+            });
+            if (repeat) throw new Error(repeatPaymentMessage(homeLabel, repeat));
+          }
+          return supabaseBrowser().rpc("record_manual_payment", {
             p_unit_id: input.homeId,
             p_amount_cents: input.amountCents,
             p_method: input.method,
             p_reference: input.reference.trim(),
             p_received_on: input.receivedOn,
-          }),
-        );
+          });
+        });
+      }
+      if (!input.allowRepeat) {
+        const repeat = findDuplicatePayment(readLocalManualPayments(communityId, input.homeId), {
+          amountCents: input.amountCents,
+          receivedOn: input.receivedOn,
+        });
+        if (repeat) return refuse(repeatPaymentMessage(homeLabel, repeat));
       }
       applyLocalPayment({
         homeId: input.homeId,
@@ -307,7 +437,7 @@ export function useMoneyActions(deps: AppDeps) {
       });
       return true;
     },
-    [remote.community, applyLocalPayment],
+    [can, remote.community, communityId, applyLocalPayment],
   );
 
   /**
@@ -407,61 +537,10 @@ export function useMoneyActions(deps: AppDeps) {
    * beside it. Row level security already lets a finance holder read both.
    */
   const manualPaymentsFor = useCallback(
-    async (homeId: string): Promise<ManualPaymentRow[]> => {
-      if (remote.community) {
-        if (!isUuid(homeId)) return [];
-        const supabase = supabaseBrowser();
-        const [paid, lines] = await Promise.all([
-          supabase
-            .from("payments")
-            .select("id, amount_cents, rail, state, refunded_cents, created_at")
-            .eq("unit_id", homeId)
-            .in("rail", ["check", "cash"])
-            .order("created_at", { ascending: false })
-            .limit(10),
-          supabase
-            .from("charges")
-            .select("label, amount_cents, due_on")
-            .eq("unit_id", homeId)
-            .eq("kind", "payment")
-            .or("label.like.Check payment*,label.like.Cash payment*")
-            .order("created_at", { ascending: true }),
-        ]);
-        if (paid.error) throw new Error(paid.error.message);
-        if (lines.error) throw new Error(lines.error.message);
-        return recentManualPayments(
-          pairManualPayments(
-            [...(paid.data ?? [])].reverse().map((p) => ({
-              id: p.id,
-              amountCents: p.amount_cents,
-              method: p.rail as HandMethod,
-              reversed: p.state === "refunded" || p.refunded_cents > 0,
-              createdOn: p.created_at.slice(0, 10),
-            })),
-            (lines.data ?? []).map((l) => ({
-              label: l.label,
-              amountCents: -l.amount_cents,
-              date: l.due_on,
-            })),
-          ),
-        );
-      }
-      const lines = sliceStore(communityId, "homeCharges").getSnapshot()[homeId] ?? [];
-      const rows: ManualPaymentRow[] = [];
-      for (const l of lines) {
-        const parsed = l.kind === "payment" ? parseManualLabel(l.label) : null;
-        if (!parsed) continue;
-        rows.push({
-          id: l.id,
-          amountCents: -l.amountCents,
-          method: parsed.method,
-          receivedOn: l.date,
-          reference: parsed.reference,
-          reversed: Boolean(l.reversed),
-        });
-      }
-      return recentManualPayments(rows);
-    },
+    async (homeId: string): Promise<ManualPaymentRow[]> =>
+      remote.community
+        ? readRemoteManualPayments(homeId)
+        : readLocalManualPayments(communityId, homeId),
     [remote.community, communityId],
   );
 
@@ -507,7 +586,14 @@ export function useMoneyActions(deps: AppDeps) {
   const addCredit = useCallback(
     (input: { homeId: string; amountCents: number; reason: string }) => {
       const reason = input.reason.trim();
-      if (input.amountCents <= 0 || !reason) return false;
+      if (!can("finances")) return false;
+      if (!reason) return refuse("Say what the credit is for.");
+      // The same ceiling as a payment entered by hand, in whole cents.
+      const owed = (
+        remote.community ? remote.community.homes : sliceStore(communityId, "homes").getSnapshot()
+      ).find((o) => o.id === input.homeId)?.balanceCents;
+      const problem = creditProblem(input.amountCents, owed ?? 0);
+      if (problem) return refuse(problem);
       const date = todayIsoDate();
       if (remote.community) {
         return remoteWrite("Adding the credit", () =>
@@ -550,7 +636,7 @@ export function useMoneyActions(deps: AppDeps) {
       );
       return true;
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   /** One charge line on a home's demo statement, with the balance it leaves. */
@@ -591,7 +677,8 @@ export function useMoneyActions(deps: AppDeps) {
     (input: { homeId: string; amountCents: number; label: string; dueOn: string }) => {
       const label = input.label.trim();
       if (!can("finances")) return false;
-      if (chargeProblem({ ...input, label }, todayIsoDate())) return false;
+      const problem = chargeProblem({ ...input, label }, todayIsoDate());
+      if (problem) return refuse(problem);
       if (remote.community) {
         return remoteWrite("Adding the charge", () =>
           supabaseBrowser().rpc("add_charge", {
@@ -613,7 +700,8 @@ export function useMoneyActions(deps: AppDeps) {
     (input: { amountCents: number; label: string; dueOn: string }) => {
       const label = input.label.trim();
       if (!can("finances")) return false;
-      if (chargeProblem({ ...input, label }, todayIsoDate())) return false;
+      const problem = chargeProblem({ ...input, label }, todayIsoDate());
+      if (problem) return refuse(problem);
       if (remote.community) {
         const rc = remote.community;
         return remoteWrite("Adding the charge to every home", () =>
@@ -709,6 +797,11 @@ export function useMoneyActions(deps: AppDeps) {
 
   const setOpeningBalances = useCallback(
     (asOf: string, balances: { homeId: string; amountCents: number }[]) => {
+      if (!can("finances")) return false;
+      for (const { amountCents } of balances) {
+        const problem = openingBalanceProblem(amountCents);
+        if (problem) return refuse(problem);
+      }
       if (remote.community) {
         // One line per home. A correction is a second line for the
         // difference rather than a delete and a rewrite (0106), so the
@@ -799,7 +892,7 @@ export function useMoneyActions(deps: AppDeps) {
       // Synchronous, like `transferHome`: the demo settles in one render.
       return true;
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const setAutopay = useCallback(
@@ -1142,10 +1235,23 @@ export function useMoneyActions(deps: AppDeps) {
     [remote.community, remote.profileId, communityId],
   );
 
+  /**
+   * Says a signed or scheduled payment has gone out. `paidOn` is the day it
+   * left (today when the form has no date); the ledger line, the payout's own
+   * paid date and the Vendors screen all read that one day. A date in the
+   * future is refused, since money cannot have left tomorrow. Resolves true
+   * once the payment reads paid, so the screen can say so only then.
+   */
   const markPayoutPaid = useCallback(
-    (payoutId: string) => {
+    (payoutId: string, paidOn?: string): boolean | Promise<boolean> => {
       if (!can("finances")) return false;
       const today = todayIsoDate();
+      const day = paidOn ?? today;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || Number.isNaN(Date.parse(day))) {
+        return refuse("Pick the day the payment went out.");
+      }
+      if (day > today)
+        return refuse("The payment cannot have gone out on a day that has not come.");
       if (remote.community) {
         const rc = remote.community;
         const payout = rc.payouts.find((p) => p.id === payoutId);
@@ -1154,10 +1260,11 @@ export function useMoneyActions(deps: AppDeps) {
         return remoteWrite("Marking the payment paid", async () => {
           const supabase = supabaseBrowser();
           // Only a payment still waiting to go out: a second press, or another
-          // officer's, finds it paid and writes no second ledger line.
+          // officer's, finds it paid and writes no second ledger line. The
+          // paid date is kept on the payout, where the Vendors screen reads it.
           const moved = await supabase
             .from("payouts")
-            .update({ status: "paid" }, { count: "exact" })
+            .update({ status: "paid", expected_on: day }, { count: "exact" })
             .eq("id", payoutId)
             .in("status", ["scheduled", "in-transit"]);
           if (moved.error) throw new Error(moved.error.message);
@@ -1167,12 +1274,12 @@ export function useMoneyActions(deps: AppDeps) {
           return supabase.from("ledger_entries").insert({
             association_id: rc.id,
             bank_account_id: operating && isUuid(operating.id) ? operating.id : null,
-            occurred_on: today,
+            occurred_on: day,
             description: payout.invoiceNumber
               ? `${payout.vendor}, ${payout.invoiceNumber}`
               : payout.vendor,
             counterparty: payout.vendor,
-            category: vendor?.defaultCategory ?? "Vendors",
+            category: ledgerCategory(payout.category ?? vendor?.defaultCategory ?? "Vendors"),
             amount_cents: -payout.amountCents,
             confirmed_at: new Date().toISOString(),
           });
@@ -1189,9 +1296,13 @@ export function useMoneyActions(deps: AppDeps) {
       const operating = sliceStore(communityId, "bankAccounts")
         .getSnapshot()
         .find((a) => a.kind === "operating");
-      const category = vendor?.defaultCategory ?? "Repairs & maintenance";
+      const category = ledgerCategory(
+        payout.category ?? vendor?.defaultCategory ?? "Repairs & maintenance",
+      );
       sliceStore(communityId, "payouts").update((all) =>
-        all.map((p) => (p.id === payoutId ? { ...p, status: "paid" as const } : p)),
+        all.map((p) =>
+          p.id === payoutId ? { ...p, status: "paid" as const, expectedDate: day } : p,
+        ),
       );
       // A bill paid from the invoice inbox already has its line, booked
       // pending; the money leaves the bank now, so it clears. Otherwise the
@@ -1201,14 +1312,14 @@ export function useMoneyActions(deps: AppDeps) {
       if (ledger.getSnapshot().some((e) => e.payoutId === payoutId)) {
         ledger.update((all) =>
           all.map((e) =>
-            e.payoutId === payoutId ? { ...e, status: "cleared" as const, date: today } : e,
+            e.payoutId === payoutId ? { ...e, status: "cleared" as const, date: day } : e,
           ),
         );
       } else {
         ledger.update((all) => [
           {
             id: `le-${payoutId}`,
-            date: today,
+            date: day,
             description: payout.invoiceNumber
               ? `${payout.vendor}, ${payout.invoiceNumber}`
               : payout.vendor,
@@ -1271,7 +1382,7 @@ export function useMoneyActions(deps: AppDeps) {
               ? `${payout.vendor}, ${payout.invoiceNumber}`
               : payout.vendor,
             counterparty: payout.vendor,
-            category: payout.category ?? vendor?.defaultCategory ?? "Vendors",
+            category: ledgerCategory(payout.category ?? vendor?.defaultCategory ?? "Vendors"),
             amount_cents: -payout.amountCents,
             confirmed_at: new Date().toISOString(),
           });
@@ -1293,7 +1404,9 @@ export function useMoneyActions(deps: AppDeps) {
       const operating = sliceStore(communityId, "bankAccounts")
         .getSnapshot()
         .find((a) => a.kind === "operating");
-      const category = payout.category ?? vendor?.defaultCategory ?? "Repairs & maintenance";
+      const category = ledgerCategory(
+        payout.category ?? vendor?.defaultCategory ?? "Repairs & maintenance",
+      );
       const entry: Community["ledger"][number] = {
         id: `le-${payout.id}`,
         date: payout.issuedDate,
@@ -1427,7 +1540,7 @@ export function useMoneyActions(deps: AppDeps) {
         date: today,
         description: `${invoice.vendor}, ${invoice.description}`,
         counterparty: invoice.vendor,
-        category: vendor?.defaultCategory ?? "Repairs & maintenance",
+        category: ledgerCategory(vendor?.defaultCategory ?? "Repairs & maintenance"),
         accountId: operating.id,
         amountCents: -invoice.amountCents,
         status: "pending",

@@ -106,7 +106,7 @@ try {
   // the two net to what the bank receives.
   const { data: feeLines } = await admin
     .from("ledger_entries")
-    .select("amount_cents, category")
+    .select("amount_cents, category, description")
     .eq("payment_id", firstId);
   const gross = (feeLines ?? [])
     .filter((l) => l.category === "Assessments")
@@ -118,6 +118,15 @@ try {
     "the ledger shows the payment whole and the processing fee as its own line",
     gross > 0 && fee === -48,
     `gross ${gross}, fee ${fee}`,
+  );
+  // Every owner reads the association's ledger, so the fee line must not say
+  // which home paid (0120).
+  check(
+    "the fee line does not name the home",
+    (feeLines ?? [])
+      .filter((l) => l.category === "Processing fees")
+      .every((l) => l.description === "Processing fee"),
+    JSON.stringify((feeLines ?? []).map((l) => l.description)),
   );
   check(
     "one intent is one ledger entry",

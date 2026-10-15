@@ -143,7 +143,7 @@ function RequestRow({
           {request.reference} · {formatDate(request.submittedDate)}
         </p>
       </div>
-      <Badge tone={requestStatusTone(request)}>{requestStatusLabel(request)}</Badge>
+      <Badge tone={requestStatusTone(request)}>{requestStatusLabel(request.status)}</Badge>
       <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
     </Link>
   );

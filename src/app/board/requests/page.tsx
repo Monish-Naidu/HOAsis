@@ -26,6 +26,7 @@ import {
   groupRequests,
   isMaintenanceRequest,
   repliedOn,
+  requestScheduleLabel,
   requestStatusLabel,
   requestStatusTone,
   type RequestGroup,
@@ -266,7 +267,10 @@ function RequestsScreen() {
             {r.summary}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge tone={requestStatusTone(r)}>{requestStatusLabel(r)}</Badge>
+            <Badge tone={requestStatusTone(r)}>{requestStatusLabel(r.status)}</Badge>
+            {requestScheduleLabel(r) ? (
+              <span className="text-footnote text-fg-muted">{requestScheduleLabel(r)}</span>
+            ) : null}
             {replied ? (
               <span className="text-footnote text-fg-muted">Replied {formatDate(replied)}</span>
             ) : null}
@@ -399,7 +403,7 @@ function RequestsScreen() {
           </p>
           <RequestDetail request={r} canChange={canChange} onReply={reply} />
         </div>
-        <Badge tone={requestStatusTone(r)}>{requestStatusLabel(r)}</Badge>
+        <Badge tone={requestStatusTone(r)}>{requestStatusLabel(r.status)}</Badge>
       </div>
     );
   }

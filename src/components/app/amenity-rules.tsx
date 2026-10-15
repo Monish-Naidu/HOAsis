@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { CalendarOff, Clock, Plus, SlidersHorizontal, X } from "lucide-react";
 import { Button, Checkbox, Select, fieldClass } from "@/components/ui/primitives";
+import {
+  MAX_BOOKINGS_PER_DAY,
+  MAX_BOOKINGS_PER_WEEK,
+  bookingLimitProblem,
+} from "@/lib/amenity-checks";
 import { describeRules, formatMinute, rulesFor } from "@/lib/bookings";
 import type { Blackout, BookingRules, CommunityAmenity } from "@/lib/types";
 import { cn, formatDate, todayIsoDate } from "@/lib/utils";
@@ -136,31 +141,20 @@ export function AmenityRules({
               </Select>
             </label>
 
-            <label className="block">
-              <span className="text-footnote font-semibold text-fg-muted">
-                Bookings per home, per day
-              </span>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={rules.maxPerDay}
-                onChange={(e) => set({ maxPerDay: Math.max(1, Number(e.target.value)) })}
-                className={`mt-1.5 w-full ${field}`}
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-footnote font-semibold text-fg-muted">Per week</span>
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={rules.maxPerWeek}
-                onChange={(e) => set({ maxPerWeek: Math.max(1, Number(e.target.value)) })}
-                className={`mt-1.5 w-full ${field}`}
-              />
-            </label>
+            <LimitField
+              label="Bookings per home, per day"
+              value={rules.maxPerDay}
+              max={MAX_BOOKINGS_PER_DAY}
+              className={field}
+              onCommit={(maxPerDay) => set({ maxPerDay })}
+            />
+            <LimitField
+              label="Per week"
+              value={rules.maxPerWeek}
+              max={MAX_BOOKINGS_PER_WEEK}
+              className={field}
+              onCommit={(maxPerWeek) => set({ maxPerWeek })}
+            />
           </div>
 
           <label className="mt-4 flex items-start gap-2.5">
@@ -305,5 +299,50 @@ export function AmenityRules({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A whole-number limit that keeps what was typed and says what is wrong with
+ * it. Only a valid number is saved: 0, -3 and 2.5 used to become 1 and 999999
+ * was kept, and neither said anything. Leaving the box with a bad entry puts
+ * the last good number back.
+ */
+function LimitField({
+  label,
+  value,
+  max,
+  className,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  className: string;
+  onCommit: (next: number) => void;
+}) {
+  const [text, setText] = useState<string | null>(null);
+  const shown = text ?? String(value);
+  const problem = text === null ? null : bookingLimitProblem(text, max);
+  return (
+    <label className="block">
+      <span className="text-footnote font-semibold text-fg-muted">{label}</span>
+      <input
+        inputMode="numeric"
+        value={shown}
+        onChange={(e) => {
+          setText(e.target.value);
+          if (bookingLimitProblem(e.target.value, max) === null) onCommit(Number(e.target.value));
+        }}
+        onBlur={() => setText(null)}
+        aria-invalid={problem ? true : undefined}
+        className={`mt-1.5 w-full ${className}`}
+      />
+      {problem ? (
+        <span role="alert" className="mt-1 block text-footnote text-danger">
+          {problem}
+        </span>
+      ) : null}
+    </label>
   );
 }

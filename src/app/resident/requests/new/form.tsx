@@ -32,13 +32,14 @@ import type { HomeRequest, RequestKind } from "@/lib/types";
 import { cn, formatDate, money, todayIsoDate } from "@/lib/utils";
 import { moduleOn } from "@/lib/modules";
 import { confirmedReference } from "@/lib/request-reference";
+import { REQUEST_SEEN_PROMISE } from "@/lib/resident-wording";
 
 /**
  * What happens next, and nothing more. These lines used to promise a reply
  * in 2 business days, 30 days and 3 days: times no board had set and
  * nothing tracked.
  */
-const SEEN = "The board sees this as soon as you send it.";
+const SEEN = REQUEST_SEEN_PROMISE;
 
 const kinds = [
   {
@@ -214,7 +215,10 @@ export function NewRequestForm() {
           at: todayIsoDate(),
           actor: "Your HOAsis",
           actorRole: "system",
-          body: chosen ? chosen.clock : "Routed to the board.",
+          // What happened, not the promise made before sending: the form's
+          // line ("sees this as soon as you send it") is future tense.
+          body:
+            kind === "amenity" ? "Sent to the board to confirm or decline." : "Sent to the board.",
           kind: "status",
         },
       ],

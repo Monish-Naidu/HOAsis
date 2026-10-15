@@ -1,7 +1,7 @@
 "use client";
 
 import { sameOriginPath } from "@/app/auth/callback/next-path";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
@@ -10,11 +10,19 @@ import { ResendLine } from "@/components/app/resend-line";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { requestPasswordReset, signInWithPassword, signUp } from "@/lib/auth";
+import {
+  requestPasswordReset,
+  signInWithPassword,
+  clearExiting,
+  signOutSettled,
+  signUp,
+  useAuth,
+} from "@/lib/auth";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 import { retryRemote, useRemote } from "@/lib/data/remote-store";
 import { readableLinkError } from "@/lib/email/link-error";
+import { pageNameFor } from "./page-name";
 
 /**
  * Real seats on the real database for trying the product, read at build
@@ -66,9 +74,19 @@ export function SignInPanel() {
   const router = useRouter();
   const { signIn, signOut, account, accounts, community } = useAppState();
   const remote = useRemote();
+  // Nothing else on this page starts the session store, so without this read
+  // the association never loaded here and the signed in card could not show.
+  const auth = useAuth();
   // Already in. A bookmark or the switcher used to land a signed in member on
   // this form as if they were a stranger; say who they are and offer the door.
-  const signedIn = hasSupabase && remote.status === "ready" && remote.community !== null;
+  // A failed load keeps the form: signing in again as the same person is how
+  // the load is asked for again (`reloadAfterFailedLoad`).
+  const signedIn =
+    hasSupabase && Boolean(auth.user) && (remote.status === "ready" || remote.status === "empty");
+  // Not known yet: showing the stranger form for a beat and then swapping it
+  // for the card is worse than showing neither.
+  const settling =
+    hasSupabase && (auth.loading || (Boolean(auth.user) && remote.status === "loading"));
 
   // Seats come from whichever association is selected, so the front door
   // always offers the right people.
@@ -85,7 +103,7 @@ export function SignInPanel() {
     ...seats.filter((s) => s.isAdmin),
     ...seats.filter((s) => !s.isAdmin).slice(0, 2),
   ];
-  const [mode, setMode] = useState<"sign-in" | "create">("sign-in");
+  const [mode, setModeRaw] = useState<"sign-in" | "create">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -99,6 +117,14 @@ export function SignInPanel() {
   // Set when creating an account left a confirmation email to open. The
   // notice that says so is where the way to send it again belongs.
   const [confirmingEmail, setConfirmingEmail] = useState<string | null>(null);
+
+  // A failed sign in must not follow somebody to the other tab, where it
+  // reads as a verdict on a form they have not touched.
+  function setMode(next: "sign-in" | "create") {
+    setModeRaw(next);
+    setNotice(null);
+    setConfirmingEmail(null);
+  }
 
   function enter(accountId: string) {
     signIn(accountId);
@@ -176,19 +202,43 @@ export function SignInPanel() {
     router.push(await destinationAfterSignIn(params.get("next")));
   }
 
+  // Arriving here ends any exit in progress; see `isExiting`.
+  useEffect(() => {
+    clearExiting();
+  }, []);
+
+  const reason = signedIn ? null : pageNameFor(params.get("next"));
+  const missing = params.get("missing");
+
   return (
     <div className="space-y-4">
+      {missing ? (
+        <p role="status" className="rounded-lg bg-surface-2 px-3 py-2 text-footnote text-fg-muted">
+          No association at that address. Check the link with your board, or sign in below.
+        </p>
+      ) : reason ? (
+        <p role="status" className="rounded-lg bg-surface-2 px-3 py-2 text-footnote text-fg-muted">
+          Sign in to open {reason}.
+        </p>
+      ) : null}
       {signedIn ? (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="min-w-0">
             <p className="text-body font-semibold text-fg">You are signed in</p>
             <p className="truncate text-footnote text-fg-muted">
               {account?.name ? `${account.name} · ` : ""}
-              {remote.community?.settings.displayName}
+              {remote.community?.settings.displayName ?? auth.user?.email}
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => signOut()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                signOut();
+                await signOutSettled();
+              }}
+            >
               Sign out
             </Button>
             <Button
@@ -201,120 +251,124 @@ export function SignInPanel() {
           </div>
         </Card>
       ) : null}
-      <Card className="overflow-hidden">
-        <div className="grid grid-cols-2 border-b border-border">
-          {(["sign-in", "create"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={cn(
-                "py-3 text-body font-medium transition-colors",
-                mode === m
-                  ? "-mb-px border-b-2 border-primary text-fg"
-                  : "text-fg-muted hover:text-fg",
-              )}
-            >
-              {m === "sign-in" ? "Sign in" : "Create account"}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={submit} className="space-y-3 p-5">
-          {mode === "create" ? (
-            <Field
-              label="Full name"
-              value={name}
-              onChange={setName}
-              placeholder="Jane Doe"
-              autoComplete="name"
-            />
-          ) : null}
-          <Field
-            label="Email"
-            value={email}
-            onChange={setEmail}
-            placeholder="you@example.com"
-            type="email"
-            autoComplete="email"
-          />
-          <Field
-            label="Password"
-            value={password}
-            onChange={setPassword}
-            placeholder="••••••••"
-            type="password"
-            autoComplete={mode === "create" ? "new-password" : "current-password"}
-          />
-          {notice ? (
-            <p
-              className={cn(
-                "rounded-lg px-3 py-2 text-footnote leading-snug",
-                notice.tone === "danger" ? "bg-danger-soft text-danger" : "bg-ok-soft text-ok",
-              )}
-              role={notice.tone === "danger" ? "alert" : "status"}
-            >
-              {notice.text}
-            </p>
-          ) : null}
-          {confirmingEmail && notice?.tone === "ok" ? <ResendLine email={confirmingEmail} /> : null}
-          <Button
-            variant="primary"
-            size="lg"
-            className="w-full"
-            type="submit"
-            disabled={busy || !email.trim() || (hasSupabase && !password)}
-          >
-            {busy ? "One moment" : mode === "sign-in" ? "Sign in" : "Create account"}
-            <ArrowRight className="size-4" />
-          </Button>
-          {mode === "sign-in" ? (
-            <p className="text-center text-footnote text-fg-muted">
+      {signedIn || settling ? null : (
+        <Card className="overflow-hidden">
+          <div className="grid grid-cols-2 border-b border-border">
+            {(["sign-in", "create"] as const).map((m) => (
               <button
+                key={m}
                 type="button"
-                className="hover:text-fg"
-                disabled={busy}
-                onClick={async () => {
-                  setConfirmingEmail(null);
-                  if (!email.trim()) {
-                    setNotice({
-                      tone: "danger",
-                      text: "Type your email first, then press Forgot your password again.",
-                    });
-                    return;
-                  }
-                  setBusy(true);
-                  const result = await requestPasswordReset(email);
-                  setBusy(false);
-                  setNotice({
-                    tone: result.ok ? "ok" : "danger",
-                    text: result.message ?? "Check your email.",
-                  });
-                }}
+                onClick={() => setMode(m)}
+                className={cn(
+                  "py-3 text-body font-medium transition-colors",
+                  mode === m
+                    ? "-mb-px border-b-2 border-primary text-fg"
+                    : "text-fg-muted hover:text-fg",
+                )}
               >
-                Forgot your password?
+                {m === "sign-in" ? "Sign in" : "Create account"}
               </button>
-            </p>
-          ) : (
-            <p className="text-center text-footnote leading-snug text-fg-subtle">
-              If your board already added your home, sign up with the email they used and it opens
-              on its own. Have a join code?{" "}
-              <Link href="/join" className="font-medium text-fg underline underline-offset-2">
-                Join with the code
-              </Link>
-              . By creating an account you agree to the{" "}
-              <Link href="/terms" className="font-medium text-fg underline underline-offset-2">
-                Terms
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="font-medium text-fg underline underline-offset-2">
-                Privacy policy
-              </Link>
-              .
-            </p>
-          )}
-        </form>
-      </Card>
+            ))}
+          </div>
+
+          <form onSubmit={submit} className="space-y-3 p-5">
+            {mode === "create" ? (
+              <Field
+                label="Full name"
+                value={name}
+                onChange={setName}
+                placeholder="Jane Doe"
+                autoComplete="name"
+              />
+            ) : null}
+            <Field
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              placeholder="you@example.com"
+              type="email"
+              autoComplete="email"
+            />
+            <Field
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              placeholder="••••••••"
+              type="password"
+              autoComplete={mode === "create" ? "new-password" : "current-password"}
+            />
+            {notice ? (
+              <p
+                className={cn(
+                  "rounded-lg px-3 py-2 text-footnote leading-snug",
+                  notice.tone === "danger" ? "bg-danger-soft text-danger" : "bg-ok-soft text-ok",
+                )}
+                role={notice.tone === "danger" ? "alert" : "status"}
+              >
+                {notice.text}
+              </p>
+            ) : null}
+            {confirmingEmail && notice?.tone === "ok" ? (
+              <ResendLine email={confirmingEmail} />
+            ) : null}
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              type="submit"
+              disabled={busy || !email.trim() || (hasSupabase && !password)}
+            >
+              {busy ? "One moment" : mode === "sign-in" ? "Sign in" : "Create account"}
+              <ArrowRight className="size-4" />
+            </Button>
+            {mode === "sign-in" ? (
+              <p className="text-center text-footnote text-fg-muted">
+                <button
+                  type="button"
+                  className="hover:text-fg"
+                  disabled={busy}
+                  onClick={async () => {
+                    setConfirmingEmail(null);
+                    if (!email.trim()) {
+                      setNotice({
+                        tone: "danger",
+                        text: "Type your email first, then press Forgot your password again.",
+                      });
+                      return;
+                    }
+                    setBusy(true);
+                    const result = await requestPasswordReset(email);
+                    setBusy(false);
+                    setNotice({
+                      tone: result.ok ? "ok" : "danger",
+                      text: result.message ?? "Check your email.",
+                    });
+                  }}
+                >
+                  Forgot your password?
+                </button>
+              </p>
+            ) : (
+              <p className="text-center text-footnote leading-snug text-fg-subtle">
+                If your board already added your home, sign up with the email they used and it opens
+                on its own. Have a join code?{" "}
+                <Link href="/join" className="font-medium text-fg underline underline-offset-2">
+                  Join with the code
+                </Link>
+                . By creating an account you agree to the{" "}
+                <Link href="/terms" className="font-medium text-fg underline underline-offset-2">
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="font-medium text-fg underline underline-offset-2">
+                  Privacy policy
+                </Link>
+                .
+              </p>
+            )}
+          </form>
+        </Card>
+      )}
 
       {/* The sample communities, and a seat in each.
 
@@ -329,7 +383,7 @@ export function SignInPanel() {
           only in development and only when the two NEXT_PUBLIC_TEST_LOGIN
           values are in .env.local (gitignored), so nothing about it reaches
           the deployed site or the repository. */}
-      {TEST_LOGINS.length ? (
+      {TEST_LOGINS.length && !signedIn && !settling ? (
         <Card className="overflow-hidden">
           <div className="p-4">
             <p className="text-caption font-semibold uppercase tracking-wide text-fg-subtle">

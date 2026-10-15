@@ -2,11 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, ChevronRight, LayoutDashboard, LogOut, Users } from "lucide-react";
+import {
+  Building2,
+  ChevronRight,
+  CircleHelp,
+  LayoutDashboard,
+  LogOut,
+  ShieldAlert,
+  Users,
+} from "lucide-react";
 import { ResidentTitle } from "@/components/app/resident-title";
 import { Card, IconTile } from "@/components/ui/primitives";
 import { residentMoreRows, visibleResidentTabs } from "@/components/app/resident-nav";
 import { useAppState } from "@/lib/app-state";
+import { useSignOut } from "@/components/app/account-menu";
+import { noteLeaving } from "@/lib/auth";
+import { moduleOn } from "@/lib/modules";
+import { supportMailto } from "@/lib/support";
 
 /**
  * Everything the phone's tab bar has no room for, as a list with a line
@@ -16,9 +28,9 @@ import { useAppState } from "@/lib/app-state";
  * Voting) are that row's tabs, which draw on a phone too.
  */
 export default function ResidentMore() {
-  const { settings, signOut, account, setView, community, communities, setCommunity } =
-    useAppState();
+  const { settings, account, setView, community, communities, setCommunity } = useAppState();
   const router = useRouter();
+  const signOut = useSignOut();
   const rows = residentMoreRows(visibleResidentTabs(settings));
   // On a phone the header has room for a name and three controls, so the two
   // switches the website keeps on the photo live here: back to the board for
@@ -49,7 +61,7 @@ export default function ResidentMore() {
         ))}
       </Card>
 
-      <Card>
+      <Card className="divide-y divide-border">
         <Link
           href="/resident/messages#your-board"
           className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
@@ -63,6 +75,39 @@ export default function ResidentMore() {
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
         </Link>
+        {/* Only when the board has switched reporting on; a link to a page
+            that says "not switched on" is a dead end. */}
+        {moduleOn("resident-report") ? (
+          <Link
+            href="/resident/report"
+            className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+          >
+            <IconTile icon={ShieldAlert} tint="neutral" size="sm" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-body font-semibold text-fg">
+                Tell the board about something
+              </span>
+              <span className="block text-footnote text-fg-muted">
+                Something you have seen that the rules may cover
+              </span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+          </Link>
+        ) : null}
+        {/* The same mailbox the board's menu opens, named for this association. */}
+        <a
+          href={supportMailto(`Help with ${settings.displayName}`)}
+          className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+        >
+          <IconTile icon={CircleHelp} tint="neutral" size="sm" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-body font-semibold text-fg">Help</span>
+            <span className="block text-footnote text-fg-muted">
+              Write to us about the app or your account
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
+        </a>
       </Card>
 
       {officer || others.length ? (
@@ -93,7 +138,9 @@ export default function ResidentMore() {
               onClick={() => {
                 // A real member switches in place. A demo seat is a different
                 // person, so that one goes back to the door, as on the website.
-                router.push(setCommunity(option.id) === "switched" ? "/resident" : "/signin");
+                const result = setCommunity(option.id);
+                if (result === "signed-out") noteLeaving();
+                router.push(result === "switched" ? "/resident" : "/signin");
               }}
               className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
             >
@@ -114,10 +161,7 @@ export default function ResidentMore() {
 
       <button
         type="button"
-        onClick={() => {
-          signOut();
-          router.push("/signin");
-        }}
+        onClick={() => void signOut()}
         className="press flex min-h-12 w-full items-center justify-center gap-2 rounded-card border border-border-2 bg-surface px-4 text-body font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
       >
         <LogOut className="size-4" />

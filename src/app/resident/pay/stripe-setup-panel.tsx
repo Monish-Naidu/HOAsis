@@ -221,7 +221,7 @@ function SetupForm({
         onClick={save}
         disabled={busy || !stripe || !ready}
       >
-        {busy ? "Saving…" : "Save payment method"}
+        {busy ? "Saving…" : "Add a payment method"}
       </Button>
       <p className="mt-2.5 flex items-start gap-1.5 text-footnote leading-snug text-fg-subtle">
         <ShieldCheck className="mt-px size-3 shrink-0" />

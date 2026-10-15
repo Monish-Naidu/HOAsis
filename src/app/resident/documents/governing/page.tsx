@@ -8,10 +8,13 @@ import { AmendmentDiff } from "@/components/app/amendment-diff";
 import { DocumentHierarchy } from "@/components/app/document-hierarchy";
 import { useAppState } from "@/lib/app-state";
 import { formatDate } from "@/lib/utils";
+import { countWord, governingSubtitle } from "@/lib/resident-wording";
+import { disclosureCoverage } from "@/lib/governing";
 
 export default function ResidentGoverningDocuments() {
   const { community } = useAppState();
   const articles = community.governingDocs;
+  const worthKnowing = disclosureCoverage(articles).total;
   const open = community.governingAmendments.filter((a) => a.stage === "open");
 
   return (
@@ -28,7 +31,7 @@ export default function ResidentGoverningDocuments() {
           The rules you live under
         </h1>
         <p className="mt-1 text-body leading-relaxed text-fg-muted">
-          Three documents, searchable together, in plain words, with the exact wording one tap away.
+          {governingSubtitle(articles)}
         </p>
       </div>
 
@@ -51,7 +54,7 @@ export default function ResidentGoverningDocuments() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-body font-semibold text-fg">
-                The eight things worth knowing
+                The {countWord(worthKnowing)} things worth knowing
               </span>
               <span className="block text-footnote leading-snug text-fg-muted">
                 Flags, solar, signs, parking, working from home, renting out, what needs approval,

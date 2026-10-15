@@ -2,6 +2,7 @@ import type { Community } from "@/lib/data/community";
 import { renderTemplate, type MessageTemplate } from "@/lib/data/templates";
 import { type CollectionPolicy, type CollectionStage, stageFor } from "@/lib/collections";
 import type { Home } from "@/lib/types";
+import { homeLabel } from "@/lib/wording";
 import { money, todayIsoDate } from "@/lib/utils";
 import { duesTerms, homeDues } from "@/lib/home-types";
 
@@ -50,13 +51,12 @@ export function dueLetter(
  * Subject and body share one map. They drifted apart once, and the board sent
  * notices whose subject line still said {{unit}}.
  */
-function letterFields(
-  home: Home,
-  community: Pick<Community, "association" | "settings">,
-): Record<string, string> {
+function letterFields(home: Home, community: LetterCommunity): Record<string, string> {
   return {
     owner: home.displayName,
-    unit: home.unit,
+    // The home in the community's own words ("Lot 12"), as every screen has
+    // it. The templates used to say "unit {{unit}}" for a subdivision.
+    unit: homeLabel(community, home.unit),
     balance: money(home.balanceCents),
     days_past_due: String(home.daysPastDue),
     association: community.settings.displayName,
@@ -67,15 +67,40 @@ function letterFields(
   };
 }
 
+type LetterCommunity = Pick<Community, "association" | "settings" | "profile" | "homeCharges">;
+
+/** Whether a late fee is on this home's statement, the only time a letter may say one was applied. */
+export function lateFeePosted(
+  community: Pick<Community, "homeCharges">,
+  home: Pick<Home, "id">,
+): boolean {
+  return (community.homeCharges[home.id] ?? []).some(
+    (l) => l.kind === "charge" && (l.category === "late_fee" || /late fee/i.test(l.label)),
+  );
+}
+
+/**
+ * The template with the word "unit" taken out in front of the home's own
+ * label, and the sentence about a late fee taken out when none was posted.
+ *
+ * A policy with a $0 fee sent "A late fee has been applied" to an owner who
+ * was charged nothing. The sentence stays when a fee is on the statement.
+ */
+function adapt(text: string, feePosted: boolean): string {
+  const named = text.replace(/\bunit\s+(\{\{unit\}\})/gi, "$1");
+  return feePosted ? named : named.replace(/ ?A late fee has been applied[^.\n]*\./i, "");
+}
+
 /** A template with this household's figures in it, ready to send. */
 export function renderLetter(
   template: Pick<MessageTemplate, "subject" | "body">,
   home: Home,
-  community: Pick<Community, "association" | "settings">,
+  community: LetterCommunity,
 ): { subject: string; body: string } {
   const fields = letterFields(home, community);
+  const feePosted = lateFeePosted(community, home);
   return {
-    subject: renderTemplate(template.subject, fields),
-    body: renderTemplate(template.body, fields),
+    subject: renderTemplate(adapt(template.subject, feePosted), fields),
+    body: renderTemplate(adapt(template.body, feePosted), fields),
   };
 }

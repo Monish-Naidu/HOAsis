@@ -57,7 +57,7 @@ export function JoinPanel() {
     const invited = search.has("invite");
     return (
       <JoinWithCode
-        initialCode={(search.get("invite") ?? search.get("code") ?? "").toUpperCase().slice(0, 6)}
+        initialCode={cleanCode(search.get("invite") ?? search.get("code") ?? "")}
         invitedEmail={invited ? (search.get("email") ?? "") : ""}
         invited={invited}
         communitySlug={search.get("community")}
@@ -134,6 +134,13 @@ export function JoinPanel() {
   );
 }
 
+/** Join codes are exactly six letters and numbers. */
+const CODE_LENGTH = 6;
+
+function cleanCode(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 const field = cn(fieldClass, "disabled:bg-surface-2 disabled:text-fg-muted");
 const label = "mb-1 block text-footnote font-semibold text-fg-muted";
 
@@ -161,10 +168,16 @@ function JoinWithCode({
 }) {
   const { lookupJoinCode } = useAppState();
   const named = useCommunityName(communitySlug ?? null);
+  const noSuchAddress = Boolean(communitySlug) && named === null;
   const [draft, setDraft] = useState(initialCode);
   // The code being looked at. Arriving with one on the link skips the first
   // step; typing one and pressing Continue sets it.
-  const [code, setCode] = useState<string | null>(initialCode.length >= 4 ? initialCode : null);
+  const [code, setCode] = useState<string | null>(
+    initialCode.length === CODE_LENGTH ? initialCode : null,
+  );
+  // Set when an invitation link did not match anything and the person chose
+  // to ask to join with a code instead. The invited email stays on the form.
+  const [dropInvite, setDropInvite] = useState(false);
 
   if (code) {
     if (!lookups.has(code)) lookups.set(code, lookupJoinCode(code));
@@ -178,24 +191,32 @@ function JoinWithCode({
           code={code}
           lookup={lookups.get(code)!}
           invitedEmail={invitedEmail}
-          invited={invited}
+          invited={invited && !dropInvite}
+          fromLink={invited && !dropInvite}
           onRetry={() => {
             lookups.delete(code);
             setCode(null);
+            // A link that matched nothing leaves nothing to correct, so the
+            // box starts empty rather than holding the dead code.
+            if (invited && !dropInvite) {
+              setDraft("");
+              setDropInvite(true);
+            }
           }}
         />
       </Suspense>
     );
   }
 
-  const canContinue = draft.trim().length >= 4;
+  const canContinue = draft.length === CODE_LENGTH;
+  const tooLong = draft.length > CODE_LENGTH;
   return (
     <Card
       as="form"
       className="overflow-hidden"
       onSubmit={(e) => {
         e.preventDefault();
-        if (canContinue) setCode(draft.trim());
+        if (canContinue) setCode(draft);
       }}
     >
       <div className="border-b border-border px-6 py-5">
@@ -206,33 +227,48 @@ function JoinWithCode({
         <h1 className="mt-1 text-title3 font-semibold leading-tight tracking-[-0.02em] text-fg">
           {named ? `Join ${named.name}` : "Enter your join code"}
         </h1>
+        {noSuchAddress ? (
+          <p role="status" className="mt-2 text-body font-medium text-danger">
+            No association at that address.
+          </p>
+        ) : null}
         <p className="mt-1 text-body leading-relaxed text-fg-muted">
           {named
             ? `Your home is not on the list for ${named.name}${named.place ? `, ${named.place}` : ""} yet. Enter the join code from your board.`
-            : "Six characters, from your board or the welcome letter."}
+            : noSuchAddress
+              ? "Check the link with your board, or enter the join code you were given."
+              : "Six characters, from your board or the welcome letter."}
         </p>
       </div>
       <div className="space-y-4 px-6 py-5">
-        <label className="block">
-          <span className={label}>Join code</span>
-          <input
-            value={draft}
-            onChange={(e) =>
-              setDraft(
-                e.target.value
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")
-                  .slice(0, 6),
-              )
-            }
-            placeholder="A1B2C3"
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            className={`${field} font-mono tracking-[0.2em]`}
-            autoFocus
-          />
-        </label>
+        <div>
+          <label className="block">
+            <span className={label}>Join code</span>
+            <input
+              value={draft}
+              onChange={(e) => setDraft(cleanCode(e.target.value))}
+              placeholder="A1B2C3"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              aria-describedby="join-code-rule"
+              className={`${field} font-mono tracking-[0.2em]`}
+            />
+          </label>
+          {/* The rule is said under the box, so a disabled button never has
+              to be guessed at. Nothing typed is thrown away silently. */}
+          <span
+            id="join-code-rule"
+            className={cn(
+              "mt-1 block text-footnote leading-snug",
+              tooLong ? "text-danger" : "text-fg-subtle",
+            )}
+          >
+            {tooLong
+              ? `That is ${draft.length} characters. A join code is exactly six letters and numbers.`
+              : `Exactly six letters and numbers. ${draft.length} of ${CODE_LENGTH} entered.`}
+          </span>
+        </div>
         <Button
           variant="primary"
           size="md"
@@ -258,10 +294,12 @@ function JoinWithCode({
  * The association a community link names, for the heading. A stranger sees
  * the name and the town, which is all `association_by_slug` gives out.
  */
-function useCommunityName(slug: string | null): Found | null {
+function useCommunityName(slug: string | null): Found | null | undefined {
   return useSyncExternalStore(
     (listener) => subscribeCommunityName(slug, listener),
-    () => (slug ? (names.get(slug) ?? null) : null),
+    // Undefined while the lookup runs, null once it says nobody holds the
+    // address, so "not yet" and "no such association" are never confused.
+    () => (slug ? names.get(slug) : null),
     () => null,
   );
 }
@@ -273,12 +311,19 @@ function subscribeCommunityName(slug: string | null, listener: () => void) {
   nameListeners.add(listener);
   if (slug && !names.has(slug)) {
     void fetch(`/api/join/lookup?community=${encodeURIComponent(slug)}`)
-      .then((r) => (r.ok ? r.json() : { found: null }))
+      .then((r) => {
+        // A refused or failed lookup says nothing about the address.
+        if (!r.ok) throw new Error("lookup failed");
+        return r.json();
+      })
       .then((body: { found: Found | null }) => {
         names.set(slug, body.found);
         for (const l of nameListeners) l();
       })
-      .catch(() => names.set(slug, null));
+      .catch(() => {
+        // A lookup that failed says nothing about the address, so it is not
+        // recorded as missing.
+      });
   }
   return () => nameListeners.delete(listener);
 }
@@ -290,12 +335,15 @@ function JoinForm({
   lookup,
   invitedEmail,
   invited,
+  fromLink,
   onRetry,
 }: {
   code: string;
   lookup: Promise<Found | null>;
   invitedEmail: string;
   invited: boolean;
+  /** The code came off an invitation link rather than the person's keyboard. */
+  fromLink: boolean;
   onRetry: () => void;
 }) {
   const found = use(lookup);
@@ -323,6 +371,30 @@ function JoinForm({
   // invitation went to a different address. They are told which, and the
   // button then goes to the home they do hold (src/app/join/invited.ts).
   const [otherSeat, setOtherSeat] = useState<{ message: string; path: string } | null>(null);
+
+  if (!found && fromLink) {
+    return (
+      <Card className="p-6">
+        <h1 className="text-title3 font-semibold tracking-[-0.02em] text-fg">
+          This invitation link is not valid
+        </h1>
+        <p className="mt-2 text-body leading-relaxed text-fg-muted">
+          The link may be old or copied wrong. Ask your board to send a new one
+          {invitedEmail ? (
+            <>
+              {" "}
+              to <span className="font-medium text-fg">{invitedEmail}</span>
+            </>
+          ) : null}
+          . If you have the association&apos;s six-character join code, you can ask to join with it
+          now.
+        </p>
+        <Button variant="secondary" size="md" className="mt-5" onClick={onRetry}>
+          Ask to join with a code
+        </Button>
+      </Card>
+    );
+  }
 
   if (!found) {
     return (
@@ -482,7 +554,6 @@ function JoinForm({
                 autoComplete="name"
                 placeholder="Priya Ellison"
                 className={field}
-                autoFocus
               />
             </label>
             <label className="block">
@@ -527,7 +598,6 @@ function JoinForm({
                 onChange={(e) => setUnit(e.target.value)}
                 placeholder="Street address, or unit or lot number"
                 className={field}
-                autoFocus={signedIn}
               />
             </label>
             <label className="block">

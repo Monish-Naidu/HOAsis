@@ -6,6 +6,7 @@ import { Callout, Card, EmptyState } from "@/components/ui/primitives";
 import { DisclosureSummary } from "@/components/app/disclosure-summary";
 import { useAppState } from "@/lib/app-state";
 import { disclosureCoverage } from "@/lib/governing";
+import { capitalize, countWord } from "@/lib/resident-wording";
 
 export default function WhatYouAgreedTo() {
   const { community } = useAppState();
@@ -31,8 +32,8 @@ export default function WhatYouAgreedTo() {
             does not know a rule exists cannot ask for the approval that would
             have made their project legal. */}
         <p className="mt-1 text-body leading-relaxed text-fg-muted">
-          Eight questions that catch most people out. You signed up to these at closing, whether or
-          not anyone showed them to you.
+          {capitalize(countWord(coverage.total))} questions that catch most people out. You signed
+          up to these at closing, whether or not anyone showed them to you.
         </p>
       </div>
 

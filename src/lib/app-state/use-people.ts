@@ -7,6 +7,7 @@ import {
   latest,
   logDemoActivity,
   newId,
+  refuse,
   remoteWrite,
   sessionStore,
   sliceStore,
@@ -18,7 +19,7 @@ import {
   DEFAULT_ROLE_VIEWS,
   NO_CAPABILITIES,
 } from "@/lib/data/accounts";
-import { DUES_HIGH_MESSAGE, isEmail, MAX_DUES_CENTS } from "@/lib/input-checks";
+import { DUES_HIGH_MESSAGE, EMAIL_MESSAGE, isEmail, MAX_DUES_CENTS } from "@/lib/input-checks";
 import { todayIsoDate } from "@/lib/utils";
 import { reportRemoteError, WRITE_TIMEOUT_MS } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -93,14 +94,19 @@ export function usePeopleActions(deps: AppDeps) {
    * Capabilities reset to that office's defaults, because carrying the old
    * ones over is how a former treasurer keeps the books open. The President's
    * own row is left alone: an association that can demote its President has no
-   * way back in.
+   * way back in. Resolves true once the role is saved, so the screen can say
+   * so (with `roleChangeMessage`) only then.
    */
   const setAccountRole = useCallback(
-    (accountId: string, role: AccountRole) => {
+    (accountId: string, role: AccountRole): boolean | Promise<boolean> => {
       if (!remote.community) {
+        const target = sliceStore(communityId, "accounts")
+          .getSnapshot()
+          .find((account) => account.id === accountId);
+        if (!target || target.role === "president") return false;
         sliceStore(communityId, "accounts").update((all) =>
           all.map((account) =>
-            account.id === accountId && account.role !== "president"
+            account.id === accountId
               ? {
                   ...account,
                   role,
@@ -110,18 +116,17 @@ export function usePeopleActions(deps: AppDeps) {
               : account,
           ),
         );
-        return;
+        return true;
       }
       const rc = remote.community;
       // Making somebody President is a handover, and the database keeps the
       // rule that there is exactly one; it has its own function for that.
       if (role === "president") {
-        void remoteWrite("Transferring the presidency", () =>
+        return remoteWrite("Transferring the presidency", () =>
           supabaseBrowser().rpc("transfer_presidency", { p_to_profile: accountId }),
         );
-        return;
       }
-      void remoteWrite("Saving the role", () =>
+      return remoteWrite("Saving the role", () =>
         supabaseBrowser()
           .from("memberships")
           .update(
@@ -142,24 +147,44 @@ export function usePeopleActions(deps: AppDeps) {
   );
 
   const setHomeRole = useCallback(
-    (homeId: string, role: AccountRole) => {
+    (homeId: string, role: AccountRole): boolean | Promise<boolean> => {
+      const accounts = remote.community
+        ? remote.community.accounts
+        : sliceStore(communityId, "accounts").getSnapshot();
+      const holder = accounts.find((a) => a.homeId === homeId);
       if (!remote.community) {
-        const account = sliceStore(communityId, "accounts")
+        if (holder) return setAccountRole(holder.id, role);
+        if (role === "resident") return true;
+        // An owner who has not signed in yet can still be appointed: the
+        // office waits on a seat made the way claiming one would make it, with
+        // the owner record's name and email. Nobody is signed in as it, so it
+        // reads as an officer who has not arrived (`waitingRoleMessage`).
+        const home = sliceStore(communityId, "homes")
           .getSnapshot()
-          .find((a) => a.homeId === homeId);
-        if (account) setAccountRole(account.id, role);
-        return;
+          .find((o) => o.id === homeId);
+        if (!home || home.placeholder) return refuse("Add the owner to this home first.");
+        sliceStore(communityId, "accounts").update((all) => [
+          ...all,
+          {
+            id: `${communityId}-acct-${home.unit}`,
+            homeId,
+            name: home.displayName,
+            email: home.email,
+            unit: home.unit,
+            role,
+            capabilities: caps(DEFAULT_ROLE_CAPABILITIES[role] ?? []),
+            views: caps(DEFAULT_ROLE_VIEWS[role] ?? []),
+          },
+        ]);
+        return true;
       }
       const rc = remote.community;
       // The presidency needs a person, not a home; that is a handover.
       if (role === "president") {
-        const holder = rc.accounts.find((a) => a.homeId === homeId);
-        if (holder) setAccountRole(holder.id, role);
-        return;
+        return holder ? setAccountRole(holder.id, role) : false;
       }
-      // Keyed on the home, so an officer can be named before they have
-      // signed up. Their capabilities are waiting when they do.
-      void remoteWrite("Saving the role", () =>
+      // Keyed on the home, so the officer's seat is found by the home it sits on.
+      return remoteWrite("Saving the role", () =>
         supabaseBrowser()
           .from("memberships")
           .update(
@@ -609,6 +634,10 @@ export function usePeopleActions(deps: AppDeps) {
     ) => {
       const name = input.name.trim();
       const email = input.email.trim();
+      // Checked before either branch writes, so a typo in the buyer's address
+      // cannot end the seller's seat and seat a buyer nobody can invite.
+      if (!name) return refuse("Enter the buyer's name.");
+      if (!isEmail(email)) return refuse(EMAIL_MESSAGE);
       if (remote.community) {
         const rc = remote.community;
         return remoteWrite("Recording the sale", async () => {
@@ -723,6 +752,8 @@ export function usePeopleActions(deps: AppDeps) {
                 displayName: name,
                 members: [name],
                 email,
+                // The home has an owner now, so Setup stops counting it unsold.
+                placeholder: false,
                 moveInDate: input.closingDate,
                 balanceCents: settle ? 0 : o.balanceCents,
                 daysPastDue: settle ? 0 : o.daysPastDue,
@@ -922,8 +953,11 @@ export function usePeopleActions(deps: AppDeps) {
         return { ok: false as const, error: "Enter your name and a working email address." };
       }
       // A demo association answers from the browser, so the flow can be
-      // tried without an account. A real one goes to the database as anyone.
-      const local = allCommunities().find((c) => c.association.joinCode === code);
+      // tried without an account. A build with a database never reads the
+      // fixtures: their codes would let a real visitor "join" Willow Creek.
+      const local = hasSupabase
+        ? undefined
+        : allCommunities().find((c) => c.association.joinCode === code);
       if (local) {
         const request: JoinRequest = {
           id: `join-${Date.now()}`,
@@ -940,6 +974,12 @@ export function usePeopleActions(deps: AppDeps) {
             : [request, ...all],
         );
         return { ok: true as const, association: local.settings.displayName };
+      }
+      if (!hasSupabase) {
+        return {
+          ok: false as const,
+          error: "No association has that join code. Check it with your board.",
+        };
       }
       const { data, error } = await supabaseBrowser().rpc("request_to_join", {
         p_code: code,
@@ -971,11 +1011,14 @@ export function usePeopleActions(deps: AppDeps) {
   const lookupJoinCode = useCallback(async (input: string) => {
     const code = input.trim().toUpperCase();
     if (!code) return null;
-    const local = allCommunities().find((c) => c.association.joinCode === code);
-    if (local) {
-      return { name: local.settings.displayName, place: local.association.addressLine };
+    // Fixtures answer only when there is no server. With one, the server
+    // route alone decides, so the demo's codes find nothing on the real /join.
+    if (!hasSupabase) {
+      const local = allCommunities().find((c) => c.association.joinCode === code);
+      return local
+        ? { name: local.settings.displayName, place: local.association.addressLine }
+        : null;
     }
-    if (!hasSupabase) return null;
     // Through our own route so lookups are counted per address; the answer
     // is the same anonymous RPC either way.
     const response = await fetch(`/api/join/lookup?code=${encodeURIComponent(code)}`);

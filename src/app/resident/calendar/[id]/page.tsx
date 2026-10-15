@@ -4,7 +4,7 @@ import { use } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarOff } from "lucide-react";
 import { Badge, Card, EmptyState, SectionTitle } from "@/components/ui/primitives";
-import { MeetingJoinDetails } from "@/components/app/meeting-rsvps";
+import { MeetingJoinDetails, RsvpButtons } from "@/components/app/meeting-rsvps";
 import { useAppState } from "@/lib/app-state";
 import { meetingPhase } from "@/lib/phases";
 import { attendedLine, cancelledLine, wasLine } from "@/lib/meeting-notices";
@@ -61,6 +61,8 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
       {meetingPhase(meeting) === "ended" || meeting.status === "cancelled" ? null : (
         <Card className="p-4">
           <MeetingJoinDetails meeting={meeting} />
+          {/* Only a meeting still ahead can be answered. */}
+          {meeting.status === "scheduled" ? <RsvpButtons meeting={meeting} /> : null}
         </Card>
       )}
 

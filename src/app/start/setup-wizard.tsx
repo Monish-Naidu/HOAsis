@@ -46,12 +46,21 @@ import {
   MONTHS,
   booksOf,
   extrasOf,
+  firstBillDate,
   householdsNeedingBooks,
   nextDueOnOrAfter,
   wallToday,
   withBooks,
   type Books,
 } from "./books";
+import {
+  anyRangeStartProblem,
+  billingStartProblem,
+  founderRangeProblem,
+  rangeStartProblem,
+  usablePhases,
+  wholeCentsProblem,
+} from "./wizard-checks";
 import { importRoster, setBooksStart } from "@/lib/roster/apply";
 import { connectLinkedAccount } from "@/lib/payments/bank-accounts";
 import { SameNameNote } from "@/components/app/same-name-note";
@@ -68,11 +77,12 @@ import {
   emailProblem,
   lateFeeAmountProblem,
   lateFeeDaysProblem,
+  dollarsToCents,
   pasteSummary,
   rangeEndProblem,
   sortPastedAddresses,
 } from "@/lib/input-checks";
-import { cn, money, ordinal } from "@/lib/utils";
+import { addDays, cn, money, ordinal } from "@/lib/utils";
 import { wordingFor, type Wording } from "@/lib/wording";
 import {
   clearProgress,
@@ -246,11 +256,42 @@ function WizardQuestions({
         },
       });
     }
+    if (next !== current) {
+      const depth = (window.history.state?.depth as number | undefined) ?? 0;
+      window.history.pushState({ hoasisStep: next, depth: depth + 1 }, "");
+    }
     flow.go(next, "forward");
   }
   function back() {
-    flow.go(ids[Math.max(index - 1, 0)], "back");
+    // Through the history, so the entry this question pushed is the one that
+    // goes, and the browser's Back and this button end up in the same place.
+    // The popstate listener below moves the question.
+    if ((window.history.state?.depth as number | undefined) ?? 0) window.history.back();
+    else flow.go(ids[Math.max(index - 1, 0)], "back");
   }
+
+  // One history entry per question, so the browser's Back button steps back
+  // through the wizard instead of leaving it. The first question replaces the
+  // entry it landed on; every Continue pushes one.
+  useEffect(() => {
+    // Always, so the entry this page landed on names the question it is
+    // showing, even when it carried a step from an earlier visit.
+    window.history.replaceState(
+      { ...window.history.state, hoasisStep: current, depth: window.history.state?.depth ?? 0 },
+      "",
+    );
+    // Only the first render lands here; later steps push their own entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    function onPop(event: PopStateEvent) {
+      const step = event.state?.hoasisStep as string | undefined;
+      if (!step || step === current || !ids.includes(step as QuestionId)) return;
+      flow.go(step, ids.indexOf(step as QuestionId) < index ? "back" : "forward");
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [current, ids, index, flow]);
 
   /**
    * Who founds what, at the end.
@@ -610,7 +651,8 @@ function WizardQuestions({
         // Ranges must produce at least one home, and no row with an owner or
         // a balance may be left outside them unanswered: creating the
         // association drops those rows (`homesAnswered`).
-        canContinue: homesAnswered(draft),
+        canContinue:
+          homesAnswered(draft) && !anyRangeStartProblem(draft) && !founderRangeProblem(draft),
         body: <HomesStep draft={draft} patch={patch} />,
       },
       books: {
@@ -618,6 +660,7 @@ function WizardQuestions({
         group: "Money",
         title: "When should billing start?",
         detail: "The date of the first bill sent from here, and the month your budget year starts.",
+        canContinue: billingStartProblem(firstBillDate(draft, wallToday()), wallToday()) === null,
         continueLabel: busy ? "Creating" : "Create the association",
         onContinue: () => void finish(),
         body: <BooksStep draft={draft} patch={patch} />,
@@ -840,6 +883,8 @@ function BooksStep({ draft, patch }: StepProps) {
   const set = (next: Partial<Books>) => patch(withBooks(draft, { ...books, ...next }));
   const fyMonth = Number(books.fiscalYearStart.slice(0, 2)) || 1;
   const suggested = nextDueOnOrAfter(today, draft.dueDay, draft.duesCadence, books.fiscalYearStart);
+  const firstBill = books.billingStartsOn ?? suggested;
+  const firstBillProblem = billingStartProblem(firstBill, today);
   const existing = draft.origin === "existing";
   // The homes question came first, so a balance column may already be in.
   const hasBalances = draft.households.some((h) => extrasOf(h).openingBalanceCents !== undefined);
@@ -849,13 +894,16 @@ function BooksStep({ draft, patch }: StepProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label="First bill goes out on"
+          error={firstBillProblem}
           hint="We suggest the next due date. Pick a later one if owners were already billed for that period."
         >
           <input
             type="date"
-            value={books.billingStartsOn ?? suggested}
-            min={today}
+            value={firstBill}
+            min={`${today.slice(0, 7)}-01`}
+            max={addDays(today, 731)}
             onChange={(e) => set({ billingStartsOn: e.target.value || null })}
+            aria-invalid={firstBillProblem ? true : undefined}
             className={input}
             autoFocus
           />
@@ -1145,7 +1193,10 @@ function RangesStep({ draft, patch }: StepProps) {
   const phases = draft.phases?.length ? draft.phases : [firstPhase(w.group)];
   const prefix = draft.lotPrefix ?? "";
   const problems = phaseProblems(phases, w.Home);
-  const lots = expandPhases(phases, prefix);
+  // Ranges that start below 1 build nothing, so the preview never lists a
+  // Lot 0 or a negative lot while the box still shows what was typed.
+  const lots = expandPhases(usablePhases(phases), prefix);
+  const founderProblem = founderRangeProblem(draft);
 
   const [namingUnit, setNamingUnit] = useState<string | null>(null);
   const [buyer, setBuyer] = useState({ name: "", email: "" });
@@ -1170,7 +1221,7 @@ function RangesStep({ draft, patch }: StepProps) {
    */
   function setPhases(next: LotPhase[], nextPrefix = prefix) {
     const rebuilt = rebuildLotHomes<DraftHousehold>({
-      phases: next,
+      phases: usablePhases(next),
       prefix: nextPrefix,
       previousPrefix: prefix,
       households: draft.households,
@@ -1263,8 +1314,9 @@ function RangesStep({ draft, patch }: StepProps) {
           </div>
           {phases.map((phase) => {
             const problem = problems.find((p) => p.phaseId === phase.id);
+            const startProblem = rangeStartProblem(phase);
             // A range with a problem creates nothing, so it counts nothing.
-            const count = problem ? 0 : lotsInPhase(phase);
+            const count = problem || startProblem ? 0 : lotsInPhase(phase);
             return (
               <div key={phase.id}>
                 <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_2rem] items-end gap-2 px-3.5 py-2.5 sm:grid-cols-[1fr_5rem_5rem_4.5rem_2rem] sm:items-center">
@@ -1321,6 +1373,11 @@ function RangesStep({ draft, patch }: StepProps) {
                     <span className="order-2 sm:order-none" />
                   )}
                 </div>
+                {startProblem ? (
+                  <p className="px-3.5 pb-2.5 text-footnote leading-relaxed text-warn">
+                    {startProblem}
+                  </p>
+                ) : null}
                 {rangeEndProblem(phase) ? (
                   <p className="px-3.5 pb-2.5 text-footnote leading-relaxed text-fg-muted">
                     {rangeEndProblem(phase)}
@@ -1367,6 +1424,12 @@ function RangesStep({ draft, patch }: StepProps) {
             );
           })}
         </Card>
+
+        {founderProblem ? (
+          <p role="alert" className="text-footnote leading-relaxed text-warn">
+            {founderProblem}
+          </p>
+        ) : null}
 
         <Button
           variant="ghost"
@@ -1723,7 +1786,7 @@ function OwnAmount({
   const cents = typedCents(shown);
   // Blank is "the usual" and says nothing. A zero or a runaway number is
   // kept as typed and named, and Continue waits (`draftOwnDuesProblem`).
-  const problem = cents === undefined ? null : duesProblem(cents);
+  const problem = wholeCentsProblem(shown) ?? (cents === undefined ? null : duesProblem(cents));
   return (
     <div>
       <div className="relative">
@@ -1757,8 +1820,11 @@ function OwnAmount({
 /** What was typed in a dollar field as cents, or undefined while it is blank. */
 function typedCents(text: string): number | undefined {
   if (!text.trim()) return undefined;
-  const cents = Math.round(Number(text) * 100);
-  return Number.isFinite(cents) ? cents : undefined;
+  // Text that is not whole cents ("1.999", "12e3") is held as zero, which no
+  // dues or fee field accepts, and the field says why (`wholeCentsProblem`).
+  // It used to be rounded, so $1.999 was saved as $2.00 without a word.
+  const cents = dollarsToCents(text);
+  return Number.isFinite(cents) ? cents : 0;
 }
 
 /**
@@ -1795,7 +1861,7 @@ function DollarField({
   const [text, setText] = useState(cents ? String(cents / 100) : "");
   const shown = shownDollars(text, cents);
   return (
-    <Field label={label} hint={hint} error={problem(typedCents(shown))}>
+    <Field label={label} hint={hint} error={wholeCentsProblem(shown) ?? problem(typedCents(shown))}>
       <div className="relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
           $

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useAppState } from "@/lib/app-state";
 import { ROLE_LABEL } from "@/lib/types";
 import { homeLabel } from "@/lib/wording";
 import { Avatar } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/app/theme";
-import { AccountPopover } from "@/components/app/account-menu";
+import { AccountPopover, useSignOut } from "@/components/app/account-menu";
 import { cn } from "@/lib/utils";
 
 /**
@@ -20,8 +19,8 @@ import { cn } from "@/lib/utils";
  * which is why the bar above no longer draws the same person again at lg.
  */
 export function RailYou() {
-  const { account, community, signOut } = useAppState();
-  const router = useRouter();
+  const { account, community } = useAppState();
+  const signOut = useSignOut();
   const [open, setOpen] = useState(false);
   const [place, setPlace] = useState<{ left: number; bottom: number } | null>(null);
   if (!account) return null;
@@ -71,10 +70,7 @@ export function RailYou() {
           with no word on it was a door nobody would find (Monish, 2026-09-26). */}
       <button
         type="button"
-        onClick={() => {
-          signOut();
-          router.push("/signin");
-        }}
+        onClick={() => void signOut()}
         className="mt-1.5 flex min-h-9 w-full items-center justify-center gap-1.5 rounded-xl text-caption font-medium text-navy-300 transition-colors hover:bg-white/10 hover:text-white"
       >
         <LogOut className="size-3.5" aria-hidden />

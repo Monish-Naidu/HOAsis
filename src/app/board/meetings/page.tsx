@@ -11,6 +11,7 @@ import {
   PageHeader,
   buttonClass,
 } from "@/components/ui/primitives";
+import { offersVideoCall } from "@/lib/meeting-call";
 import { meetingJoin } from "@/lib/meetings/video";
 import { ScheduleMeeting } from "@/components/app/schedule-meeting";
 import { ActionItems } from "@/components/app/action-items";
@@ -176,18 +177,20 @@ export default function BoardMeetings() {
                 {m.time} · {m.location}
                 {wasLine(m) ? <span className="text-fg-subtle"> · {wasLine(m)}</span> : null}
               </p>
-              <p className="mt-0.5 text-footnote text-fg-subtle">
-                <a
-                  href={join(m).videoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-primary underline underline-offset-2"
-                >
-                  Video call link
-                </a>
-                {join(m).dialIn ? ` · dial in ${join(m).dialIn}` : ""}
-                {join(m).passcode ? ` · passcode ${join(m).passcode}` : ""}
-              </p>
+              {offersVideoCall(m) ? (
+                <p className="mt-0.5 text-footnote text-fg-subtle">
+                  <a
+                    href={join(m).videoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    Video call link
+                  </a>
+                  {join(m).dialIn ? ` · dial in ${join(m).dialIn}` : ""}
+                  {join(m).passcode ? ` · passcode ${join(m).passcode}` : ""}
+                </p>
+              ) : null}
               <p
                 className={cn(
                   "mt-0.5 text-footnote",

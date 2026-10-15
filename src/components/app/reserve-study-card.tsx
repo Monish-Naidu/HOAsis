@@ -24,7 +24,7 @@ const STUDY_YEARS = 3;
  */
 export function ReserveStudyCard() {
   const { community, uploadDocuments, updateSettings } = useAppState();
-  const { notify } = useToast();
+  const { notify, clear } = useToast();
   const study = community.settings.reserveStudy;
   const document = study ? community.documents.find((d) => d.id === study.documentId) : undefined;
   const [busy, setBusy] = useState(false);
@@ -34,6 +34,7 @@ export function ReserveStudyCard() {
 
   async function upload(file: File) {
     setBusy(true);
+    clear("upload-refused");
     try {
       const outcome = await uploadDocuments([file], { category: "Financial" });
       const filed = outcome.filed[0];
@@ -41,6 +42,8 @@ export function ReserveStudyCard() {
         notify(
           outcome.rejected[0]?.reason ?? "The file was not uploaded. Check it and try again.",
           "warn",
+          undefined,
+          "upload-refused",
         );
         return;
       }

@@ -454,9 +454,47 @@ try {
     })
     .select()
     .single();
+  // The owner replies on their own request (0124): a resident note lands on
+  // the thread, nobody else's home can, and an empty reply is refused.
+  const { error: ownerNote } = await neighbor.client.rpc("reply_on_request", {
+    p_request_id: request?.id,
+    p_body: "The gate code stopped working on Monday.",
+  });
+  const { data: replied } = await admin
+    .from("requests")
+    .select("thread")
+    .eq("id", request?.id)
+    .single();
+  check(
+    "requests: the owner's reply is on the thread as a resident note",
+    !ownerNote &&
+      replied?.thread.length === 2 &&
+      replied.thread[1].actorRole === "resident" &&
+      replied.thread[1].kind === "note",
+    ownerNote?.message ?? JSON.stringify(replied?.thread?.[1]),
+  );
+  const { error: strangerNote } = await president.client.rpc("reply_on_request", {
+    p_request_id: request?.id,
+    p_body: "Not my home",
+  });
+  check(
+    "requests: a person who does not hold the home cannot reply as its owner",
+    strangerNote?.code === "42501",
+    strangerNote?.message ?? "no error",
+  );
+  const { error: blankNote } = await neighbor.client.rpc("reply_on_request", {
+    p_request_id: request?.id,
+    p_body: "   ",
+  });
+  check(
+    "requests: an empty reply is refused",
+    Boolean(blankNote),
+    blankNote?.message ?? "no error",
+  );
+  request.thread = replied?.thread ?? request.thread;
   check(
     "requests: a thread is kept with the request",
-    !requestError && request.thread.length === 1,
+    !requestError && request.thread.length === 2,
     requestError?.message ?? "",
   );
   const { error: decideError } = await president.client

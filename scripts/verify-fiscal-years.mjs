@@ -335,6 +335,27 @@ try {
     JSON.stringify(reclosed),
   );
 
+  // A board member cannot post into the closed year by hand (0120); the
+  // platform just did, as the service role, which is the exemption.
+  const { data: anyUnit } = await admin
+    .from("units")
+    .select("id")
+    .eq("association_id", associationId)
+    .limit(1)
+    .single();
+  const { error: intoClosed } = await president.client.rpc("record_manual_payment", {
+    p_unit_id: anyUnit.id,
+    p_amount_cents: 1000,
+    p_method: "check",
+    p_reference: "late",
+    p_received_on: `${y0}-08-15`,
+  });
+  check(
+    "a hand payment dated into the closed year is refused",
+    intoClosed?.code === "22000" && /closed/i.test(intoClosed?.message ?? ""),
+    intoClosed?.message ?? "no error",
+  );
+
   const { data: ownYears } = await neighbor.client
     .from("fiscal_years")
     .select("starts_on")

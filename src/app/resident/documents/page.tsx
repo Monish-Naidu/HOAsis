@@ -8,6 +8,7 @@ import { BookOpen, ChevronRight, FileSpreadsheet, FileText, PenLine, Search } fr
 import { Card, EmptyState, IconTile, SectionTitle, fieldClass } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { cn, formatDate } from "@/lib/utils";
+import { governingTeaser } from "@/lib/resident-wording";
 import type { DocumentRecord, GoverningDoc } from "@/lib/types";
 
 /** Short enough to sit in front of an article number in a search result. */
@@ -87,11 +88,13 @@ function DocumentsScreen() {
         />
       </label>
 
-      {/* A sample document has no file behind it, so its row does not open.
-          Said once for the signed-out demo rather than on every row. */}
-      {!isRemote && visible.some((d) => !d.url) ? (
+      {/* A row with no file does not open, and says so on the row. The note
+          explains it once, in the demo's words or the real association's. */}
+      {visible.some((d) => !d.url) ? (
         <p className="-mt-3 text-footnote text-fg-muted">
-          Sample documents. They show how the list works and do not open.
+          {isRemote
+            ? "A row marked No file yet is waiting for the board to upload it."
+            : "Sample documents. They show how the list works, and a row marked No file yet does not open."}
         </p>
       ) : null}
 
@@ -131,8 +134,7 @@ function DocumentsScreen() {
               Read the rules you live under
             </span>
             <span className="block text-footnote leading-snug text-fg-muted">
-              The CC&amp;Rs, the bylaws and the rules, in plain words, searchable, with the exact
-              wording one tap away
+              {governingTeaser(community.governingDocs)}
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-fg-subtle" />
@@ -210,7 +212,7 @@ function DocumentsScreen() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-body font-medium text-fg">{d.name}</span>
                     <span className="block truncate text-footnote text-fg-muted">
-                      {formatDate(d.updatedDate, "medium")} · {d.size}
+                      {formatDate(d.updatedDate, "medium")} · {d.url ? d.size : "No file yet"}
                     </span>
                   </span>
                 </>

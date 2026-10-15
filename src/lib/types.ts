@@ -437,6 +437,12 @@ export interface ChargeLine {
   category?: string;
   /** Demo only: a payment entered by hand that the board has since reversed. */
   reversed?: boolean;
+  /**
+   * When the line was written, as the database stamped it. Tells apart two
+   * lines of one day: the newer sits after the older. Unset on the demo's
+   * lines, which keep the order they were written in.
+   */
+  createdAt?: string;
 }
 
 export interface Payout {
@@ -929,6 +935,8 @@ export interface Ballot {
   seated?: SeatedWinner[];
   /** When the results went to every home. Once per ballot. */
   resultsEmailedDate?: ISODate;
+  /** The day the board ended voting, when the record keeps it. */
+  closedDate?: ISODate;
 }
 
 export interface MeetingAttendee {

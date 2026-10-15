@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import { useToast } from "@/components/app/toast";
+import { openingBalanceProblem } from "@/lib/input-checks";
 import { cn, formatDate, money, pluralize } from "@/lib/utils";
 
 /** Reads a typed amount into cents, tolerating "1,240.50" and "$1240". */
@@ -24,6 +25,17 @@ function toCents(input: string): number | null {
   if (!/^-?\d*\.?\d{0,2}$/.test(clean)) return null;
   const value = Number.parseFloat(clean);
   return Number.isFinite(value) ? Math.round(value * 100) : null;
+}
+
+/**
+ * Why a typed amount cannot be saved, or null. An empty box is "not set", not a
+ * problem. The ceiling is the one the mutation refuses at, so the row says it
+ * before Save does.
+ */
+export function openingProblem(raw: string): string | null {
+  const cents = toCents(raw);
+  if (cents === null) return "Figures only, with up to two decimals, like 1240.50";
+  return openingBalanceProblem(cents);
 }
 
 /** The label the opening line carries on a statement. */
@@ -123,12 +135,13 @@ export function BalancesScreen() {
       home,
       raw,
       cents: toCents(raw),
+      problem: openingProblem(raw),
       // A new figure, or the same figure under a corrected date. The second
       // applies only to a home that has a line to re-date.
       changed: raw.trim() !== (onFile[home.id] ?? "") || redated,
     };
   });
-  const bad = parsed.filter((row) => row.cents === null);
+  const bad = parsed.filter((row) => row.problem !== null);
   const owing = parsed.filter((row) => (row.cents ?? 0) > 0);
   const totalCents = parsed.reduce((sum, row) => sum + (row.cents ?? 0), 0);
   const changed = parsed.filter((row) => row.changed);
@@ -241,7 +254,7 @@ export function BalancesScreen() {
           }
         />
         <div className="divide-y divide-border">
-          {parsed.map(({ home, raw, cents }) => (
+          {parsed.map(({ home, raw, problem }) => (
             <div key={home.id} className="flex items-center gap-3 px-5 py-2.5">
               {/* Two lines, like the Homeowners list: the name, then the home
                   and what it owes today, so neither is clipped at phone width. */}
@@ -260,24 +273,32 @@ export function BalancesScreen() {
                       : ""}
                 </span>
               </div>
-              <label className="relative w-32 shrink-0 sm:w-36">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
-                  $
-                </span>
-                <input
-                  inputMode="decimal"
-                  value={raw}
-                  onChange={(e) => {
-                    setEntered((all) => ({ ...all, [home.id]: e.target.value }));
-                    setSaved(false);
-                  }}
-                  placeholder="Not set"
-                  aria-label={`Starting balance for ${home.displayName}, ${home.unit}`}
-                  className={`tnum h-9 w-full rounded-lg border bg-surface pl-6 pr-3 text-right text-body text-fg outline-none focus:border-brand ${
-                    cents === null ? "border-danger" : "border-border-2"
-                  }`}
-                />
-              </label>
+              <span className="block w-32 shrink-0 sm:w-36">
+                <label className="relative block">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body text-fg-subtle">
+                    $
+                  </span>
+                  <input
+                    inputMode="decimal"
+                    value={raw}
+                    onChange={(e) => {
+                      setEntered((all) => ({ ...all, [home.id]: e.target.value }));
+                      setSaved(false);
+                    }}
+                    placeholder="Not set"
+                    aria-label={`Starting balance for ${home.displayName}, ${home.unit}`}
+                    aria-invalid={problem ? true : undefined}
+                    className={`tnum h-9 w-full rounded-lg border bg-surface pl-6 pr-3 text-right text-body text-fg outline-none focus:border-brand ${
+                      problem ? "border-danger" : "border-border-2"
+                    }`}
+                  />
+                </label>
+                {problem ? (
+                  <span role="alert" className="mt-1 block text-right text-caption text-danger">
+                    {problem}
+                  </span>
+                ) : null}
+              </span>
             </div>
           ))}
         </div>
@@ -299,7 +320,7 @@ export function BalancesScreen() {
         </Button>
         {bad.length > 0 ? (
           <p className="text-footnote text-danger">
-            {pluralize(bad.length, "amount")} could not be read. Use figures only, like 1240.50.
+            {pluralize(bad.length, "amount")} cannot be saved. Fix the red ones first.
           </p>
         ) : (
           <p className="text-footnote text-fg-subtle">

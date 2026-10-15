@@ -4,7 +4,7 @@ import type { TintName } from "@/components/ui/primitives";
 import type { Home } from "@/lib/types";
 import { formatDate, money } from "@/lib/utils";
 import { vendorPaidThisYear } from "@/lib/metrics";
-import { statusLabel } from "@/lib/request-status";
+import { requestStatusLabel } from "@/lib/request-status";
 import { homeLabel } from "@/lib/wording";
 import { ballotPhase, meetingPhase } from "@/lib/phases";
 import type { Searchable } from "./match";
@@ -253,7 +253,7 @@ export function boardIndex(c: Community): SearchHit[] {
       id: `req-${r.id}`,
       kind: "request",
       title: r.title,
-      subtitle: `${r.reference} · ${r.ownerName}, ${homeLabel(c, r.unit)} · ${statusLabel[r.status]}`,
+      subtitle: `${r.reference} · ${r.ownerName}, ${homeLabel(c, r.unit)} · ${requestStatusLabel(r.status)}`,
       date: r.submittedDate,
       href: `/board/requests#req-${r.id}`,
       keywords: `${r.reference} ${r.kind} ${r.unit} ${r.summary} ${dateWords(r.submittedDate)}`,
@@ -380,7 +380,7 @@ export function residentIndex(c: Community, home: Home | null): SearchHit[] {
         id: `req-${r.id}`,
         kind: "request",
         title: r.title,
-        subtitle: `${r.reference} · ${statusLabel[r.status]} · ${formatDate(r.submittedDate)}`,
+        subtitle: `${r.reference} · ${requestStatusLabel(r.status)} · ${formatDate(r.submittedDate)}`,
         date: r.submittedDate,
         href: `/resident/requests/${q(r.reference)}`,
         keywords: `${r.reference} ${r.kind} ${r.summary} ${dateWords(r.submittedDate)}`,

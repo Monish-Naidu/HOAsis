@@ -53,7 +53,7 @@ export default function BoardDocuments() {
 function DocumentsScreen() {
   const { community, documents, uploadDocuments, setDocumentVisibility, removeDocument } =
     useAppState();
-  const { notify } = useToast();
+  const { notify, clear } = useToast();
   const params = useSearchParams();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [uploading, setUploading] = useState(false);
@@ -98,6 +98,9 @@ function DocumentsScreen() {
                 event.target.value = "";
                 if (files.length === 0) return;
                 setUploading(true);
+                // An earlier refusal ("Larger than 25.0 MB") waits to be
+                // closed; a new attempt takes it down.
+                clear("upload-refused");
                 try {
                   const outcome = await uploadDocuments(files);
                   if (outcome.uploaded.length) {
@@ -108,7 +111,12 @@ function DocumentsScreen() {
                     );
                   }
                   for (const refused of outcome.rejected) {
-                    notify(`${refused.name}: ${refused.reason}`, "warn");
+                    notify(
+                      `${refused.name}: ${refused.reason}`,
+                      "warn",
+                      undefined,
+                      "upload-refused",
+                    );
                   }
                 } catch (error) {
                   notify(

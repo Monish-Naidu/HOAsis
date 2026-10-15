@@ -19,6 +19,9 @@ const { AppStateProvider, useAppState } = await import("@/lib/app-state");
 const { default: ResidentCalendar } = await import("@/app/resident/calendar/page");
 const { default: MeetingDetail } = await import("@/app/resident/calendar/[id]/page");
 const { CalendarView } = await import("@/components/app/calendar-view");
+const { HomeSchedule } = await import("@/components/app/home-schedule");
+const { calendarEntries } = await import("@/lib/metrics");
+const { default: userEvent } = await import("@testing-library/user-event");
 const { videoJoinUrl, meetingJoin } = await import("@/lib/meetings/video");
 const { meetingPage } = await import("@/lib/meeting-notices");
 
@@ -66,8 +69,16 @@ async function addMeeting(over: {
   date?: string;
   minutes?: never;
 }) {
+  // A provider of its own for this test, signed in in its own step: the call
+  // below reads the seat it was rendered with, and a seat that can only look
+  // is refused.
+  await act(async () => {
+    mount(null);
+  });
   await act(async () => {
     seen.state.signIn("acct-arya");
+  });
+  await act(async () => {
     seen.state.addMeeting({
       id: over.id,
       title: "Test meeting",
@@ -121,6 +132,47 @@ describe("the Meetings tab", () => {
         seen.state.community.association.id,
       ).videoUrl,
     );
+  });
+});
+
+describe("answering from a meeting's own page", () => {
+  it("offers the same two answers the list does, and says what was answered", async () => {
+    await addMeeting({ id: "mtg-rsvp" });
+    await openDetail("mtg-rsvp");
+    const user = userEvent.setup();
+    expect(screen.queryByText(/You said/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Can't make it" }));
+    expect(await screen.findByText("You said you cannot make it.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Can't make it" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(screen.getByRole("button", { name: "I'm coming" }));
+    expect(await screen.findByText("You said you are coming.")).toBeInTheDocument();
+  });
+
+  it("offers no answer for a meeting that was called off", async () => {
+    await addMeeting({ id: "mtg-off-rsvp" });
+    await openDetail("mtg-off-rsvp");
+    await act(async () => {
+      await seen.state.cancelMeeting("mtg-off-rsvp", "Storm warning");
+    });
+    expect(screen.queryByRole("button", { name: "I'm coming" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Next up on the home screen", () => {
+  it("leaves out a cancelled meeting, which the calendar still shows marked", async () => {
+    await addMeeting({ id: "mtg-next-off", date: "2026-08-25" });
+    await act(async () => {
+      await seen.state.cancelMeeting("mtg-next-off", "Storm warning");
+    });
+    const { community } = seen.state;
+    expect(calendarEntries(community).some((e) => e.id === "cal-mtg-next-off")).toBe(true);
+    mount(<HomeSchedule entries={calendarEntries(community)} />);
+    expect(screen.queryByText(/Test meeting/)).not.toBeInTheDocument();
   });
 });
 
@@ -197,7 +249,12 @@ describe("a meeting's own page", () => {
 
   it("shows the minutes of a meeting that was held, and no call to join", async () => {
     await act(async () => {
+      mount(null);
+    });
+    await act(async () => {
       seen.state.signIn("acct-arya");
+    });
+    await act(async () => {
       seen.state.addMeeting({
         id: "mtg-held",
         title: "Held meeting",

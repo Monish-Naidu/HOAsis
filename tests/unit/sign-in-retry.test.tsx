@@ -24,6 +24,9 @@ vi.mock("@/lib/supabase/env", async (original) => ({
 
 let signInAnswer: { ok: boolean; message?: string } = { ok: true };
 vi.mock("@/lib/auth", () => ({
+  useAuth: () => ({ user: null, loading: false }),
+  signOutSettled: async () => {},
+  clearExiting: () => {},
   signInWithPassword: vi.fn(async () => signInAnswer),
   signUp: vi.fn(async () => ({ ok: true })),
   requestPasswordReset: vi.fn(async () => ({ ok: true })),

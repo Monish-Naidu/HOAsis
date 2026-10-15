@@ -16,6 +16,7 @@ import {
   quorumLine,
   resultHeadline,
 } from "@/lib/voting";
+import { closedBallotSummary } from "@/lib/ballots";
 
 /**
  * Where a ballot stands, for the board.
@@ -35,6 +36,23 @@ function tally(ballot: Ballot) {
     share: (optionVotes: number) => (votes ? optionVotes / votes : 0),
     daysLeft: daysFromToday(ballot.closesDate),
   };
+}
+
+/**
+ * Votes per choice for a closed ballot: the counted results where the
+ * database has them, otherwise the tally the ballot itself holds.
+ */
+export function choiceCounts(ballot: Ballot): { optionId: string; label: string; votes: number }[] {
+  return closedBallotSummary(ballot).results;
+}
+
+/**
+ * When voting actually ended, or null. The scheduled closing date is not it:
+ * a ballot the board closed early, or one nobody has recorded yet, would
+ * print a date it did not end on.
+ */
+export function endedOn(ballot: Ballot): string | null {
+  return closedBallotSummary(ballot).closedOn ?? null;
 }
 
 /** "Yes won, 41 of 60 homes voted", or why there is no winner yet. */
@@ -86,7 +104,9 @@ export function BallotCard({
               ? `Ends ${relativeDays(ballot.closesDate)}`
               : scheduled
                 ? `Opens ${formatDate(ballot.opensDate, "long")}`
-                : `Ended ${formatDate(ballot.closesDate, "long")}`}
+                : endedOn(ballot)
+                  ? `Ended ${formatDate(endedOn(ballot) ?? "", "long")}`
+                  : "Closed"}
           </span>
           {scheduled ? null : (
             <span className="inline-flex items-center gap-1 text-footnote text-fg-subtle">

@@ -67,6 +67,7 @@ function CommunicationsScreen() {
   const threads =
     filter === "mine" ? allThreads.filter((t) => isMine(t, account?.role)) : allThreads;
   const waiting = unansweredByAddress(allThreads);
+  const waitingOn = (["board", ...OFFICES] as const).filter((a) => waiting[a] > 0);
   const [activeId, setActiveId] = useState(params.get("thread") ?? allThreads[0]?.id);
   const [draft, setDraft] = useState("");
   // Ten years of collection letters is a hundred conversations. The list
@@ -153,11 +154,12 @@ function CommunicationsScreen() {
                     : "Written to the board."}
                 </p>
               ) : null}
+              {/* Only the offices that owe a reply. A row of zeros reads like a
+                  dump of the data rather than a sentence. */}
               <p className="mt-2 text-footnote text-fg-muted">
-                Waiting on a reply:{" "}
-                {(["board", ...OFFICES] as const)
-                  .map((a) => `${addressLabel(a)} ${waiting[a]}`)
-                  .join(", ")}
+                {waitingOn.length
+                  ? `Waiting on a reply: ${waitingOn.map((a) => `${addressLabel(a)} ${waiting[a]}`).join(", ")}`
+                  : "Nobody is waiting on a reply."}
               </p>
             </div>
             {threads.length === 0 ? (

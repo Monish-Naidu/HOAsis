@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarOff, Copy, Radio, Users, Video } from "lucide-react";
+import { CalendarOff, Check, Copy, Radio, Users, Video, X } from "lucide-react";
 import { useToast } from "@/components/app/toast";
 import {
   Badge,
@@ -20,6 +20,7 @@ import type { Meeting } from "@/lib/types";
 import { attendedLine, cancelledLine, meetingPage, wasLine } from "@/lib/meeting-notices";
 import { liveMeetingLine } from "@/lib/resident-wording";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
+import { offersVideoCall } from "@/lib/meeting-call";
 
 /**
  * Everything coming up, once, with the RSVP on the meeting's own row.
@@ -30,8 +31,7 @@ import { cn, formatDate, relativeDays } from "@/lib/utils";
  * plain rows that open where they are acted on.
  */
 export function MeetingRsvps() {
-  const { community, account, rsvpMeeting } = useAppState();
-  const { notify } = useToast();
+  const { community } = useAppState();
   const upcoming = upcomingFrom(calendarEntries(community), community.asOf, 8);
 
   return (
@@ -78,10 +78,6 @@ export function MeetingRsvps() {
             );
           }
           if (!m) return <EntryRow key={entry.id} entry={entry} divided={i > 0} showDate />;
-          // The person's own answer, and how many neighbours said yes. The
-          // board sees the names; here a count is all a resident needs.
-          const mine = (m.rsvps ?? []).find((r) => r.profileId === account?.id)?.response;
-          const coming = (m.rsvps ?? []).filter((r) => r.response === "yes").length;
           return (
             <div key={m.id} className={cn("px-4 py-3", i > 0 && "border-t border-border")}>
               <div className="flex flex-wrap items-center gap-2">
@@ -98,39 +94,7 @@ export function MeetingRsvps() {
                 {wasLine(m) ? ` · ${wasLine(m)}` : ""}
               </p>
               <MeetingJoinDetails meeting={m} />
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <Button
-                  variant={mine === "yes" ? "primary" : "secondary"}
-                  size="md"
-                  aria-pressed={mine === "yes"}
-                  onClick={() =>
-                    void rsvpMeeting(m.id, "yes").then((ok) => {
-                      if (ok) notify(`See you at ${m.title}.`);
-                    })
-                  }
-                >
-                  I&apos;m coming
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  aria-pressed={mine === "no"}
-                  className={cn(mine === "no" && "bg-surface-3")}
-                  onClick={() =>
-                    void rsvpMeeting(m.id, "no").then((ok) => {
-                      if (ok) notify("Noted. The board knows you cannot make it.", "info");
-                    })
-                  }
-                >
-                  Can&apos;t make it
-                </Button>
-                {coming > 0 ? (
-                  <span className="inline-flex items-center gap-1 text-footnote text-fg-subtle">
-                    <Users className="size-3" />
-                    {coming} coming
-                  </span>
-                ) : null}
-              </div>
+              <RsvpButtons meeting={m} />
             </div>
           );
         })}
@@ -193,32 +157,34 @@ export function MeetingJoinDetails({ meeting: m }: { meeting: Meeting }) {
   const { videoUrl: link, dialIn, passcode } = meetingJoin(m, community.association.id);
   return (
     <div className="mt-1 text-footnote leading-snug text-fg-subtle">
-      <p className="flex flex-wrap items-center gap-x-2">
-        <span>
-          <a
-            href={link}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-primary underline underline-offset-2"
+      {offersVideoCall(m) ? (
+        <p className="flex flex-wrap items-center gap-x-2">
+          <span>
+            <a
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              Video call link
+            </a>
+          </span>
+          <button
+            type="button"
+            aria-label="Copy join link"
+            onClick={() =>
+              void navigator.clipboard?.writeText(link).then(
+                () => notify("Copied", "ok"),
+                () => notify(link, "info"),
+              )
+            }
+            className="press inline-flex min-h-9 items-center gap-1 rounded-md px-1.5 font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
           >
-            Video call link
-          </a>
-        </span>
-        <button
-          type="button"
-          aria-label="Copy join link"
-          onClick={() =>
-            void navigator.clipboard?.writeText(link).then(
-              () => notify("Copied", "ok"),
-              () => notify(link, "info"),
-            )
-          }
-          className="press inline-flex min-h-9 items-center gap-1 rounded-md px-1.5 font-medium text-fg-muted hover:bg-surface-2 hover:text-fg"
-        >
-          <Copy className="size-3.5" />
-          Copy
-        </button>
-      </p>
+            <Copy className="size-3.5" />
+            Copy
+          </button>
+        </p>
+      ) : null}
       {dialIn ? (
         <p>
           Dial in: <span className="tnum">{dialIn}</span>
@@ -227,7 +193,7 @@ export function MeetingJoinDetails({ meeting: m }: { meeting: Meeting }) {
       ) : passcode ? (
         <p>Passcode {passcode}</p>
       ) : null}
-      <p className="opacity-70">Opens when the host starts it.</p>
+      {offersVideoCall(m) ? <p className="opacity-70">Opens when the host starts it.</p> : null}
     </div>
   );
 }
@@ -265,5 +231,64 @@ export function LiveMeetingCard() {
         </a>
       </div>
     </Card>
+  );
+}
+
+/**
+ * "I'm coming" and "Can't make it" for one meeting, with the person's own
+ * answer said in words. Shared by the list row and the meeting's own page, so
+ * both write the same answer the same way. A "no" is its own state, not the
+ * look of never having answered.
+ */
+export function RsvpButtons({ meeting: m }: { meeting: Meeting }) {
+  const { account, rsvpMeeting } = useAppState();
+  const { notify } = useToast();
+  // The person's own answer, and how many neighbors said yes. The board sees
+  // the names; here a count is all a resident needs.
+  const mine = (m.rsvps ?? []).find((r) => r.profileId === account?.id)?.response;
+  const coming = (m.rsvps ?? []).filter((r) => r.response === "yes").length;
+  return (
+    <div className="mt-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={mine === "yes" ? "primary" : "secondary"}
+          size="md"
+          aria-pressed={mine === "yes"}
+          onClick={() =>
+            void rsvpMeeting(m.id, "yes").then((ok) => {
+              if (ok) notify(`See you at ${m.title}.`);
+            })
+          }
+        >
+          {mine === "yes" ? <Check className="size-3.5" /> : null}
+          I&apos;m coming
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          aria-pressed={mine === "no"}
+          className={cn(mine === "no" && "border-danger/50 bg-danger-soft text-danger")}
+          onClick={() =>
+            void rsvpMeeting(m.id, "no").then((ok) => {
+              if (ok) notify("Noted. The board knows you cannot make it.", "info");
+            })
+          }
+        >
+          {mine === "no" ? <X className="size-3.5" /> : null}
+          Can&apos;t make it
+        </Button>
+        {coming > 0 ? (
+          <span className="inline-flex items-center gap-1 text-footnote text-fg-subtle">
+            <Users className="size-3" />
+            {coming} coming
+          </span>
+        ) : null}
+      </div>
+      {mine ? (
+        <p className="mt-1.5 text-footnote text-fg-muted">
+          {mine === "yes" ? "You said you are coming." : "You said you cannot make it."}
+        </p>
+      ) : null}
+    </div>
   );
 }

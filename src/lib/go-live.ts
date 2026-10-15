@@ -3,6 +3,7 @@ import { billingPhase } from "@/lib/billing";
 import type { ISODate } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { homeCount } from "@/lib/metrics";
+import { OPENING_LINE } from "@/lib/statement";
 
 /**
  * Whether a real association is ready to collect from real residents.
@@ -82,8 +83,7 @@ export function billingStatus(community: Community, today: ISODate) {
   return { phase, done, detail, urgent: Boolean(urgent) };
 }
 
-/** The label an opening balance carries on a statement. */
-export const OPENING_LINE = /brought forward/i;
+export { OPENING_LINE };
 const DUES = /dues/i;
 
 export function goLiveChecklist(community: Community, today: ISODate): GoLive {

@@ -158,7 +158,10 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
   const appHeader = (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md lg:hidden">
       <div className="min-w-0">
-        <p className="truncate text-headline font-semibold tracking-[-0.015em] text-fg">
+        <p
+          className="truncate text-headline font-semibold tracking-[-0.015em] text-fg"
+          title={associationName}
+        >
           {associationName}
         </p>
         <p className="truncate text-footnote text-fg-muted">
@@ -170,7 +173,11 @@ export function ResidentShell({ children }: { children: React.ReactNode }) {
         <ResidentBell compact />
         {/* The avatar opens Settings, where text size lives: the place a
             phone user reaches for when something is hard to read. */}
-        <Link href="/resident/settings" aria-label="Settings" className="press rounded-full">
+        <Link
+          href="/resident/settings"
+          aria-label="Settings"
+          className="press flex size-11 items-center justify-center rounded-full"
+        >
           <Avatar name={ownerName} />
         </Link>
       </div>
@@ -320,7 +327,10 @@ function PhoneHeader({
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur-md">
       <div className="min-w-0">
-        <p className="truncate text-headline font-semibold tracking-[-0.015em] text-fg">
+        <p
+          className="truncate text-headline font-semibold tracking-[-0.015em] text-fg"
+          title={associationName}
+        >
           {associationName}
         </p>
         <p className="truncate text-footnote text-fg-muted">
@@ -444,7 +454,7 @@ function TabBar({
                   {badge && badge.count > 0 ? (
                     <span
                       className={cn(
-                        "tnum absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white",
+                        "tnum absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-status-fg",
                         badge.tone === "danger"
                           ? "bg-danger"
                           : badge.tone === "warn"

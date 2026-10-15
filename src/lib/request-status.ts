@@ -32,7 +32,7 @@ export const kindLabel = {
  */
 export const statusLabel: Record<RequestStatus, string> = {
   approved: "Approved",
-  denied: "Denied",
+  denied: "Declined",
   "in-review": "Under review",
   "info-needed": "Needs info",
   submitted: "Sent",
@@ -118,45 +118,35 @@ export function scheduledFor(r: {
 }
 
 /**
- * The status in the words of its kind, derived from the same group the board
- * list sorts by, so a row never wears a pill that contradicts its heading:
- * under "Needs scheduling" it is not scheduled, under "Needs a decision" it is
- * sent or under review, and a finished repair is Fixed.
+ * The one name a status has, wherever it is shown: the board lists, the
+ * resident lists, search and the emails. It does not depend on the kind of
+ * request. A maintenance request used to read "Not scheduled" until someone
+ * scheduled it, which an owner reads as a refusal; it now reads Sent, and the
+ * schedule is its own line (`requestScheduleLabel`).
  */
-export function requestStatusLabel(
+export function requestStatusLabel(status: RequestStatus): string {
+  return statusLabel[status];
+}
+
+/**
+ * The schedule line of a maintenance request, or null when there is nothing
+ * to say. A date is shown only while the work is still ahead; a request that
+ * is done carries no schedule, and one with no date says nothing rather than
+ * "not scheduled".
+ */
+export function requestScheduleLabel(
   r: Shaped & {
     workOrder?: { scheduledOn?: string; completedOn?: string };
     thread?: { at: string; kind: string; body?: string }[];
   },
-): string {
-  switch (requestGroup(r)) {
-    case "done":
-      return r.status === "closed" && isMaintenanceRequest(r) ? "Fixed" : statusLabel[r.status];
-    case "scheduling":
-      return "Not scheduled";
-    case "progress": {
-      const on = scheduledFor({ workOrder: r.workOrder, thread: r.thread ?? [] });
-      return on ? `Scheduled ${formatDate(on)}` : "Scheduled";
-    }
-    case "decision":
-      return r.status === "submitted" || r.status === "draft"
-        ? statusLabel[r.status]
-        : "Under review";
-  }
+): string | null {
+  if (!isMaintenanceRequest(r) || requestGroup(r) === "done") return null;
+  const on = scheduledFor({ workOrder: r.workOrder, thread: r.thread ?? [] });
+  return on ? `Scheduled for ${formatDate(on, "medium")}` : null;
 }
 
 export function requestStatusTone(r: Shaped): (typeof statusTone)[RequestStatus] {
-  // The tone follows the label, which follows the group.
-  switch (requestGroup(r)) {
-    case "done":
-      return statusTone[r.status];
-    case "scheduling":
-      return "neutral";
-    case "progress":
-      return "info";
-    case "decision":
-      return r.status === "submitted" || r.status === "draft" ? "neutral" : "info";
-  }
+  return statusTone[r.status];
 }
 
 /** When the board last answered in words, while the request still reads Sent. */

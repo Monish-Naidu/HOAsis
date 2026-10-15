@@ -216,7 +216,59 @@ export async function requestEmailChange(newEmail: string): Promise<AuthResult> 
   return { ok: true };
 }
 
-export async function signOutOfSupabase(): Promise<void> {
-  if (!hasSupabase) return;
-  await supabaseBrowser().auth.signOut();
+/**
+ * The sign out in flight, shared so the caller that navigates afterwards can
+ * wait for the same request the app state started. Leaving the page first
+ * aborted the global revoke and left the session alive on the server.
+ */
+let leaving: Promise<void> | null = null;
+
+/**
+ * True from the moment somebody chooses to sign out until a session is seen
+ * again. The guard that sends strangers to the sign-in page reads it, so a
+ * person who just left is not sent back with a "sign in to open" line for the
+ * page they walked out of.
+ */
+let exiting = false;
+
+export function signOutOfSupabase(): Promise<void> {
+  exiting = true;
+  if (!hasSupabase) return Promise.resolve();
+  if (leaving) return leaving;
+  const request = supabaseBrowser()
+    .auth.signOut({ scope: "global" })
+    .then(
+      () => undefined,
+      // A failed revoke still clears this browser; the person is leaving
+      // either way, so the page must not hang on it.
+      () => undefined,
+    )
+    .finally(() => {
+      leaving = null;
+    });
+  leaving = request;
+  return request;
+}
+
+/** Resolves once any sign out that has started has finished. */
+export function signOutSettled(): Promise<void> {
+  return leaving ?? Promise.resolve();
+}
+
+export function isExiting(): boolean {
+  return exiting;
+}
+
+/** Marks a deliberate walk to the sign-in page that does not end a real session. */
+export function noteLeaving() {
+  exiting = true;
+}
+
+/**
+ * The exit is over: a session is back, or the sign-in page has been reached.
+ * The next stranger on a guarded page is a stranger again, which is what
+ * keeps the Back button from landing on a blank page after signing out.
+ */
+export function clearExiting() {
+  exiting = false;
 }

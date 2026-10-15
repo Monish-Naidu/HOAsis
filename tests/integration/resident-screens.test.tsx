@@ -239,7 +239,12 @@ describe("More", () => {
       "/resident/finances",
       "/resident/settings",
       "/resident/messages#your-board",
+      // Help is the same mailbox the board's menu opens; reporting is off for
+      // this association, so no link leads to a page that says it is off.
+      expect.stringMatching(/^mailto:/),
     ]);
+    expect(screen.getByRole("link", { name: /Help/ })).toBeInTheDocument();
+    expect(screen.queryByText("Tell the board about something")).not.toBeInTheDocument();
     expect(screen.getByText("Association funds")).toBeInTheDocument();
     expect(screen.queryByText("Funds")).not.toBeInTheDocument();
   });

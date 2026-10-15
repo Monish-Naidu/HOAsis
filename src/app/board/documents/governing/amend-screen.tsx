@@ -25,7 +25,7 @@ import type { AmendmentKind, GoverningAmendment, GoverningDoc } from "@/lib/type
 import { GOVERNING_DOCS, amendmentThreshold, articlesIn, documentsPresent } from "@/lib/governing";
 import { policyTemplates } from "@/lib/data";
 import type { PolicyTemplate } from "@/lib/data/policy-templates";
-import { cn, formatDate } from "@/lib/utils";
+import { addDays, cn, formatDate, todayIsoDate } from "@/lib/utils";
 
 const STAGE_TONE = {
   draft: "neutral",
@@ -44,18 +44,18 @@ const STAGE_LABEL = {
 } as const;
 
 export function AmendScreen() {
-  const { community, isRemote } = useAppState();
+  const { community, isRemote, addBallot, ballots } = useAppState();
   const { notify } = useToast();
   /**
    * Proposing a change is a demo of the idea, not yet a feature.
    *
-   * A proposal lives in this screen's memory and nowhere else: no row is
-   * written, no ballot opens, no owner is told, and it is gone on the next
-   * visit. For a real association that is worse than nothing, because a
-   * board that believes owners were sent the wording starts counting a
-   * notice period that never began. So a real association can read its
-   * documents here and is told plainly that proposing is coming, and the
-   * demo keeps the composer and says what it did not do.
+   * A draft lives in this screen's memory and nowhere else, so it is gone on
+   * the next visit, and the screen says so. Sending is different: it opens a
+   * ballot through the same mutation the Voting page uses, so a sent
+   * amendment is a real vote. For a real association proposing is still
+   * coming, because a board that believes owners were sent the wording
+   * starts counting a notice period that never began; it can read its
+   * documents here and is told plainly. The demo keeps the composer.
    */
   const canPropose = !isRemote;
   const all = community.governingDocs;
@@ -85,6 +85,20 @@ export function AmendScreen() {
   const [rationale, setRationale] = useState("");
 
   const target = articles.find((a) => a.id === targetId);
+  // Only this document's changes. The list used to show every document's under
+  // every tab, so a bylaws proposal sat under the declaration.
+  const shownAmendments = amendments.filter((a) => a.document === doc);
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  // A removal has no wording; everything else needs a title and the words.
+  const missing = !title.trim()
+    ? "Give the article a title."
+    : drafting !== "remove" && paragraphs.length === 0
+      ? "Write the wording first."
+      : null;
+  const [problem, setProblem] = useState<string | null>(null);
 
   function reset() {
     setDrafting(null);
@@ -139,11 +153,11 @@ export function AmendScreen() {
   }
 
   function save(stage: "draft" | "open") {
-    if (!drafting) return;
-    const paragraphs = body
-      .split(/\n{2,}/)
-      .map((p) => p.trim())
-      .filter(Boolean);
+    if (!drafting || missing) return;
+    setProblem(null);
+    const today = todayIsoDate();
+    const seq = ballots.length + 1;
+    const ballotId = stage === "open" ? `bal-${today}-${seq}` : undefined;
 
     const amendment: GoverningAmendment = {
       id: `amd-${Date.now()}`,
@@ -151,7 +165,7 @@ export function AmendScreen() {
       document: doc,
       articleId: drafting === "add" ? undefined : targetId,
       number: number.trim() || "New article",
-      title: title.trim() || "Untitled",
+      title: title.trim(),
       text: drafting === "remove" ? [] : paragraphs,
       plain: plain.trim(),
       topic: target?.topic ?? "governance",
@@ -160,18 +174,46 @@ export function AmendScreen() {
       proposedBy: "Board of Directors",
       proposedOn: community.asOf,
       stage,
+      ballotId,
       thresholdLabel: threshold,
     };
+
+    if (ballotId) {
+      // Sending is the vote itself: one ballot, for or against, closing in
+      // thirty days. The mutation refuses what the database would, and says
+      // why in a message of its own.
+      const opened = addBallot({
+        id: ballotId,
+        reference: `BAL-${today.slice(0, 4)}-${String(seq).padStart(3, "0")}`,
+        title: `${amendment.number}: ${amendment.title}`,
+        body: [amendment.plain || "A change to the governing documents.", ...amendment.text],
+        kind: "amendment",
+        audience: "owners",
+        status: "open",
+        opensDate: today,
+        closesDate: addDays(today, 30),
+        eligible: community.homes.length || community.association.unitCount,
+        quorumRequired: 0,
+        thresholdLabel: threshold,
+        liveResultsVisible: community.settings.showLiveVoteResults,
+        options: [
+          { id: `opt-${today}-${seq}-0`, label: "For", votes: 0 },
+          { id: `opt-${today}-${seq}-1`, label: "Against", votes: 0 },
+        ],
+      });
+      if (!opened) {
+        setProblem(
+          "The vote did not open. The reason is in the message at the bottom of the screen.",
+        );
+        return;
+      }
+    }
     setAmendments((list) => [amendment, ...list]);
     reset();
-    // Says what happened and no more. Nothing here leaves the page, so the
-    // toast must not say owners were sent it or that it is on an agenda.
     notify(
-      stage !== "open"
-        ? "Kept as a draft on this page. Nobody has been notified."
-        : boardAdopted
-          ? "Marked for the board agenda. This demo does not save it or tell anybody."
-          : "Marked open for voting. This demo sends nothing to owners.",
+      stage === "open"
+        ? "Voting is open. Owners can vote for or against on the Voting page."
+        : "Kept as a draft on this page. It is gone when you leave, and nobody has been told.",
     );
   }
 
@@ -261,7 +303,11 @@ export function AmendScreen() {
             }`}
       </Callout>
 
-      {canPropose ? null : (
+      {canPropose ? (
+        <p className="mt-3 text-footnote leading-relaxed text-fg-subtle">
+          Drafts stay on this page until you leave it. Sending opens a vote for owners.
+        </p>
+      ) : (
         <p className="mt-3 text-footnote leading-relaxed text-fg-subtle">
           Proposing a change from here is coming. Nothing on this page is saved or sent to owners
           yet.
@@ -438,25 +484,37 @@ export function AmendScreen() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => save("open")}>
-                <Send className="size-4" />
-                {boardAdopted ? "Put on the board agenda" : "Send to owners and open voting"}
-              </Button>
-              <Button variant="secondary" onClick={() => save("draft")}>
+            <div className="flex flex-wrap items-center gap-2">
+              {boardAdopted ? null : (
+                <Button onClick={() => save("open")} disabled={Boolean(missing)}>
+                  <Send className="size-4" />
+                  Send to owners and open voting
+                </Button>
+              )}
+              <Button
+                variant={boardAdopted ? "primary" : "secondary"}
+                onClick={() => save("draft")}
+                disabled={Boolean(missing)}
+              >
                 Save as a draft
               </Button>
+              {missing ? <span className="text-footnote text-fg-subtle">{missing}</span> : null}
             </div>
+            {problem ? (
+              <p role="alert" className="text-footnote text-danger">
+                {problem}
+              </p>
+            ) : null}
           </div>
         </Card>
       ) : null}
 
-      {amendments.length > 0 ? (
+      {shownAmendments.length > 0 ? (
         <div className="mt-6 space-y-3">
           <h2 className="text-headline font-semibold tracking-[-0.01em] text-fg">
             Proposed changes
           </h2>
-          {amendments.map((amendment) => (
+          {shownAmendments.map((amendment) => (
             <Card key={amendment.id} className="p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={STAGE_TONE[amendment.stage]}>{STAGE_LABEL[amendment.stage]}</Badge>
@@ -497,7 +555,7 @@ export function AmendScreen() {
         </h2>
         <GoverningReader
           articles={articles}
-          amendedIds={amendments
+          amendedIds={shownAmendments
             .filter((a) => a.stage === "open")
             .map((a) => a.articleId ?? "")
             .filter(Boolean)}

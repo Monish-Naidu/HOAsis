@@ -30,6 +30,19 @@ export type { CollectionPolicy };
 
 export type CollectionStage = "current" | "reminder" | "late-notice" | "demand" | "counsel";
 
+/**
+ * What each rung's letter is called, everywhere the board sees it: the list of
+ * homes, the reminders composer and the editor. The list said "Final notice
+ * due" while the letter was titled "Notice of intent to refer", so one rung
+ * wore two names. The attorney rung sends the same letter as the one before.
+ */
+export const LETTER_NAME: Record<Exclude<CollectionStage, "current">, string> = {
+  reminder: "Reminder",
+  "late-notice": "Late notice",
+  demand: "Final notice",
+  counsel: "Final notice",
+};
+
 export const DEFAULT_COLLECTION_POLICY: CollectionPolicy = {
   reminderDay: 15,
   lateNoticeDay: 30,

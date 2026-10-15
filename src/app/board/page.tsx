@@ -48,6 +48,7 @@ import { SectionLink } from "@/components/app/finance-ui";
 import { useAppState, useReconciliation, useUnreadThreadCount } from "@/lib/app-state";
 import { SetupPlanSummary } from "@/components/app/setup-plan";
 import { boardModuleFor, mayOpen } from "@/lib/board-routes";
+import { transactionsToConfirm, vendorPaymentsToApprove } from "@/lib/requests";
 import { cn, daysFromToday, formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
@@ -224,7 +225,7 @@ function NeedsYou() {
     },
     {
       count: recon.needsReview.length,
-      label: pluralize(recon.needsReview.length, "transaction") + " to confirm",
+      label: transactionsToConfirm(recon.needsReview.length),
       // The oldest line waiting is rarely this month's, so the link asks for
       // the whole year.
       href: "/board/money/transactions?status=needs-review&period=this-year",
@@ -233,7 +234,7 @@ function NeedsYou() {
     },
     {
       count: vendors.count,
-      label: pluralize(vendors.count, "vendor payment") + " to approve",
+      label: vendorPaymentsToApprove(vendors.count),
       href: "/board/vendors",
       icon: Receipt,
       tint: "amber",

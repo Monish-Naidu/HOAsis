@@ -26,6 +26,35 @@ import { homeTypesOf } from "@/lib/home-types";
 import { formatDate, money, pluralize, todayIsoDate } from "@/lib/utils";
 
 /**
+ * The board's contact email, which the setup list asks for and no shared task
+ * list holds. Mail from the association comes from a no-reply address, so an
+ * owner who answers an invitation or a notice writes to nobody until this is
+ * set. It lives in Settings under Community.
+ */
+const CONTACT_EMAIL_TASK: SetupTask = {
+  key: "contact-email",
+  label: "Add the board's contact email",
+  detail: "Where owners' replies go.",
+  why: "Everything the association emails comes from a do-not-reply address. Without a contact email, an owner who answers an invitation, a notice or a bill writes to nobody. Use an address the board reads, not one person's own.",
+  href: "/board/settings#contact-email",
+  done: (c) => Boolean(c.association.contactEmail?.trim()),
+};
+
+/** Every task the plan can hold: the shared list, then the ones the plan adds. */
+const ALL_TASKS: SetupTask[] = [...SETUP_TASKS, CONTACT_EMAIL_TASK];
+
+/**
+ * Tasks the records can finish by another road than the one the task names.
+ *
+ * Opening balances are for an association's first bill. Once any bill has
+ * gone out the moment has passed, and "Nothing is saved yet" on a board that
+ * has billed for ten months is wrong in a way that costs it trust.
+ */
+const ALSO_DONE = new Map<string, (c: Community) => boolean>([
+  ["opening-balances", (c) => firstBill(c).issued],
+]);
+
+/**
  * A plan, built from what a board told us about their situation.
  *
  * The checklist this replaces showed all eleven tasks to everybody and let you
@@ -182,6 +211,11 @@ function applies(task: SetupTask, p: AssociationProfile, c: Community): boolean 
     case "billing":
       return whereIs(c) === "signed-in";
 
+    // Only a real association sends mail; a browser copy and the demo send none,
+    // so there is nobody to reply.
+    case "contact-email":
+      return whereIs(c) === "signed-in";
+
     case "reserves":
       // Detached homes on their own lots have far less in common to replace,
       // and plenty of those associations genuinely have no reserve obligation.
@@ -224,6 +258,32 @@ function applies(task: SetupTask, p: AssociationProfile, c: Community): boolean 
   }
 }
 
+/** Why a reserve study matters for this association's kinds of home and state. */
+function reserveStudySentence(p: AssociationProfile): string {
+  const types = homeTypesOf(p);
+  const has = (t: PropertyType) => types.includes(t);
+  const mixed = types.length > 1;
+  if (mixed && has("condos")) {
+    return "The condo buildings are the association's to replace, roof to foundation. They will dominate the study, so start with them.";
+  }
+  if (mixed) {
+    return "The townhome roofs and shared walls are the association's, and they are the expensive ones. The detached homes add little beyond the common areas.";
+  }
+  if (p.propertyType === "condos") {
+    return `The association owns the building, so the whole of it is your obligation. ${
+      RESERVE_STUDY_STATES.has(p.stateName)
+        ? `${p.stateName} requires a study for many associations, and a lender will not finance a unit in a project it cannot assess.`
+        : "A lender will not finance a unit in a project it cannot assess."
+    }`;
+  }
+  if (p.propertyType === "townhomes") {
+    return "Shared roofs and shared walls are the association's, and they are the expensive ones. This is the difference between a plan and a surprise bill.";
+  }
+  return RESERVE_STUDY_STATES.has(p.stateName)
+    ? `${p.stateName} requires a reserve study for many associations, and a buyer's lender asks for it.`
+    : "Roads, the entry and any pool are yours to replace. Nothing else is, which usually makes this a short list.";
+}
+
 /** The sentence that names their own situation back to them. */
 function because(
   task: SetupTask,
@@ -232,7 +292,6 @@ function because(
   dismissed: boolean,
 ): string | undefined {
   const types = homeTypesOf(p);
-  const has = (t: PropertyType) => types.includes(t);
   const mixed = types.length > 1;
   switch (task.key) {
     case "roster": {
@@ -250,6 +309,8 @@ function because(
       const n = openingBalanceCount(c);
       if (n > 0) return `${pluralize(n, "home")} with an opening balance saved.`;
       if (dismissed) return "You said nobody owes anything today.";
+      if (firstBill(c).issued)
+        return "Billing has started, so every statement already begins from here.";
       return "Nothing is saved yet. Enter these before the first bill goes out.";
     }
 
@@ -299,25 +360,10 @@ function because(
       return billingStatus(c, todayIsoDate()).detail;
 
     case "reserves":
-      if (mixed && has("condos")) {
-        return "The condo buildings are the association's to replace, roof to foundation. They will dominate the study, so start with them.";
-      }
-      if (mixed) {
-        return "The townhome roofs and shared walls are the association's, and they are the expensive ones. The detached homes add little beyond the common areas.";
-      }
-      if (p.propertyType === "condos") {
-        return `The association owns the building, so the whole of it is your obligation. ${
-          RESERVE_STUDY_STATES.has(p.stateName)
-            ? `${p.stateName} requires a study for many associations, and a lender will not finance a unit in a project it cannot assess.`
-            : "A lender will not finance a unit in a project it cannot assess."
-        }`;
-      }
-      if (p.propertyType === "townhomes") {
-        return "Shared roofs and shared walls are the association's, and they are the expensive ones. This is the difference between a plan and a surprise bill.";
-      }
-      return RESERVE_STUDY_STATES.has(p.stateName)
-        ? `${p.stateName} requires a reserve study for many associations, and a buyer's lender asks for it.`
-        : "Roads, the entry and any pool are yours to replace. Nothing else is, which usually makes this a short list.";
+    // A builder's "fund reserves" step is the same duty in other words, so it
+    // carries the same sentence about what a study is for in this state.
+    case "builder-reserves":
+      return reserveStudySentence(p);
 
     case "insurance":
       // The single most misunderstood thing in the category. What the
@@ -352,7 +398,7 @@ function because(
 
     case "documents":
       if (p.origin === "builder") {
-        return "Put the recorded declaration in as text before the first closing. Several states make the association, and not the seller, responsible for giving a new member the covenants.";
+        return "Upload the recorded declaration before the first closing. Several states make the association, and not the seller, responsible for giving a new member the covenants.";
       }
       return p.origin === "handover"
         ? "Take the full record while the builder still wants the handover to go smoothly. Afterwards you are a former counterparty rather than a partner."
@@ -403,6 +449,7 @@ const PHASE_OF: Record<string, PlanPhaseId> = {
   "maintenance-matrix": "obligations",
   structural: "obligations",
   board: "everything-else",
+  "contact-email": "everything-else",
   vendors: "everything-else",
   amenities: "everything-else",
   photo: "everything-else",
@@ -473,7 +520,7 @@ export function buildPlan(
   const facts: PlanFacts = { origin: profile.origin, previously: profile.previously };
   const included = new Set<string>();
   const phases: PlanPhase[] = PHASE_META.map((meta) => {
-    const tasks: PlanTask[] = SETUP_TASKS.filter(
+    const tasks: PlanTask[] = ALL_TASKS.filter(
       (task) =>
         PHASE_OF[task.key] === meta.id &&
         applies(task, profile, community) &&
@@ -492,7 +539,9 @@ export function buildPlan(
         // Never done where it cannot be done, whatever the records say.
         complete:
           !unavailable &&
-          (isDone(community, facts) || (Boolean(task.doneWhenDismissed) && wasDismissed)),
+          (isDone(community, facts) ||
+            Boolean(ALSO_DONE.get(task.key)?.(community)) ||
+            (Boolean(task.doneWhenDismissed) && wasDismissed)),
         because: because(task, profile, community, wasDismissed),
       };
     });
@@ -546,7 +595,7 @@ export function buildPlan(
      */
     allDone: done === all.length,
     /** What we removed by asking three questions instead of showing everything. */
-    skipped: SETUP_TASKS.filter((t) => !HIDDEN_BY_SWITCH.has(t.key) && !included.has(t.key)).length,
+    skipped: ALL_TASKS.filter((t) => !HIDDEN_BY_SWITCH.has(t.key) && !included.has(t.key)).length,
   };
 }
 

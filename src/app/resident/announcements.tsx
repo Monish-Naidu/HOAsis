@@ -114,7 +114,7 @@ function AnnouncementTitle({
   return (
     <Link
       href={href}
-      className={`inline-flex items-start gap-1 text-body font-semibold leading-snug tracking-[-0.01em] text-fg underline decoration-border-2 underline-offset-2 hover:decoration-fg${className ? ` ${className}` : ""}`}
+      className={`flex w-fit max-w-full items-start gap-1 text-body font-semibold leading-snug tracking-[-0.01em] text-fg underline decoration-border-2 underline-offset-2 hover:decoration-fg${className ? ` ${className}` : ""}`}
     >
       {a.title}
       <ChevronRight className="mt-1 size-3.5 shrink-0 text-fg-subtle" />
@@ -138,7 +138,7 @@ function AnnouncementCard({
     return (
       <Card>
         <div className="px-4 pt-4">
-          <span className="text-footnote font-semibold text-fg-muted">{a.category}</span>
+          <span className="block text-footnote font-semibold text-fg-muted">{a.category}</span>
           <AnnouncementTitle announcement={a} href={href} className="mt-1" />
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{a.body}</p>
         </div>
@@ -152,7 +152,7 @@ function AnnouncementCard({
     <Card>
       <details className="group/card">
         <summary className="cursor-pointer list-none px-4 pt-4 [&::-webkit-details-marker]:hidden">
-          <span className="text-footnote font-semibold text-fg-muted">{a.category}</span>
+          <span className="block text-footnote font-semibold text-fg-muted">{a.category}</span>
           <AnnouncementTitle announcement={a} href={null} className="mt-1" />
           <p className="mt-1.5 line-clamp-2 text-body leading-relaxed text-fg-muted group-open/card:line-clamp-none">
             {a.body}

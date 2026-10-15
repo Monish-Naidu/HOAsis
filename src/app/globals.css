@@ -66,6 +66,12 @@
   --primary-hover: #2160d6;
   --primary-fg: #ffffff;
   --primary-soft: #e8f0fd;
+  /* The blue as text (a link, the lit tab label). The fill and the text part
+     ways on the dark theme, where no one blue clears 4.5:1 both as white
+     text's ground and as text on the night surfaces. */
+  --primary-text: var(--primary);
+  /* Text on a solid status fill (the count on a tab, the bell). */
+  --status-fg: #ffffff;
   --brand-gradient: linear-gradient(135deg, #3f82f2 0%, #2b6be3 55%, #1f56c9 100%);
   --brand-gradient-text: linear-gradient(100deg, #2b6be3 0%, #5f8ff5 60%, #7b5cf5 100%);
   --aurora:
@@ -155,11 +161,16 @@
   --accent: #6ea0f0;
   --ring: #6ea0f0;
 
-  --primary: #3d7ff0;
-  --primary-hover: #4d8bf5;
+  /* The fill is darkened until white on it reads at 4.5:1 (avatar initials,
+     primary buttons were 3.8:1); the same blue as text is lifted to the
+     accent, which reads on every night surface. */
+  --primary: #376fe0;
+  --primary-hover: #2f66d6;
   --primary-fg: #ffffff;
   --primary-soft: #14284a;
-  --brand-gradient: linear-gradient(135deg, #4d8bf5 0%, #3d7ff0 55%, #2b63d6 100%);
+  --primary-text: #6ea0f0;
+  --status-fg: #0b1524;
+  --brand-gradient: linear-gradient(135deg, #376fe0 0%, #3068d9 55%, #2b63d6 100%);
   --brand-gradient-text: linear-gradient(100deg, #6ea0f0 0%, #8fb6ff 55%, #b7a6ff 100%);
   --aurora:
     radial-gradient(60% 60% at 20% 10%, rgb(77 139 245 / 0.3), transparent 60%),
@@ -167,7 +178,7 @@
     radial-gradient(45% 45% at 60% 95%, rgb(31 191 143 / 0.16), transparent 60%);
 
   --tint-blue: #4d8bf5;
-  --tint-blue-soft: #14284a;
+  --tint-blue-soft: #0f2140;
   --tint-blue-fg: #9cc0ff;
   --tint-teal: #1fbf8f;
   --tint-teal-soft: #0f2f27;
@@ -243,6 +254,7 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-fg: var(--primary-fg);
   --color-primary-soft: var(--primary-soft);
+  --color-status-fg: var(--status-fg);
   --color-royal: var(--royal);
   --color-royal-hover: var(--royal-hover);
   --color-royal-fg: var(--royal-fg);
@@ -370,6 +382,12 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  /* Blue text reads from its own token, so the dark theme can lift it without
+     lightening every blue fill. Later in this layer than Tailwind's own
+     utility, so it wins on the same specificity. */
+  .text-primary {
+    color: var(--primary-text);
   }
 }
 
@@ -1153,7 +1171,7 @@
 
 /* A borderless field sits in a box that is the field, as far as the reader
    can tell, so the box wears the ring. */
-:has(> :is(input, textarea).bg-transparent:focus-visible):not([data-bare-focus]) {
+:has(> :is(input, textarea, select).bg-transparent:focus-visible):not([data-bare-focus]) {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }

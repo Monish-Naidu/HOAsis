@@ -20,6 +20,7 @@ import { useToast } from "@/components/app/toast";
 import type { FormField, FormSubmission, HomeRequest } from "@/lib/types";
 import { cn, addDays, formatDate, todayIsoDate } from "@/lib/utils";
 import { confirmedReference } from "@/lib/request-reference";
+import { looksAhead, pastDateProblem } from "@/lib/resident-wording";
 
 /**
  * Filling in a form on the page rather than printing it.
@@ -97,7 +98,18 @@ export function FillForm({ formId }: { formId: string }) {
     if (field.kind === "checkbox") return answers[field.id] !== "Yes";
     return !(answers[field.id] ?? "").trim();
   });
-  const canSubmit = missing.length === 0 && typedName.trim().length > 1;
+  // A planned start in the past is not a plan. Said on the field, and the
+  // form will not send until it is changed.
+  const today = todayIsoDate();
+  const dateProblems = Object.fromEntries(
+    form.fields.flatMap((field) => {
+      const problem =
+        field.kind === "date" ? pastDateProblem(field.label, answers[field.id] ?? "", today) : null;
+      return problem ? [[field.id, problem]] : [];
+    }),
+  );
+  const canSubmit =
+    missing.length === 0 && typedName.trim().length > 1 && Object.keys(dateProblems).length === 0;
 
   async function submit() {
     if (!home || !form || !canSubmit || sending) return;
@@ -268,6 +280,8 @@ export function FillForm({ formId }: { formId: string }) {
             value={answers[field.id] ?? ""}
             files={files[field.id] ?? []}
             uploads={!isRemote}
+            problem={dateProblems[field.id]}
+            minDate={field.kind === "date" && looksAhead(field.label) ? today : undefined}
             onChange={(value) => setAnswers((a) => ({ ...a, [field.id]: value }))}
             onFiles={(names) => setFiles((f) => ({ ...f, [field.id]: names }))}
           />
@@ -324,6 +338,8 @@ function Field({
   value,
   files,
   uploads,
+  problem,
+  minDate,
   onChange,
   onFiles,
 }: {
@@ -332,6 +348,10 @@ function Field({
   files: string[];
   /** False where there is nowhere to keep a file yet. */
   uploads: boolean;
+  /** Why the answer cannot be sent as it stands. */
+  problem?: string;
+  /** The earliest day the date picker offers. */
+  minDate?: string;
   onChange: (value: string) => void;
   onFiles: (names: string[]) => void;
 }) {
@@ -342,7 +362,11 @@ function Field({
       <label className="block">
         <span className="text-body font-medium text-fg">
           {field.label}
-          {field.required ? <span className="ml-1 text-danger">*</span> : null}
+          {/* Not asked for what cannot be given: a file the form has nowhere
+              to keep is not required, so it carries no asterisk. */}
+          {field.required && !(field.kind === "file" && !uploads) ? (
+            <span className="ml-1 text-danger">*</span>
+          ) : null}
         </span>
 
         {field.kind === "long" ? (
@@ -424,10 +448,18 @@ function Field({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
+            min={field.kind === "date" ? minDate : undefined}
+            aria-invalid={problem ? true : undefined}
             className={`mt-1.5 ${input}`}
           />
         )}
       </label>
+
+      {problem ? (
+        <p role="alert" className="mt-1.5 text-footnote font-medium text-danger">
+          {problem}
+        </p>
+      ) : null}
 
       {field.suffix && field.kind === "number" ? (
         <p className="mt-1 text-footnote text-fg-subtle">In {field.suffix}.</p>

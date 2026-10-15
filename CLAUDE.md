@@ -25,7 +25,7 @@ reviewers in `.claude/agents/`, the paste-able missions in
   UTC midnight. For people: two owners on one home, one person with two homes,
   the seat that ended, nobody signed in. For writes: delivered twice, two
   people at once, the demo path and the signed-in path (every mutation in
-  `app-state.tsx` has both).
+  `app-state/` has both).
 - **Fix the cause, not the symptom.** A test that fails once under load is
   re-run alone before it is believed; a lint rule is satisfied, not disabled.
 - **Branch, pull request, checks, merge.** The pull request says what
@@ -43,7 +43,7 @@ reviewers in `.claude/agents/`, the paste-able missions in
 | Shared screen pieces     | `src/components/app/`                                      | One component per concern; `src/components/ui/primitives.tsx` for anything used three times                                                                          |
 | Pure logic and selectors | `src/lib/*.ts`                                             | No React, no fetch, no `new Date()`; every exported function has a unit test                                                                                         |
 | Data layer               | `src/lib/data/`                                            | `index.ts` is the only import screens use; `remote.ts` maps Supabase rows; fixtures are the demo                                                                     |
-| Mutations                | `src/lib/app-state.tsx`                                    | Signed-in branch calls one SQL function through `remoteWrite`; demo branch edits local state the same way the database would                                         |
+| Mutations                | `src/lib/app-state/`                                       | Signed-in branch calls one SQL function through `remoteWrite`; demo branch edits local state the same way the database would                                         |
 | Money, email, meetings   | `src/lib/payments/`, `src/lib/email/`, `src/lib/meetings/` | Server-only where a key is involved                                                                                                                                  |
 | Server routes and jobs   | `src/app/api/`                                             | Authorised with `CRON_SECRET` or a webhook signature; log with `logger()`; record a cron run                                                                         |
 | Database                 | `supabase/migrations/NNNN_name.sql`                        | Numbered, never edited once applied; redefine a function by copying it whole into a new file; grants explicit; every change proven by a `scripts/verify-*.mjs` suite |
@@ -117,6 +117,6 @@ not `||` on arrays; never a second overload of an existing function name;
 
 One sonnet helper per chunk with a written spec: files it may edit, exact
 wording, what not to run. Two at once only with a hard file boundary;
-`src/lib/app-state.tsx` belongs to one of them. Read the diff, apply the
+`src/lib/app-state/` belongs to one of them. Read the diff, apply the
 SQL, run the checks, click through, then commit. When compacting, keep the
 list of modified files, the migrations applied and their suite results.

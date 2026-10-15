@@ -111,11 +111,17 @@ test.describe.serial("Stripe, test mode", () => {
     });
 
     if (!(await page.getByRole("button", { name: /Visa/ }).count())) {
-      await page.getByRole("button", { name: /Save a card or bank account/ }).click();
+      await page
+        .getByRole("button", { name: /Add a payment method/ })
+        .first()
+        .click();
       const tab = await frameWith(page, '[data-testid="card-tab"], [id="card-tab"]');
       await tab.locator('[data-testid="card-tab"], [id="card-tab"]').first().click();
       await fillCard(page);
-      await page.getByRole("button", { name: /Save payment method/ }).click();
+      await page
+        .getByRole("button", { name: /Add a payment method/ })
+        .last()
+        .click();
       await expect(page.getByRole("button", { name: /Visa/ }).first()).toBeVisible({
         timeout: 30_000,
       });

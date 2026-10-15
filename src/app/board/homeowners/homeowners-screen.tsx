@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Avatar,
   Badge,
@@ -291,8 +291,16 @@ export function HomeownersScreen() {
   // Search's "Open home" shortcut lands with one household expanded.
   const [openId, setOpenId] = useState<string | null>(params.get("open"));
   const [focusComposer, setFocusComposer] = useState(false);
+  // The Past due list's "Send a reminder" arrives with the letter asked for:
+  // the composer opens on that home already started from the letter it is due.
+  const startWithLetter = params.get("letter") === "1";
   const [shown, setShown] = useState(PAGE);
   const [adding, setAdding] = useState(false);
+  // The form opens below the list's header, often off screen on a laptop, so
+  // it brings itself into view when it appears. Its first field takes focus.
+  const showForm = useCallback((el: HTMLElement | null) => {
+    el?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  }, []);
   const [entry, setEntry] = useState<{
     name: string;
     email: string;
@@ -685,7 +693,7 @@ export function HomeownersScreen() {
 
         {/* Add a household */}
         {adding ? (
-          <div className="border-b border-border px-5 py-4">
+          <div ref={showForm} className="scroll-mt-24 border-b border-border px-5 py-4">
             <p className="text-body font-semibold text-fg">New household</p>
             <div
               className={cn(
@@ -701,6 +709,7 @@ export function HomeownersScreen() {
                   onChange={(e) => setEntry({ ...entry, name: e.target.value })}
                   placeholder="Household name"
                   aria-label="Household name"
+                  autoFocus
                   onKeyDown={(e) => e.key === "Enter" && saveOwner()}
                   className={input}
                 />
@@ -1018,7 +1027,10 @@ export function HomeownersScreen() {
                       key={o.id}
                       home={o}
                       thread={threadFor(threads, o)}
-                      focusComposer={focusComposer}
+                      focusComposer={
+                        focusComposer || (startWithLetter && o.id === params.get("open"))
+                      }
+                      startWithLetter={startWithLetter && o.id === params.get("open")}
                       letter={(() => {
                         const template = dueLetter(o, policy, templates);
                         return template
@@ -1252,7 +1264,20 @@ function threadFor(threads: MessageThread[], home: Home) {
 function DuesBadge({ home, unsold }: { home: Home; unsold: boolean }) {
   // Nobody on record: not paid up, not behind, nobody to message. It read
   // "Paid up" beside a Message button that could reach nobody.
-  if (home.placeholder) return <Badge tone="neutral">{unsold ? "Unsold" : "No owner"}</Badge>;
+  if (home.placeholder) {
+    // A home with nobody on record can still owe, and months late is the
+    // fact the board needs; "No owner" alone hid it.
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1">
+        <Badge tone="neutral">{unsold ? "Unsold" : "No owner"}</Badge>
+        {home.balanceCents > 0 && home.daysPastDue > 0 ? (
+          <Badge tone={home.standing === "collections" ? "danger" : "warn"} dot>
+            {pluralize(home.daysPastDue, "day")} late
+          </Badge>
+        ) : null}
+      </span>
+    );
+  }
   // Days late, the same fact Collections leads with. "In collections" here
   // and "Attorney next" there read as two different states for one home.
   if (home.standing === "collections") {
@@ -1283,6 +1308,7 @@ function HouseholdDetail({
   home,
   thread,
   focusComposer,
+  startWithLetter,
   letter,
   onSend,
   onSetOwner,
@@ -1310,6 +1336,8 @@ function HouseholdDetail({
   home: Home;
   thread?: MessageThread;
   focusComposer: boolean;
+  /** Opens with the composer already holding the letter, when there is one. */
+  startWithLetter: boolean;
   /** The dues letter this household is due today, already filled in. Null when none is. */
   letter: { name: string; subject: string; body: string } | null;
   onSend: (body: string, subject?: string) => void;
@@ -1362,10 +1390,12 @@ function HouseholdDetail({
     period: string;
   };
 }) {
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(() => (startWithLetter && letter ? letter.body : ""));
   // Set once the draft started from the letter: the send then opens its own
   // thread under this subject rather than replying to whatever came last.
-  const [subject, setSubject] = useState<string | null>(null);
+  const [subject, setSubject] = useState<string | null>(() =>
+    startWithLetter && letter ? letter.subject : null,
+  );
   const [editing, setEditing] = useState<
     "email" | "second" | "payment" | "hand" | "credit" | "charge" | "dues" | "statement" | null
   >(null);
@@ -1560,7 +1590,9 @@ function HouseholdDetail({
           existing={hand.status === "ready" ? hand.rows : undefined}
           balanceCents={home.balanceCents}
           onSave={(input) =>
-            onRecordPayment(input).then((ok) => ok && loadHandPayments().then(() => ok))
+            // Re-read either way: a refusal names a repeat the form did not know
+            // about, and the re-read puts the warning and Record it again on screen.
+            onRecordPayment(input).then((ok) => loadHandPayments().then(() => ok))
           }
           onCancel={() => setEditing(null)}
         />

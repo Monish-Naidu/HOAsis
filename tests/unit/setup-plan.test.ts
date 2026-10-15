@@ -327,6 +327,74 @@ describe("enter what each home owes today", () => {
   });
 });
 
+describe("enter what each home owes, once billing has started", () => {
+  it("is done once any bill has gone out, with no balance entered", () => {
+    const billed = signedIn((x) => {
+      x.homeCharges[x.homes[1].id] = [
+        {
+          id: "d1",
+          date: "2026-01-01",
+          label: "January 2026 dues",
+          kind: "charge",
+          amountCents: 28500,
+          balanceAfterCents: 28500,
+        },
+      ];
+    });
+    const t = taskOf(billed, "opening-balances")!;
+    expect(t.complete).toBe(true);
+    expect(t.because).not.toMatch(/Nothing is saved yet/);
+  });
+
+  it("stays open, saying nothing is saved yet, before any bill", () => {
+    expect(taskOf(signedIn(), "opening-balances")!.complete).toBe(false);
+    expect(taskOf(signedIn(), "opening-balances")!.because).toMatch(/Nothing is saved yet/);
+  });
+});
+
+describe("add the board's contact email", () => {
+  it("is asked of a real association with none, and links to the setting", () => {
+    const t = taskOf(signedIn(), "contact-email")!;
+    expect(t.label).toBe("Add the board's contact email");
+    expect(t.complete).toBe(false);
+    expect(t.href).toBe("/board/settings#contact-email");
+  });
+
+  it("is done once an address is set", () => {
+    const c = signedIn((x) => {
+      x.association.contactEmail = "board@oakridge.org";
+    });
+    expect(taskOf(c, "contact-email")!.complete).toBe(true);
+  });
+
+  it("is not asked of a copy in the browser or the demo, which send no mail", () => {
+    expect(taskOf(mehrMeadows, "contact-email")).toBeUndefined();
+  });
+});
+
+describe("a step prints each sentence once", () => {
+  it("has a reason different from its detail wherever it carries both", () => {
+    const plan = planOf(signedIn((x) => void x));
+    for (const t of plan.phases.flatMap((p) => p.tasks)) {
+      if (t.because) expect(t.because, t.key).not.toBe(t.detail);
+    }
+  });
+
+  it("tells a builder to upload the declaration, not to put it in as text", () => {
+    const c = signedIn((x) => {
+      x.profile = { ...x.profile!, origin: "builder" };
+    });
+    expect(taskOf(c, "documents")!.because).toMatch(/^Upload the recorded declaration/);
+  });
+
+  it("gives the builder's reserve step the reserve study sentence", () => {
+    const c = signedIn((x) => {
+      x.profile = { ...x.profile!, origin: "builder", propertyType: "condos" };
+    });
+    expect(taskOf(c, "builder-reserves")!.because).toMatch(/The association owns the building/);
+  });
+});
+
 describe("turn on online payments", () => {
   it("is done only when Stripe charges are enabled", () => {
     expect(taskOf(signedIn(), "payments")!.complete).toBe(false);

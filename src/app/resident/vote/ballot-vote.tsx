@@ -47,9 +47,10 @@ export function BallotVote({ ballot }: { ballot: Ballot }) {
     <Card className="overflow-hidden">
       <div className="px-4 py-3.5">
         <div className="flex flex-wrap items-center gap-2">
-          {closed ? (
-            <Badge tone="neutral">Closed</Badge>
-          ) : mine ? (
+          {/* A closed ballot sits under the page's "Closed" heading and says
+              when it ended; a badge saying the same again was the third
+              "Closed" on the screen. */}
+          {closed ? null : mine ? (
             <Badge tone="ok">
               <Check className="size-2.5" />
               You voted

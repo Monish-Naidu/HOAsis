@@ -93,7 +93,7 @@ export default async function UnsubscribePage({
             </>
           )}
           <Link
-            href="/resident/account"
+            href="/resident/settings"
             className="mt-6 inline-flex h-10 items-center rounded-lg border border-border-2 px-4 text-body font-semibold text-fg hover:bg-surface-2"
           >
             Manage all email preferences

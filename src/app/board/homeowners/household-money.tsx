@@ -49,6 +49,7 @@ export function RecordPaymentForm({
     method: ManualMethod;
     reference: string;
     receivedOn: string;
+    allowRepeat?: boolean;
   }) => Promise<boolean>;
   onCancel: () => void;
 }) {
@@ -63,7 +64,14 @@ export function RecordPaymentForm({
   const cents = check.ok ? check.cents : 0;
   // The date input's max stops the picker; this stops a typed date.
   const ready = check.ok && Boolean(receivedOn) && receivedOn <= today;
-  // Said once something is typed; an empty field is not an error yet.
+  // Why Save is off, whichever field it is. An empty form says what to enter
+  // in a quiet voice; once something is typed it is a warning.
+  const dateProblem = !receivedOn
+    ? "Pick the date it was received."
+    : receivedOn > today
+      ? "The date received cannot be in the future."
+      : null;
+  const whyNot = !check.ok ? check.message : dateProblem;
   const amountProblem = amount.trim() && !check.ok ? check.message : null;
   const overpay = check.ok ? homeOverpayNote(check.extraCents) : null;
   // Said before saving, and saving is still allowed: two checks of the same
@@ -78,7 +86,14 @@ export function RecordPaymentForm({
         e.preventDefault();
         if (!ready || busy) return;
         setBusy(true);
-        void onSave({ amountCents: cents, method, reference: reference.trim(), receivedOn })
+        void onSave({
+          amountCents: cents,
+          method,
+          reference: reference.trim(),
+          receivedOn,
+          // The warning was on screen, so a second identical payment is meant.
+          allowRepeat: Boolean(repeat),
+        })
           .then((ok) => ok && onCancel())
           .finally(() => setBusy(false));
       }}
@@ -130,13 +145,21 @@ export function RecordPaymentForm({
             value={receivedOn}
             onChange={(e) => setReceivedOn(e.target.value)}
             aria-label="Date received"
+            aria-invalid={dateProblem ? true : undefined}
             className={fieldClass}
           />
         </Field>
       </div>
-      {amountProblem ? (
-        <p role="alert" className="text-footnote font-medium text-danger">
-          {amountProblem}
+      {whyNot ? (
+        <p
+          role={amount.trim() || dateProblem ? "alert" : undefined}
+          className={
+            amount.trim() || dateProblem
+              ? "text-footnote font-medium text-danger"
+              : "text-footnote text-fg-subtle"
+          }
+        >
+          {whyNot}
         </p>
       ) : null}
       {overpay ? <p className="text-footnote text-fg-muted">{overpay}</p> : null}
@@ -182,6 +205,14 @@ export function AddCreditForm({
   const [busy, setBusy] = useState(false);
   const cents = toCents(amount);
   const ready = cents > 0 && reason.trim().length > 0;
+  const whyNot =
+    cents <= 0
+      ? amount.trim()
+        ? "Enter an amount above $0, in dollars and cents."
+        : "Enter an amount."
+      : reason.trim().length === 0
+        ? "Say why the credit is given."
+        : null;
   return (
     <form
       className="mt-4 space-y-2 border-t border-border pt-3"
@@ -223,6 +254,18 @@ export function AddCreditForm({
           />
         </Field>
       </div>
+      {whyNot ? (
+        <p
+          role={amount.trim() || reason.trim() ? "alert" : undefined}
+          className={
+            amount.trim() || reason.trim()
+              ? "text-footnote font-medium text-danger"
+              : "text-footnote text-fg-subtle"
+          }
+        >
+          {whyNot}
+        </p>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Cancel
@@ -262,7 +305,13 @@ export function AddChargeForm({
   const [busy, setBusy] = useState(false);
   const cents = chargeCents(amount);
   const input = { amountCents: cents, label: label.trim(), dueOn };
-  const problem = chargeProblem(input, today);
+  // A typed amount that is not whole cents reads as 0, which would say "Enter
+  // an amount" about a number that was entered.
+  const problem =
+    amount.trim() && cents === 0
+      ? "Enter an amount above $0, in dollars and cents."
+      : chargeProblem(input, today);
+  const touched = amount.trim() !== "" || label.trim() !== "" || dueOn !== today;
   return (
     <form
       className="mt-4 space-y-2 border-t border-border pt-3"
@@ -316,6 +365,16 @@ export function AddChargeForm({
       </div>
       {summary && cents > 0 ? (
         <p className="tnum text-footnote text-fg-muted">{summary(cents)}</p>
+      ) : null}
+      {problem ? (
+        <p
+          role={touched ? "alert" : undefined}
+          className={
+            touched ? "text-footnote font-medium text-danger" : "text-footnote text-fg-subtle"
+          }
+        >
+          {problem}
+        </p>
       ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>

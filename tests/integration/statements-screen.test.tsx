@@ -46,5 +46,36 @@ describe("the statements screen in the demo", () => {
     await userEvent.selectOptions(screen.getByLabelText("Which homes"), "balance");
     const withBalance = screen.getByText(/^\d+ statements? for /).textContent;
     expect(Number(withBalance?.split(" ")[0])).toBeLessThanOrEqual(homes);
+    // Printing every home's statement into the page is the slow part, and it
+    // slows more when other suites share the machine.
+  }, 20_000);
+
+  it("adds up on every row: brought forward + billed - paid - credits = balance", async () => {
+    render(<StatementsScreen />, { wrapper });
+    await screen.findAllByRole("button", { name: /^Print the statement for / });
+    const cents = (text: string) => {
+      const negative = /^-|\(/.test(text.trim());
+      const n = Math.round(Number(text.replace(/[^0-9.]/g, "")) * 100);
+      return negative ? -n : n;
+    };
+    const rows = Array.from(document.querySelectorAll("tbody tr"));
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const cells = Array.from(row.querySelectorAll("td"))
+        .slice(1, 6)
+        .map((td) => cents(td.textContent ?? ""));
+      const [forward, billed, paid, credits, balance] = cells;
+      expect(forward + billed - paid - credits, row.textContent ?? "").toBe(balance);
+    }
+  });
+
+  it("lists homes by lot, not in the order they were added", async () => {
+    render(<StatementsScreen />, { wrapper });
+    await screen.findAllByRole("button", { name: /^Print the statement for / });
+    const units = Array.from(
+      document.querySelectorAll("tbody tr td:first-child p:first-child"),
+    ).map((p) => p.textContent ?? "");
+    const sorted = [...units].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    expect(units).toEqual(sorted);
   });
 });

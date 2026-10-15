@@ -36,12 +36,12 @@ export default function AuthLanding() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-body font-medium text-fg-muted transition-colors hover:text-fg"
+              className="inline-flex h-11 items-center gap-1.5 rounded-lg px-3 text-body font-medium text-fg-muted transition-colors hover:text-fg"
             >
               <ArrowLeft className="size-3.5" />
-              <span className="hidden sm:inline">Home</span>
+              Home
             </Link>
-            <ThemeToggle className="max-sm:[&>button:nth-child(2)]:hidden max-sm:[&>button:nth-child(3)]:hidden" />
+            <ThemeToggle />
           </div>
         </header>
 

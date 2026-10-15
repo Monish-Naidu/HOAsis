@@ -28,8 +28,8 @@ const input = fieldClass;
  * described here.
  *
  * It is deliberately not anonymous. No state researched bans an anonymous
- * complaint to an association, but a board that cannot tell one neighbour's
- * twelve reports from twelve neighbours' one is a board that cannot see the
+ * complaint to an association, but a board that cannot tell one neighbor's
+ * twelve reports from twelve neighbors' one is a board that cannot see the
  * pattern that matters. The honest trade is that we know who you are and the
  * household you are reporting never does.
  */
@@ -119,7 +119,7 @@ export function ReportForm() {
       </div>
 
       {/* Said before they type, not after. Somebody deciding whether to report
-          their neighbour is deciding on these two facts. */}
+          their neighbor is deciding on these two facts. */}
       <Callout tone="info" icon={<ShieldCheck className="size-4" />} title="What happens to this">
         Your name goes to the board and to nobody else. The household you name is never told who
         reported them. And this is not a notice: a board member has to go and see it for themselves

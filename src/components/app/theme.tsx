@@ -195,7 +195,7 @@ export function ThemeToggle({
         title={`${current.label}. Click for ${next.label.toLowerCase()}`}
         onClick={() => setMode(next.value)}
         className={cn(
-          "press inline-flex size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:size-9",
+          "press inline-flex size-11 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:size-9",
           className,
         )}
       >
@@ -221,7 +221,7 @@ export function ThemeToggle({
             title={hint}
             onClick={() => setMode(value)}
             className={cn(
-              "flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-2 text-footnote font-medium transition-colors",
+              "flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md px-2 text-footnote font-medium transition-colors",
               mode === value ? "bg-surface-3 text-fg" : "text-fg-muted hover:text-fg",
             )}
           >

@@ -1,6 +1,14 @@
 import { useCallback } from "react";
 import type { Community } from "@/lib/data/community";
-import { type AppDeps, destructive, logDemoActivity, newId, remoteWrite, sliceStore } from "./core";
+import {
+  type AppDeps,
+  destructive,
+  logDemoActivity,
+  mayChange,
+  newId,
+  remoteWrite,
+  sliceStore,
+} from "./core";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { activityWords } from "@/lib/activity";
 import { vendorNameProblem } from "@/lib/vendor-name";
@@ -9,10 +17,11 @@ import { vendorNameProblem } from "@/lib/vendor-name";
  * Vendors: who the association pays and the paperwork it holds for each.
  */
 export function useVendorsActions(deps: AppDeps) {
-  const { remote, communityId } = deps;
+  const { remote, communityId, can } = deps;
 
   const markW9Requested = useCallback(
     (vendorId: string) => {
+      if (!remote.community && !mayChange(can, "vendors")) return;
       if (remote.community) {
         void remoteWrite("Noting the W-9", () =>
           supabaseBrowser()
@@ -26,11 +35,12 @@ export function useVendorsActions(deps: AppDeps) {
         all.map((vendor) => (vendor.id === vendorId ? { ...vendor, w9OnFile: true } : vendor)),
       );
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const addVendor = useCallback(
     (vendor: Community["vendors"][number]) => {
+      if (!remote.community && !mayChange(can, "vendors")) return;
       // The same rule the form shows, held here too: a second call cannot
       // add "cascade grounds co." beside "Cascade Grounds Co.".
       const known = remote.community
@@ -60,11 +70,12 @@ export function useVendorsActions(deps: AppDeps) {
       });
       sliceStore(communityId, "vendors").update((all) => [vendor, ...all]);
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   const removeVendor = useCallback(
     (vendorId: string) => {
+      if (!remote.community && !mayChange(can, "vendors")) return () => {};
       if (remote.community) {
         const rc = remote.community;
         const vendor = rc.vendors.find((v) => v.id === vendorId);
@@ -93,7 +104,7 @@ export function useVendorsActions(deps: AppDeps) {
         all.filter((v) => v.id !== vendorId),
       );
     },
-    [remote.community, communityId],
+    [can, remote.community, communityId],
   );
 
   return {
