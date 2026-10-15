@@ -8,9 +8,8 @@ import { join } from "node:path";
  * /admin is the owner's ops page. The redirect that keeps old /admin/...
  * deep links working was written with `:path*`, which also matches no
  * segments at all, so the bare page answered 308 to /board and was never
- * rendered. The file is read rather than imported because the config is
- * wrapped by Sentry's build plugin, which has no business loading in a unit
- * test.
+ * rendered. The file is read rather than imported so the test does not load
+ * Next's config module.
  */
 const source = readFileSync(join(process.cwd(), "next.config.ts"), "utf8");
 const redirectSources = [...source.matchAll(/source:\s*["'`]([^"'`]+)["'`]/g)].map((m) => m[1]);

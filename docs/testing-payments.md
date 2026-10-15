@@ -16,7 +16,7 @@ deployed. It disappears by itself when live keys go in.
    phone `000 000 0000` (code `000000`), date of birth `01/01/1901`, SSN
    last four `0000`, address line `address_full_match`. Bank `110000000` /
    `000123456789`. Press **Agree and submit**.
-4. The row reads **Payments are live** once Stripe switches the account on,
+4. The row reads **Accepting payments** once Stripe switches the account on,
    usually within a minute. Reload if it still says **Resume setup**.
 
 ## 2. A homeowner pays

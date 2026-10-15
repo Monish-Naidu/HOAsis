@@ -9,7 +9,7 @@ const quiet: OpsReport = {
   health: {
     ok: true,
     at: "2026-10-06T15:00:00.000Z",
-    checks: { supabase: ok, stripe: ok, resend: ok, cron: ok, sentry: ok },
+    checks: { supabase: ok, stripe: ok, resend: ok, cron: ok, telemetry: ok },
   } as unknown as OpsReport["health"],
   errors: [],
   errorGroups: [],

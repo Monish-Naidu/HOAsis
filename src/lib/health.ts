@@ -25,7 +25,7 @@ export interface HealthReport {
     stripe: HealthCheck;
     resend: HealthCheck;
     cron: HealthCheck;
-    sentry: HealthCheck;
+    telemetry: HealthCheck;
   };
 }
 
@@ -56,13 +56,12 @@ export async function runHealthChecks(): Promise<HealthReport> {
   const stripe = present("STRIPE_SECRET_KEY", "key present");
   const resend = present("RESEND_API_KEY", "key present");
   const cron = present("CRON_SECRET", "secret present");
-  const sentry: HealthCheck =
-    process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
-      ? { ok: true, detail: "DSN present" }
-      : { ok: true, detail: "not configured (optional)" };
+  const telemetry: HealthCheck = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING
+    ? { ok: true, detail: "Application Insights on" }
+    : { ok: true, detail: "not configured (optional)" };
   return {
     ok: supabase.ok && stripe.ok && resend.ok && cron.ok,
     at: new Date().toISOString(),
-    checks: { supabase, stripe, resend, cron, sentry },
+    checks: { supabase, stripe, resend, cron, telemetry },
   };
 }

@@ -84,7 +84,7 @@ Runbook, top five:
 | Supabase paused     | Loader forever; `npx supabase projects list` says INACTIVE      | `POST /v1/projects/<ref>/restore`, four minutes. Never rebuild first. Pro removes the cause.                        |
 | Email not delivered | `email_log.status` failing; Resend dashboard                    | Check `EMAIL_FROM`, domain status, monthly quota; single address, look for an opt-out row.                          |
 | Cron missed         | No Vercel cron log; no row for the date                         | Call the route with the `CRON_SECRET` bearer, `?dry=1` first; resumes with `?after=<id>`.                           |
-| Bad deploy          | Sentry spike or a board writes in                               | Vercel > Promote previous deployment. Never roll a migration back; forward-fix.                                     |
+| Bad deploy          | An alert email or a board writes in                             | Vercel > Promote previous deployment. Never roll a migration back; forward-fix.                                     |
 
 ## 5. Business and legal
 
