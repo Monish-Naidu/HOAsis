@@ -429,13 +429,21 @@ export interface AppState {
   setWorkOrder: (requestId: string, workOrder: WorkOrder | null) => void;
   /** Whether the signed in person is coming to a meeting. */
   rsvpMeeting: (meetingId: string, response: "yes" | "no") => Promise<boolean>;
-  /** Moves a meeting that has not happened. Refused in the past; resolves false if nothing was kept. */
+  /**
+   * Moves a meeting that has not happened. Refused in the past. Resolves to
+   * the sentence to toast: the new date, and how the notice of the move got
+   * to owners. False when nothing was kept.
+   */
   rescheduleMeeting: (
     meetingId: string,
     to: { date: string; time?: string; location?: string },
-  ) => Promise<boolean>;
-  /** Cancels a meeting that has not happened; it stays on the record with the reason. */
-  cancelMeeting: (meetingId: string, reason: string) => Promise<boolean>;
+  ) => Promise<string | false>;
+  /**
+   * Cancels a meeting that has not happened; it stays on the record with the
+   * reason. Resolves to the sentence to toast: the fact, and how the notice
+   * of the cancellation got to owners. False when nothing was kept.
+   */
+  cancelMeeting: (meetingId: string, reason: string) => Promise<string | false>;
   /** Minutes and who came, for a meeting that was held. Saving again replaces them. */
   recordMinutes: (
     meetingId: string,

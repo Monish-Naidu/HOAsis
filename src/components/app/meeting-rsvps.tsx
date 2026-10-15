@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CalendarOff, Copy, Radio, Users, Video } from "lucide-react";
 import { useToast } from "@/components/app/toast";
 import {
@@ -16,7 +17,7 @@ import { calendarEntries } from "@/lib/metrics";
 import { useAppState } from "@/lib/app-state";
 import { meetingJoin } from "@/lib/meetings/video";
 import type { Meeting } from "@/lib/types";
-import { attendedLine, cancelledLine, wasLine } from "@/lib/meeting-notices";
+import { attendedLine, cancelledLine, meetingPage, wasLine } from "@/lib/meeting-notices";
 import { liveMeetingLine } from "@/lib/resident-wording";
 import { cn, formatDate, relativeDays } from "@/lib/utils";
 
@@ -59,7 +60,12 @@ export function MeetingRsvps() {
             return (
               <div key={called.id} className={cn("px-4 py-3", i > 0 && "border-t border-border")}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-body font-medium text-fg-muted line-through">{called.title}</p>
+                  <Link
+                    href={meetingPage(called.id)}
+                    className="text-body font-medium text-fg-muted line-through underline-offset-2 hover:text-fg hover:underline"
+                  >
+                    {called.title}
+                  </Link>
                   <Badge tone="danger">Cancelled</Badge>
                 </div>
                 <p className="mt-0.5 text-footnote text-fg-muted">
@@ -77,13 +83,14 @@ export function MeetingRsvps() {
           const mine = (m.rsvps ?? []).find((r) => r.profileId === account?.id)?.response;
           const coming = (m.rsvps ?? []).filter((r) => r.response === "yes").length;
           return (
-            <div
-              key={m.id}
-              id={`meeting-${m.id}`}
-              className={cn("scroll-mt-24 px-4 py-3", i > 0 && "border-t border-border")}
-            >
+            <div key={m.id} className={cn("px-4 py-3", i > 0 && "border-t border-border")}>
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-body font-medium text-fg">{m.title}</p>
+                <Link
+                  href={meetingPage(m.id)}
+                  className="text-body font-medium text-fg underline decoration-border-2 underline-offset-2 hover:decoration-fg"
+                >
+                  {m.title}
+                </Link>
                 <Badge tone={kindTone.meeting}>{kindLabel.meeting}</Badge>
               </div>
               <p className="mt-0.5 text-footnote text-fg-muted">
@@ -135,6 +142,7 @@ export function MeetingRsvps() {
 /**
  * Minutes of meetings that were held, newest first, each folded so a phone
  * screen is not a wall of text. Nothing at all until the board records some.
+ * The title opens the meeting's own page, which carries the minutes too.
  */
 export function MeetingMinutes() {
   const { community } = useAppState();
@@ -149,7 +157,12 @@ export function MeetingMinutes() {
         {held.map((m, i) => (
           <details key={m.id} className={cn("group px-4 py-3", i > 0 && "border-t border-border")}>
             <summary className="cursor-pointer select-none">
-              <span className="text-body font-medium text-fg">{m.title}</span>
+              <Link
+                href={meetingPage(m.id)}
+                className="text-body font-medium text-fg underline decoration-border-2 underline-offset-2 hover:decoration-fg"
+              >
+                {m.title}
+              </Link>
               <span className="mt-0.5 block text-footnote text-fg-muted">
                 {formatDate(m.date, "long")}
                 {attendedLine(m) ? ` · ${attendedLine(m)}` : ""}
@@ -169,10 +182,12 @@ export function MeetingMinutes() {
 }
 
 /**
- * Where to join a meeting that has not started: the video link to forward,
- * the phone number, and a note that the room opens when the host does.
+ * Where to join a meeting that has not started: the one video link to open,
+ * the phone number when the board typed one, and a note that the room opens
+ * when the host does. Shared by the meeting's row and its own page, so the
+ * two cannot describe joining differently.
  */
-function MeetingJoinDetails({ meeting: m }: { meeting: Meeting }) {
+export function MeetingJoinDetails({ meeting: m }: { meeting: Meeting }) {
   const { community } = useAppState();
   const { notify } = useToast();
   const { videoUrl: link, dialIn, passcode } = meetingJoin(m, community.association.id);
@@ -227,7 +242,12 @@ export function LiveMeetingCard() {
       <div className="flex flex-wrap items-center gap-x-2 gap-y-3 bg-ok-soft px-4 py-3">
         <Radio className="size-3.5 shrink-0 text-ok" />
         <div className="min-w-0 flex-1 basis-40">
-          <p className="text-body font-semibold text-ok">{live.title}</p>
+          <Link
+            href={meetingPage(live.id)}
+            className="text-body font-semibold text-ok underline-offset-2 hover:underline"
+          >
+            {live.title}
+          </Link>
           <p className="text-footnote text-ok opacity-90">
             {liveMeetingLine(live.attendees.length)}
           </p>

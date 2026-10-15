@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { attendedLine, cancelledLine, currentAnnouncements, wasLine } from "@/lib/meeting-notices";
+import {
+  attendedLine,
+  cancelledLine,
+  currentAnnouncements,
+  meetingOfAnnouncement,
+  meetingPage,
+  wasLine,
+} from "@/lib/meeting-notices";
 import type { Announcement, DocumentRecord, Meeting } from "@/lib/types";
 
 const ann = (id: string, title: string): Announcement => ({
@@ -114,5 +121,24 @@ describe("the lines beside a meeting", () => {
     expect(attendedLine({})).toBeNull();
     expect(attendedLine({ attended: [] })).toBeNull();
     expect(attendedLine({ attended: [{ name: "A", channel: "in-person" }] })).toBe("1 attended");
+  });
+});
+
+describe("the meeting a notice names", () => {
+  it("matches on the meeting's name and the day the notice gives", () => {
+    expect(meetingOfAnnouncement(list[0], meetings)?.id).toBe("Budget workshop");
+    expect(meetingOfAnnouncement(list[1], meetings)?.id).toBe("Board meeting");
+    expect(meetingOfAnnouncement(list[2], meetings)).toBeUndefined();
+  });
+  it("does not match the same name on another day", () => {
+    const other = ann("d", "Budget workshop, November 3 at 6:30pm");
+    expect(meetingOfAnnouncement(other, meetings)).toBeUndefined();
+  });
+});
+
+describe("a meeting's own page", () => {
+  it("is under the calendar, with the id made safe for a URL", () => {
+    expect(meetingPage("mtg-1")).toBe("/resident/calendar/mtg-1");
+    expect(meetingPage("a b/c")).toBe("/resident/calendar/a%20b%2Fc");
   });
 });

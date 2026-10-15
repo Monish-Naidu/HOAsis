@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { noticeToast, plainEmailError, replyEmailState, replyToast } from "@/lib/email/plain-error";
+import {
+  changeEmailSentence,
+  noticeToast,
+  plainEmailError,
+  replyEmailState,
+  replyToast,
+} from "@/lib/email/plain-error";
 
 const none = { answered: true, sent: 0, failed: 0, already: 0, remaining: 0 };
 
@@ -71,5 +77,28 @@ describe("replies", () => {
     expect(replyToast("sent", "Nina")).toBe("Reply sent to Nina");
     expect(replyToast("failed", "Nina")).toBe("Reply posted. The email did not go out.");
     expect(replyToast("none", "Nina")).toBe("Reply posted.");
+  });
+});
+
+describe("changeEmailSentence", () => {
+  it("counts who was emailed, and who was not", () => {
+    expect(changeEmailSentence({ ...none, sent: 1 })).toBe("Emailed 1 owner.");
+    expect(changeEmailSentence({ ...none, sent: 12, failed: 1, remaining: 2 })).toBe(
+      "Emailed 12 owners. 3 emails did not go out.",
+    );
+  });
+  it("says why nothing went", () => {
+    expect(changeEmailSentence({ ...none, answered: false })).toBe(
+      "Email did not go out: the email did not go out.",
+    );
+    expect(changeEmailSentence({ ...none, reason: "verify a domain" })).toBe(
+      "Email did not go out: email is not set up to send to owners yet (the sending domain is not verified).",
+    );
+  });
+  it("tells a repeat and an empty roster apart", () => {
+    expect(changeEmailSentence({ ...none, already: 4 })).toBe(
+      "Every owner already had this email in the last hour.",
+    );
+    expect(changeEmailSentence(none)).toBe("No owner has an email address on file.");
   });
 });

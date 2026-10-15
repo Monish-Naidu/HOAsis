@@ -20,7 +20,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import type { ActionItem, MeetingAttendee } from "@/lib/types";
 import { meetingPhase } from "@/lib/phases";
 import { activityWords } from "@/lib/activity";
-import { noticeToast } from "@/lib/email/plain-error";
+import { changeEmailSentence, noticeToast } from "@/lib/email/plain-error";
 import type { useCommunicationsActions } from "./use-communications";
 
 /**
@@ -312,12 +312,14 @@ export function useMeetingsActions(
    * Moves a meeting that has not happened to another day. The first date it
    * was noticed for is kept, so the screen can say "Was Oct 3". The database
    * refuses a past date and a meeting that is over, and so does the demo.
+   * Resolves to the sentence to toast: the new date, and how the notice of
+   * the move got to owners. False when the write was refused.
    */
   const rescheduleMeeting = useCallback(
     (meetingId: string, to: { date: string; time?: string; location?: string }) => {
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
-      if (!m) return Promise.resolve(false);
+      if (!m) return Promise.resolve<false>(false);
       if (to.date < todayIsoDate())
         throw new ValidationError("Pick a date that has not passed.", { date: to.date });
       if (m.status === "cancelled" || meetingPhase(m) === "ended") {
@@ -326,14 +328,26 @@ export function useMeetingsActions(
       const time = to.time?.trim() || undefined;
       const location = to.location?.trim() || undefined;
       if (remote.community) {
-        return remoteWrite("Changing the date", () =>
-          supabaseBrowser().rpc("reschedule_meeting", {
-            p_meeting_id: meetingId,
-            p_held_on: to.date,
-            p_held_at: time ?? null,
-            p_location: location ?? null,
-          }),
-        );
+        const rc = remote.community;
+        // The notice goes out only once the new date is on the record,
+        // because the route reads the row back for its words. A write the
+        // database refused changed nothing, so nobody is emailed about a
+        // move that never happened. One call, so a move that reached some
+        // of a long roster and stopped is carried on inside it rather than
+        // by a second press.
+        return (async () => {
+          const written = await remoteWrite("Changing the date", () =>
+            supabaseBrowser().rpc("reschedule_meeting", {
+              p_meeting_id: meetingId,
+              p_held_on: to.date,
+              p_held_at: time ?? null,
+              p_location: location ?? null,
+            }),
+          );
+          if (!written) return false;
+          const outcome = await emailNotice(rc.id, { kind: "meeting-moved", id: meetingId }, true);
+          return `${m.title} moved to ${formatDate(to.date, "long")}. ${changeEmailSentence(outcome)}`;
+        })();
       }
       logDemoActivity(communityId, "meeting", `Moved meeting "${m.title}" to ${to.date}`, {
         was: m.date,
@@ -355,17 +369,21 @@ export function useMeetingsActions(
           )
           .sort((a, b) => a.date.localeCompare(b.date)),
       );
-      return Promise.resolve(true);
+      return Promise.resolve(`${m.title} moved to ${formatDate(to.date, "long")}.`);
     },
     [remote.community, meetingList, communityId],
   );
 
-  /** Cancels a meeting that has not happened. It stays on the record with the reason. */
+  /**
+   * Cancels a meeting that has not happened. It stays on the record with the
+   * reason. Resolves to the sentence to toast: the fact, and how the notice
+   * of the cancellation got to owners. False when the write was refused.
+   */
   const cancelMeeting = useCallback(
     (meetingId: string, reason: string) => {
       const meetings = remote.community ? remote.community.meetings : meetingList;
       const m = meetings.find((x) => x.id === meetingId);
-      if (!m) return Promise.resolve(false);
+      if (!m) return Promise.resolve<false>(false);
       const why = reason.trim();
       if (why.length < 3)
         throw new ValidationError("Say why the meeting is cancelled.", { reason });
@@ -373,9 +391,21 @@ export function useMeetingsActions(
         throw new ValidationError("That meeting is over.", { meetingId });
       }
       if (remote.community) {
-        return remoteWrite("Cancelling the meeting", () =>
-          supabaseBrowser().rpc("cancel_meeting", { p_meeting_id: meetingId, p_reason: why }),
-        );
+        const rc = remote.community;
+        // As with a move: the reason has to be on the record before the
+        // route can say it, and a refused write emails nobody.
+        return (async () => {
+          const written = await remoteWrite("Cancelling the meeting", () =>
+            supabaseBrowser().rpc("cancel_meeting", { p_meeting_id: meetingId, p_reason: why }),
+          );
+          if (!written) return false;
+          const outcome = await emailNotice(
+            rc.id,
+            { kind: "meeting-cancelled", id: meetingId },
+            true,
+          );
+          return `${m.title} is cancelled. ${changeEmailSentence(outcome)}`;
+        })();
       }
       logDemoActivity(communityId, "meeting", `Cancelled meeting "${m.title}"`, { reason: why });
       sliceStore(communityId, "meetings").update((all) =>
@@ -390,7 +420,7 @@ export function useMeetingsActions(
             : x,
         ),
       );
-      return Promise.resolve(true);
+      return Promise.resolve(`${m.title} is cancelled.`);
     },
     [remote.community, meetingList, communityId],
   );

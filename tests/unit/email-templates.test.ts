@@ -7,6 +7,8 @@ import {
   boardMessageEmail,
   confirmSignupEmail,
   inviteEmail,
+  meetingCancelledEmail,
+  meetingMovedEmail,
   meetingNoticeEmail,
   pastDueEmail,
   requestUpdateEmail,
@@ -238,6 +240,71 @@ describe("meetingNoticeEmail", () => {
     expect(links(built.html)).toEqual([person.url]);
     expect(built.html).toContain("cannot be turned off");
     expect(built.text).not.toContain("Unsubscribe");
+  });
+});
+
+describe("meetingMovedEmail", () => {
+  const moved = {
+    ...person,
+    unsubscribeUrl: null,
+    title: "Annual meeting",
+    date: "2026-10-21",
+    time: "7:00 PM",
+    location: "Clubhouse",
+    videoUrl: "https://meet.example/room",
+    dialIn: "(425) 555-0110",
+    passcode: "1234",
+    agenda: ["Budget"],
+  };
+
+  it("puts the new date in the subject and says what it was", () => {
+    const built = meetingMovedEmail({ ...moved, was: "2026-10-14" });
+    expect(built.subject).toBe(
+      "Annual meeting moved to October 21, 2026 at 7:00 PM · Maple Court HOA",
+    );
+    expect(built.text).toContain(
+      "It was October 14, 2026 and is now October 21, 2026 at 7:00 PM, Clubhouse.",
+    );
+    expect(built.text).toContain(
+      "Join by video: https://meet.example/room, or dial (425) 555-0110 (passcode 1234).",
+    );
+    expect(built.text).toContain("1. Budget");
+  });
+
+  it("says only what is new when the day did not change", () => {
+    const built = meetingMovedEmail(moved);
+    expect(built.text).toContain("It is now October 21, 2026 at 7:00 PM, Clubhouse.");
+    expect(built.text).not.toContain("It was");
+  });
+
+  it("is statutory: one link, no unsubscribe", () => {
+    const built = meetingMovedEmail(moved);
+    expect(links(built.html)).toEqual([person.url]);
+    expect(built.html).toContain("cannot be turned off");
+  });
+});
+
+describe("meetingCancelledEmail", () => {
+  const called = {
+    ...person,
+    unsubscribeUrl: null,
+    title: "Annual meeting",
+    date: "2026-10-14",
+    time: "7:00 PM",
+    reason: "No quorum",
+  };
+
+  it("names the day in the subject and carries the board's reason as typed", () => {
+    const built = meetingCancelledEmail(called);
+    expect(built.subject).toBe("Annual meeting on October 14, 2026 is cancelled · Maple Court HOA");
+    expect(built.text).toContain("Annual meeting on October 14, 2026 at 7:00 PM is cancelled.");
+    expect(built.text).toContain("No quorum");
+    expect(links(built.html)).toEqual([person.url]);
+  });
+
+  it("escapes the reason in the HTML", () => {
+    const built = meetingCancelledEmail({ ...called, reason: "<b>Storm</b>" });
+    expect(built.html).not.toContain("<b>Storm</b>");
   });
 });
 
