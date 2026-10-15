@@ -1,0 +1,52 @@
+# The front door of the self-hosted Supabase services, standing in for Kong.
+# supabase-js appends /auth/v1, /rest/v1 and /storage/v1 to one base URL;
+# each prefix is stripped and handed to the service beside this container.
+# Each service checks the JWT itself, so the gateway checks nothing.
+#
+# CORS lives here, as it does in Kong: a browser on the web app's host calls
+# this host, and the services do not all answer a preflight themselves
+# (auth answers without an allow-origin, storage with a 404). Any origin is
+# allowed, as on a hosted project; the JWT is what protects the data.
+{
+	auto_https off
+	admin off
+}
+
+(cors) {
+	@preflight method OPTIONS
+	handle @preflight {
+		header {
+			Access-Control-Allow-Origin "*"
+			Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD"
+			Access-Control-Allow-Headers "{http.request.header.Access-Control-Request-Headers}"
+			Access-Control-Max-Age "86400"
+		}
+		respond 204
+	}
+	header {
+		Access-Control-Allow-Origin "*"
+		Access-Control-Expose-Headers "Content-Range, Content-Length, Content-Type, Content-Disposition, Range, X-Total-Count"
+		defer
+	}
+}
+
+:8000 {
+	handle_path /auth/v1/* {
+		import cors
+		reverse_proxy localhost:9999
+	}
+	handle_path /rest/v1/* {
+		import cors
+		reverse_proxy localhost:3000
+	}
+	handle_path /storage/v1/* {
+		import cors
+		reverse_proxy localhost:5000
+	}
+	handle /health {
+		respond "ok" 200
+	}
+	handle {
+		respond "Not here" 404
+	}
+}

@@ -179,7 +179,7 @@ function CronRuns({ report }: { report: OpsReport }) {
     <Card>
       <CardHeader
         title="Crons"
-        subtitle="Latest call per job. Each runs once a day (vercel.json); a run older than a day is the alarm."
+        subtitle="Latest call per job. Each runs once a day (vercel.json on Vercel, the scheduled jobs on Azure); a run older than a day is the alarm."
       />
       <Table
         head={["Job", "Started", "Took", "Result", "Summary", "Reference"]}
@@ -301,7 +301,7 @@ function LatestErrors({ report }: { report: OpsReport }) {
     <Card>
       <CardHeader
         title="Latest errors"
-        subtitle="Newest 50. The reference is what a person reads off the error screen; search Vercel logs or Sentry for it."
+        subtitle="Newest 50. The reference is what a person reads off the error screen; search the host's logs or Sentry for it."
       />
       <Table
         head={["When", "Reference", "Level", "Source", "Route", "Message", "Association"]}

@@ -1,4 +1,5 @@
 import type { supabaseAdmin } from "@/lib/supabase/server";
+import { isProduction } from "@/lib/deploy-env";
 
 /**
  * The locks on the test tools, in one place so both routes share them.
@@ -44,7 +45,7 @@ export function projectRef(url: string | undefined): string | null {
 
 /** Why the environment refuses the test tools, or null when it allows them. */
 export function environmentBlocks(env: Env = process.env): string | null {
-  if (env.VERCEL_ENV === "production" || env.NODE_ENV === "production") {
+  if (isProduction(env) || env.NODE_ENV === "production") {
     return "Test tools do not exist in production.";
   }
   if (env.ALLOW_TEST_RESET !== "true") {
