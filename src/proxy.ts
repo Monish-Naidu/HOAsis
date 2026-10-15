@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabase } from "@/lib/supabase/env";
-import { apexForWww, communityPath, slugFromHost } from "@/lib/community-links";
+import { communityPath, slugFromHost, wwwForApex } from "@/lib/community-links";
 import { REQUEST_ID_HEADER, requestIdFrom } from "@/lib/log";
 
 /**
@@ -32,10 +32,11 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const url = request.nextUrl;
 
-  // One address: www goes to the apex, permanently, path and query kept.
-  const apex = apexForWww(host);
-  if (apex) {
-    return NextResponse.redirect(new URL(`${url.pathname}${url.search}`, `https://${apex}`), 308);
+  // One address for pages: the bare domain goes to www, permanently, path
+  // and query kept. API routes and the auth callback are served as they are.
+  const www = wwwForApex(host, url.pathname);
+  if (www) {
+    return NextResponse.redirect(new URL(`${url.pathname}${url.search}`, `https://${www}`), 308);
   }
 
   const slug = slugFromHost(host);

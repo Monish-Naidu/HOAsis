@@ -128,20 +128,26 @@ export function slugFromHost(
 }
 
 /**
- * The host to send `www.` traffic to, or null when the host is already the
- * one to use. One address per page: `www.yourhoasis.com/pricing` is
- * `yourhoasis.com/pricing`, for people, their sessions and search engines.
- * Vercel did this redirect for us; on Azure the proxy does it. Only the
- * product's own roots; a vanity host or a preview address is left alone.
+ * The host a page request should be redirected to, or null to serve it.
+ * One address per page, and the address is `www.yourhoasis.com`:
+ * `yourhoasis.com/pricing` goes to `www.yourhoasis.com/pricing`. Vercel
+ * did a redirect for us; on Azure the proxy does it.
+ *
+ * Only pages. Stripe's webhooks and the daily jobs call `/api/...` on the
+ * bare domain and do not follow redirects, and a magic link lands on
+ * `/auth/callback` there; those are served where they arrive. A vanity host,
+ * a preview address and localhost are left alone.
  */
-export function apexForWww(
+export function wwwForApex(
   host: string | null | undefined,
+  pathname: string,
   roots: readonly string[] = VANITY_ROOTS,
 ): string | null {
   if (!host) return null;
+  if (pathname.startsWith("/api/") || pathname.startsWith("/auth/")) return null;
   const bare = host.toLowerCase().replace(/:\d+$/, "");
   for (const root of roots) {
-    if (bare === `www.${root}` && root !== "localhost") return root;
+    if (bare === root && root !== "localhost") return `www.${root}`;
   }
   return null;
 }
