@@ -1,10 +1,3 @@
-/**
- * The browser side of "send the confirmation email again".
- *
- * Kept apart from the join panel so the sign-in and join screens share one call
- * and one set of failure words.
- */
-
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export type ResendResult = { ok: true } | { ok: false; message: string };
@@ -12,10 +5,13 @@ export type ResendResult = { ok: true } | { ok: false; message: string };
 /**
  * Asks for the confirmation email again.
  *
+ * Kept apart from the line that offers it, so the join page, the sign-in
+ * page and the setup wizard share one call and one set of failure words.
+ *
  * Goes through our own route, which sends it the way sign up does and is
  * limited by the same limiter. A 503 means no mail key is set on this
- * deployment, and Supabase's own mailer is the fallback, as it is for sign up.
- * A refusal is returned in the route's own words.
+ * deployment, and Supabase's own mailer is the fallback, as it is for sign
+ * up. A refusal is returned in the route's own words.
  */
 export async function resendConfirmation(email: string): Promise<ResendResult> {
   try {

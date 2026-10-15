@@ -397,6 +397,54 @@ export function inviteEmail(input: {
 }
 
 /**
+ * The board's notice that somebody asked to join.
+ *
+ * One email per request, to every officer who can manage homeowners, so a
+ * request never waits on the board happening to open Homeowners. The
+ * officer's next move is on that page, so the one link goes straight there.
+ */
+export function joinRequestEmail(input: {
+  associationName: string;
+  officerName: string;
+  requesterName: string;
+  requesterEmail: string;
+  /** The home the person says is theirs. Empty when they typed none. */
+  unitLabel: string;
+  /** What the person wrote for the board. Empty when they wrote nothing. */
+  note: string;
+  url: string;
+}) {
+  const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
+  const officer = input.officerName.trim().split(/\s+/)[0] || "there";
+  const requester = oneLine(input.requesterName) || "Somebody";
+  const home = input.unitLabel.trim()
+    ? ` They say their home is ${escapeHtml(input.unitLabel.trim())}.`
+    : "";
+  const note = input.note.trim() ? ` They wrote: "${escapeHtml(input.note.trim())}"` : "";
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
+      ${escapeHtml(requester)} asked to join
+    </h1>
+    <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
+      Hi ${escapeHtml(officer)}. ${escapeHtml(requester)} (${escapeHtml(input.requesterEmail)}) used
+      the join code and is waiting on the board's answer.${home}${note}
+    </p>`;
+  return {
+    subject: `${requester} asked to join ${input.associationName}`,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `${requester} is waiting on the board of ${input.associationName}.`,
+      body,
+      cta: { label: "Review their request", url: input.url },
+      footer:
+        "Sent to the officers who manage the roster, through Your HOAsis. " +
+        "Requests wait on the Homeowners page until they are decided.",
+    }),
+    text: `Hi ${officer}. ${requester} (${input.requesterEmail}) used the join code and is waiting on the board's answer.${home ? ` They say their home is ${input.unitLabel.trim()}.` : ""}${note ? ` They wrote: "${input.note.trim()}"` : ""}\n\nReview their request: ${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/**
  * Makes typed words safe to sit in HTML, as text or inside a double-quoted
  * attribute. Subjects and the plain text part are not HTML and never go
  * through this, or "&amp;" shows up in an inbox.

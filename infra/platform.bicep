@@ -22,8 +22,11 @@ param postgresAdminPassword string
 @description('Public IPv4 of the laptop running the migration, allowed through the Postgres firewall. Empty adds no rule.')
 param clientIp string = ''
 
-@description('Who gets the budget emails.')
+@description('Who gets the budget and the site-down emails.')
 param budgetEmail string
+
+@description('The address the uptime check watches. Empty skips the check (before the domain exists).')
+param uptimeUrl string = ''
 
 @description('Monthly spend, in dollars, at which the budget alerts fire in full. Under the $150 credit on purpose.')
 param budgetAmount int = 120
@@ -296,6 +299,82 @@ resource budget 'Microsoft.Consumption/budgets@2023-11-01' = {
         contactEmails: [ budgetEmail ]
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------- uptime
+
+// "Is the site up" from outside: Application Insights calls the health
+// route from three regions every five minutes and an alert emails when a
+// region fails twice running. The daily digest says what went wrong inside
+// the app; this says when nobody can reach it at all.
+resource insights 'Microsoft.Insights/components@2020-02-02' = if (uptimeUrl != '') {
+  name: 'appi-${baseName}'
+  location: location
+  tags: tags
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logs.id
+    IngestionMode: 'LogAnalytics'
+    publicNetworkAccessForIngestion: 'Enabled'
+    publicNetworkAccessForQuery: 'Enabled'
+  }
+}
+
+resource alertEmail 'Microsoft.Insights/actionGroups@2023-01-01' = if (uptimeUrl != '') {
+  name: 'ag-${baseName}-owner'
+  location: 'global'
+  tags: tags
+  properties: {
+    groupShortName: 'hoasis'
+    enabled: true
+    emailReceivers: [ { name: 'owner', emailAddress: budgetEmail, useCommonAlertSchema: true } ]
+  }
+}
+
+resource uptime 'Microsoft.Insights/webtests@2022-06-15' = if (uptimeUrl != '') {
+  name: 'uptime-${baseName}'
+  location: location
+  tags: union(tags, { 'hidden-link:${insights.id}': 'Resource' })
+  kind: 'standard'
+  properties: {
+    Name: 'uptime-${baseName}'
+    SyntheticMonitorId: 'uptime-${baseName}'
+    Enabled: true
+    Frequency: 300
+    Timeout: 30
+    Kind: 'standard'
+    RetryEnabled: true
+    Locations: [
+      { Id: 'us-ca-sjc-azr' }
+      { Id: 'us-tx-sn1-azr' }
+      { Id: 'us-va-ash-azr' }
+    ]
+    Request: { RequestUrl: uptimeUrl, HttpVerb: 'GET', ParseDependentRequests: false }
+    ValidationRules: { ExpectedHttpStatusCode: 200, SSLCheck: true, SSLCertRemainingLifetimeCheck: 7 }
+  }
+}
+
+resource uptimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (uptimeUrl != '') {
+  name: 'alert-${baseName}-down'
+  location: 'global'
+  tags: union(tags, { 'hidden-link:${insights.id}': 'Resource', 'hidden-link:${uptime.id}': 'Resource' })
+  properties: {
+    description: 'yourhoasis.com did not answer 200 from two regions in a row.'
+    severity: 1
+    enabled: true
+    scopes: [ uptime.id, insights.id ]
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT10M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.WebtestLocationAvailabilityCriteria'
+      webTestId: uptime.id
+      componentId: insights.id
+      failedLocationCount: 2
+    }
+    autoMitigate: true
+    actions: [ { actionGroupId: alertEmail.id } ]
   }
 }
 

@@ -12,13 +12,13 @@ import {
   fieldClass,
   textareaClass,
 } from "@/components/ui/primitives";
+import { ResendLine } from "@/components/app/resend-line";
 import { useAppState, useCommunityById, useStorageReady } from "@/lib/app-state";
 import { useAuth, signUp } from "@/lib/auth";
 import { parseInvitation } from "@/lib/invitations";
 import { hasSupabase } from "@/lib/supabase/env";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { joinReturnPath, openInvitedHome } from "./invited";
-import { resendConfirmation } from "./resend";
 import { homeDues } from "@/lib/home-types";
 import { isEmail } from "@/lib/input-checks";
 import { cn, money } from "@/lib/utils";
@@ -596,40 +596,6 @@ function JoinForm({
         ) : null}
       </div>
     </Card>
-  );
-}
-
-/**
- * "Send it again" under the Check your email message. Says "Sent again" when
- * the email went, or the refusal in the route's own words, such as the
- * limiter's "Too many attempts".
- */
-export function ResendLine({ email }: { email: string }) {
-  const [state, setState] = useState<
-    { kind: "idle" | "sending" | "sent" } | { kind: "refused"; message: string }
-  >({
-    kind: "idle",
-  });
-  return (
-    <p className="mt-4 text-footnote text-fg-muted">
-      Nothing yet? Check your spam folder, or{" "}
-      <button
-        type="button"
-        disabled={state.kind === "sending"}
-        onClick={async () => {
-          setState({ kind: "sending" });
-          const result = await resendConfirmation(email);
-          setState(result.ok ? { kind: "sent" } : { kind: "refused", message: result.message });
-        }}
-        className="font-medium text-accent hover:underline disabled:opacity-60"
-      >
-        {state.kind === "sending" ? "Sending" : "Send it again"}
-      </button>
-      .{" "}
-      <span role="status" className={state.kind === "refused" ? "text-danger" : undefined}>
-        {state.kind === "sent" ? "Sent again" : state.kind === "refused" ? state.message : null}
-      </span>
-    </p>
   );
 }
 

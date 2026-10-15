@@ -242,6 +242,18 @@
         }
       }
     },
+    "/join/notify": {
+      "post": {
+        "operationId": "post_join_notify",
+        "summary": "POST /join/notify",
+        "description": "Handler source: src/app/api/join/notify/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
     "/log": {
       "post": {
         "operationId": "post_log",

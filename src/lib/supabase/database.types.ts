@@ -1121,6 +1121,7 @@ export type Database = {
       join_requests: {
         Row: {
           association_id: string;
+          board_notified_at: string | null;
           created_at: string;
           decided_by: string | null;
           decided_on: string | null;
@@ -1133,6 +1134,7 @@ export type Database = {
         };
         Insert: {
           association_id: string;
+          board_notified_at?: string | null;
           created_at?: string;
           decided_by?: string | null;
           decided_on?: string | null;
@@ -1145,6 +1147,7 @@ export type Database = {
         };
         Update: {
           association_id?: string;
+          board_notified_at?: string | null;
           created_at?: string;
           decided_by?: string | null;
           decided_on?: string | null;
@@ -3224,7 +3227,8 @@ export type Database = {
         | "billing"
         | "invite"
         | "message"
-        | "request";
+        | "request"
+        | "join";
       payment_rail: "ach" | "card" | "apple-pay" | "google-pay" | "check" | "cash";
       payment_state: "pending" | "settled" | "failed" | "refunded";
       post_status: "pending" | "published" | "rejected";
@@ -3394,6 +3398,7 @@ export const Constants = {
         "invite",
         "message",
         "request",
+        "join",
       ],
       payment_rail: ["ach", "card", "apple-pay", "google-pay", "check", "cash"],
       payment_state: ["pending", "settled", "failed", "refunded"],

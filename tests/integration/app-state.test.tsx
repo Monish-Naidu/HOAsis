@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
@@ -1078,6 +1078,89 @@ describe("the roster", () => {
   });
 });
 
+describe("asking to join (demo)", () => {
+  // The demo's own code, so the ask stays in this browser and nothing is
+  // sent anywhere.
+  const ask = (state: ReturnType<typeof useAppState>) =>
+    state.requestToJoin({
+      code: "meadow",
+      name: "Nadia Bell",
+      email: "nadia@example.com",
+      unit: "115 Maple Lane",
+      note: "Closed last week",
+    });
+
+  it("records the ask for the board to see, once per address", async () => {
+    const asked = vi.fn();
+    vi.stubGlobal("fetch", asked);
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    let outcome: Awaited<ReturnType<typeof ask>> | undefined;
+
+    await act(async () => {
+      outcome = await ask(result.current);
+    });
+
+    expect(outcome).toEqual({
+      ok: true,
+      association: result.current.community.settings.displayName,
+    });
+    const mine = result.current.community.joinRequests.filter(
+      (j) => j.email === "nadia@example.com",
+    );
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({
+      name: "Nadia Bell",
+      unit: "115 Maple Lane",
+      note: "Closed last week",
+      status: "pending",
+    });
+
+    // A second submit from the same address is the same ask, not a second
+    // one, and the board is not asked for twice: in the demo nothing is
+    // sent at all.
+    await act(async () => {
+      outcome = await ask(result.current);
+    });
+    expect(
+      result.current.community.joinRequests.filter((j) => j.email === "nadia@example.com"),
+    ).toHaveLength(1);
+    expect(asked).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("refuses an ask with no name or no working address", async () => {
+    const { result } = renderHook(() => useAppState(), { wrapper });
+    await act(async () => {
+      expect(
+        await result.current.requestToJoin({
+          code: "meadow",
+          name: "",
+          email: "nadia@example.com",
+          unit: "",
+          note: "",
+        }),
+      ).toEqual({ ok: false, error: "Enter your name and a working email address." });
+      expect(
+        await result.current.requestToJoin({
+          code: "meadow",
+          name: "Nadia Bell",
+          email: "not an address",
+          unit: "",
+          note: "",
+        }),
+      ).toEqual({ ok: false, error: "Enter your name and a working email address." });
+      expect(
+        await result.current.requestToJoin({
+          code: "  ",
+          name: "Nadia Bell",
+          email: "nadia@example.com",
+          unit: "",
+          note: "",
+        }),
+      ).toEqual({ ok: false, error: "Enter the join code from your board." });
+    });
+  });
+});
 describe("letting somebody in on a home already on the register (demo)", () => {
   const pending = (state: ReturnType<typeof useAppState>) =>
     state.community.joinRequests.find((j) => j.status === "pending")!;

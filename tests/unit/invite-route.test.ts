@@ -102,11 +102,11 @@ vi.mock("@/lib/supabase/server", () => ({
 const { POST } = await import("@/app/api/email/invite/route");
 const { INVITES_PER_HOUR } = await import("@/lib/email/invite-limit");
 
-function invite(unitIds: string[]) {
+function invite(unitIds: string[], extra: Record<string, unknown> = {}) {
   return new NextRequest("http://localhost/api/email/invite", {
     method: "POST",
     headers: { host: "localhost" },
-    body: JSON.stringify({ associationId: "assoc-1", unitIds, kind: "invite" }),
+    body: JSON.stringify({ associationId: "assoc-1", unitIds, kind: "invite", ...extra }),
   });
 }
 
@@ -233,5 +233,46 @@ describe("inviting one household", () => {
     const response = await POST(invite(["unit-1"]));
     expect(await response.json()).toMatchObject({ sent: 1, already: 0 });
     expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("a welcome for one person on a home", () => {
+  it("goes to the address the board named, not to the home's other owner", async () => {
+    // A second owner let in from a join request: the home keeps its first
+    // owner, and only the newcomer is told they are in.
+    members = [
+      household(1),
+      {
+        unit_id: "unit-1",
+        full_name: "Quinn Ross",
+        invited_email: "quinn@example.com",
+        profile_id: null,
+        units: { label: "1" },
+      },
+    ];
+
+    const response = await POST(
+      invite(["unit-1"], { kind: "welcome", onlyEmail: "Quinn@example.com" }),
+    );
+
+    expect(await response.json()).toMatchObject({ sent: 1, failed: 0 });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls.map(([message]) => message.to)).toEqual(["quinn@example.com"]);
+    expect((send.mock.calls[0] as unknown as [{ subject: string }])[0].subject).toBe(
+      "You're in: Maple Court HOA",
+    );
+  });
+
+  it("sends nothing when the address is not one of the home's members", async () => {
+    members = [household(1)];
+    const response = await POST(invite(["unit-1"], { onlyEmail: "nobody@example.com" }));
+    expect(await response.json()).toMatchObject({ sent: 0, failed: 0 });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("refuses an address that is not an address", async () => {
+    const response = await POST(invite(["unit-1"], { onlyEmail: "not an address" }));
+    expect(response.status).toBe(400);
+    expect(send).not.toHaveBeenCalled();
   });
 });
