@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { pinnedFirst } from "@/lib/announcements";
-import { ChevronDown, Megaphone } from "lucide-react";
+import { ChevronDown, ChevronRight, Megaphone } from "lucide-react";
 import { Card, IconTile, SectionTitle } from "@/components/ui/primitives";
 import { useAppState } from "@/lib/app-state";
 import type { Announcement } from "@/lib/types";
-import { currentAnnouncements } from "@/lib/meeting-notices";
+import { currentAnnouncements, meetingOfAnnouncement, meetingPage } from "@/lib/meeting-notices";
 import { formatDate, todayIsoDate } from "@/lib/utils";
 
 /** How many show before the "Earlier announcements" fold: the pinned one and the newest. */
@@ -36,6 +37,15 @@ export function Announcements() {
   const earlier = others.slice(shown.length);
   if (!pinned && shown.length === 0) return null;
 
+  // The notice the board posted names the meeting in its own words; a card
+  // rewritten by the app can drop the day it names, so the match runs on the
+  // announcement as it was posted.
+  const meetingLink = (a: Announcement): string | null => {
+    const original = community.announcements.find((x) => x.id === a.id);
+    const meeting = original ? meetingOfAnnouncement(original, community.meetings) : undefined;
+    return meeting ? meetingPage(meeting.id) : null;
+  };
+
   return (
     <section>
       <SectionTitle>From the board</SectionTitle>
@@ -52,9 +62,7 @@ export function Announcements() {
                   Pinned · {pinned.category}
                 </span>
               </div>
-              <h3 className="text-body font-semibold leading-snug tracking-[-0.01em] text-fg">
-                {pinned.title}
-              </h3>
+              <AnnouncementTitle announcement={pinned} href={meetingLink(pinned)} />
               <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{pinned.body}</p>
               <p className="mt-2.5 text-footnote text-fg-subtle">
                 {pinned.author} · {formatDate(pinned.postedDate)}
@@ -63,7 +71,7 @@ export function Announcements() {
           </Card>
         ) : null}
         {shown.map((a) => (
-          <AnnouncementCard key={a.id} announcement={a} />
+          <AnnouncementCard key={a.id} announcement={a} href={meetingLink(a)} />
         ))}
       </div>
 
@@ -75,7 +83,7 @@ export function Announcements() {
           </summary>
           <div className="mt-3 grid gap-3 @3xl:grid-cols-2 [&>*]:min-w-0">
             {earlier.map((a) => (
-              <AnnouncementCard key={a.id} announcement={a} />
+              <AnnouncementCard key={a.id} announcement={a} href={meetingLink(a)} />
             ))}
           </div>
         </details>
@@ -84,16 +92,68 @@ export function Announcements() {
   );
 }
 
+/** The card's title: a plain heading, or the link to the meeting it names. */
+function AnnouncementTitle({
+  announcement: a,
+  href,
+  className,
+}: {
+  announcement: Announcement;
+  href: string | null;
+  className?: string;
+}) {
+  if (!href) {
+    return (
+      <h3
+        className={`text-body font-semibold leading-snug tracking-[-0.01em] text-fg${className ? ` ${className}` : ""}`}
+      >
+        {a.title}
+      </h3>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-start gap-1 text-body font-semibold leading-snug tracking-[-0.01em] text-fg underline decoration-border-2 underline-offset-2 hover:decoration-fg${className ? ` ${className}` : ""}`}
+    >
+      {a.title}
+      <ChevronRight className="mt-1 size-3.5 shrink-0 text-fg-subtle" />
+    </Link>
+  );
+}
+
 /** Two lines of the text while closed, all of it once opened, in the same place. */
-function AnnouncementCard({ announcement: a }: { announcement: Announcement }) {
+function AnnouncementCard({
+  announcement: a,
+  href,
+}: {
+  announcement: Announcement;
+  /** Set when the announcement is a notice about a meeting, whose own page carries the whole story. */
+  href: string | null;
+}) {
+  if (href) {
+    // A meeting notice has a page of its own with the agenda and how to
+    // join, so the card shows its short text whole and the title opens it,
+    // rather than folding the two sentences behind a "Read more".
+    return (
+      <Card>
+        <div className="px-4 pt-4">
+          <span className="text-footnote font-semibold text-fg-muted">{a.category}</span>
+          <AnnouncementTitle announcement={a} href={href} className="mt-1" />
+          <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{a.body}</p>
+        </div>
+        <p className="mt-2.5 px-4 pb-4 text-footnote text-fg-subtle">
+          {a.author} · {formatDate(a.postedDate)}
+        </p>
+      </Card>
+    );
+  }
   return (
     <Card>
       <details className="group/card">
         <summary className="cursor-pointer list-none px-4 pt-4 [&::-webkit-details-marker]:hidden">
           <span className="text-footnote font-semibold text-fg-muted">{a.category}</span>
-          <h3 className="mt-1 text-body font-semibold leading-snug tracking-[-0.01em] text-fg">
-            {a.title}
-          </h3>
+          <AnnouncementTitle announcement={a} href={null} className="mt-1" />
           <p className="mt-1.5 line-clamp-2 text-body leading-relaxed text-fg-muted group-open/card:line-clamp-none">
             {a.body}
           </p>

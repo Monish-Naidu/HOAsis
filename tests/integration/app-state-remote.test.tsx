@@ -2333,6 +2333,60 @@ describe("a meeting after the notice", () => {
       p_minutes: "Approved the budget.",
       p_attended: [{ name: "Arya Mehr", unit: "7", role: null, channel: "in-person" }],
     });
+    // A move and then a cancellation each send their own notice, in that
+    // order, so an owner hears first of the new date and then of the end.
+    expect(fetched).toMatchObject([
+      { url: "/api/email/notify", body: { kind: "meeting-moved", id: upcoming().id } },
+      { url: "/api/email/notify", body: { kind: "meeting-cancelled", id: upcoming().id } },
+    ]);
+  });
+  it("emails one notice per move, once the new date is on the record", async () => {
+    const { result } = renderApp();
+    let said: string | false = false;
+    await act(async () => {
+      said = await result.current.rescheduleMeeting(upcoming().id, { date: "2030-01-05" });
+    });
+    await act(async () => {
+      await result.current.rescheduleMeeting(upcoming().id, { date: "2030-02-02" });
+    });
+    // Two moves in a row, two notices: each says the date the row then held.
+    expect(fetched.filter((f) => f.url === "/api/email/notify").map((f) => f.body)).toMatchObject([
+      { kind: "meeting-moved", id: upcoming().id },
+      { kind: "meeting-moved", id: upcoming().id },
+    ]);
+    // The toast carries both halves: what changed, and where the notice got
+    // to. The route answered here having sent to nobody.
+    expect(said).toBe(
+      `${upcoming().title} moved to January 5, 2030. No owner has an email address on file.`,
+    );
+  });
+  it("emails nobody about a move the database refused", async () => {
+    db.answer = (s) =>
+      s.target === "rpc:reschedule_meeting"
+        ? { error: { message: "That meeting is over" } }
+        : undefined;
+    const { result } = renderApp();
+    let said: string | false = "unset";
+    await act(async () => {
+      said = await result.current.rescheduleMeeting(upcoming().id, { date: "2030-01-05" });
+    });
+    expect(said).toBe(false);
+    expect(fetched).toEqual([]);
+    expect(errors).toEqual(["Changing the date: That meeting is over"]);
+  });
+  it("emails the cancellation, and says when the email could not go", async () => {
+    route = () => ({ ok: false, body: { error: "The sending domain is not verified" } });
+    const { result } = renderApp();
+    let said: string | false = false;
+    await act(async () => {
+      said = await result.current.cancelMeeting(upcoming().id, "Storm warning");
+    });
+    expect(fetched.filter((f) => f.url === "/api/email/notify").map((f) => f.body)).toMatchObject([
+      { kind: "meeting-cancelled", id: upcoming().id },
+    ]);
+    expect(said).toBe(
+      `${upcoming().title} is cancelled. Email did not go out: email is not set up to send to owners yet (the sending domain is not verified).`,
+    );
   });
 
   it("writes nothing for a past day, a blank reason or thin minutes", async () => {

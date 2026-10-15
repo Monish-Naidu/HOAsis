@@ -58,14 +58,28 @@ export function videoJoinUrl(meeting: Pick<Meeting, "id" | "videoRoom">, scope: 
  * How to join, in one place, so the row, the resident calendar, the notice
  * and the email cannot disagree. A link the board typed (anything starting
  * with http) IS the video link; the automatic room is only for a board that
- * typed nothing. What was typed and is not a URL is a phone number to dial.
+ * typed nothing. What was typed and is not a URL is shown as a number to
+ * dial, and only when it really is one: another room's address typed
+ * without its `https://` used to reach owners as a "Dial in" line.
  * The passcode goes with whichever of the two applies.
  */
 export interface MeetingJoin {
   videoUrl: string;
-  /** A phone number or other text to dial. Empty when the board typed a link or nothing. */
+  /** A phone number to dial. Empty when the board typed a link, something that is not a number, or nothing. */
   dialIn: string;
   passcode: string;
+}
+
+/**
+ * Whether the dial-in field holds a phone number: digits and the punctuation
+ * people type around them, and enough digits to dial. Everything else, from
+ * a bare meeting URL to "Zoom ID 8842", is not something a phone can call.
+ */
+export function isDialInNumber(value: string): boolean {
+  const text = value.trim();
+  if (!text) return false;
+  const digits = text.replace(/[\s().\-+/]/g, "");
+  return /^\d{7,15}$/.test(digits);
 }
 
 export function meetingJoin(
@@ -75,5 +89,9 @@ export function meetingJoin(
   const typed = (meeting.dialIn ?? "").trim();
   const passcode = (meeting.passcode ?? "").trim();
   if (/^https?:\/\//i.test(typed)) return { videoUrl: typed, dialIn: "", passcode };
-  return { videoUrl: videoJoinUrl(meeting, associationId), dialIn: typed, passcode };
+  return {
+    videoUrl: videoJoinUrl(meeting, associationId),
+    dialIn: isDialInNumber(typed) ? typed : "",
+    passcode,
+  };
 }

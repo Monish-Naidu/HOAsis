@@ -2,13 +2,17 @@ import type { Announcement, DocumentRecord, Meeting } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
 /**
- * Announcements about a meeting that has already happened.
+ * Meetings as a resident reads them.
  *
  * A meeting notice is posted as an ordinary announcement with the meeting's
  * title and day written into its title, and nothing else ties the two
  * together, so the link is read back from that text. A notice for a meeting
  * before today is stale news: it is dropped, unless the meeting has minutes
  * on file, when it becomes a pointer to them.
+ *
+ * The small wording a meeting's rows share, and the address of a meeting's
+ * own page, live here too so every surface that names a meeting says the
+ * same thing and links the same place.
  */
 
 /** "October 3", the way a notice writes the day. */
@@ -16,7 +20,15 @@ function dayText(date: string): string {
   return formatDate(date, "long").replace(/,\s*\d{4}$/, "");
 }
 
-function meetingOf(a: Announcement, meetings: readonly Meeting[]): Meeting | undefined {
+/**
+ * The meeting a notice was posted for, read back from the text the notice
+ * was titled with: the meeting's own name and the day it names. Boards name
+ * meetings freely, so this is a match and not a stored link.
+ */
+export function meetingOfAnnouncement(
+  a: Announcement,
+  meetings: readonly Meeting[],
+): Meeting | undefined {
   const title = a.title.toLowerCase();
   return meetings.find(
     (m) => title.includes(m.title.toLowerCase()) && a.title.includes(dayText(m.date)),
@@ -43,7 +55,7 @@ export function currentAnnouncements(
 ): Announcement[] {
   const out: Announcement[] = [];
   for (const a of announcements) {
-    const m = meetingOf(a, meetings);
+    const m = meetingOfAnnouncement(a, meetings);
     if (m?.status === "cancelled") {
       out.push({
         ...a,
@@ -90,4 +102,12 @@ export function wasLine(m: Pick<Meeting, "rescheduledFrom" | "date">): string | 
 export function attendedLine(m: Pick<Meeting, "attended">): string | null {
   const n = m.attended?.length ?? 0;
   return n ? `${n} attended` : null;
+}
+
+/**
+ * The meeting's own page, where the agenda, how to join and the minutes live.
+ * Every list that names a meeting links here, so the address is written once.
+ */
+export function meetingPage(id: string): string {
+  return `/resident/calendar/${encodeURIComponent(id)}`;
 }

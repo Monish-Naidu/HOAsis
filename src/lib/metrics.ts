@@ -15,6 +15,7 @@ import {
 import { policyFor } from "@/lib/collections";
 import { totalDues } from "@/lib/home-types";
 import { isDuesLine, isPaymentReversal } from "@/lib/statement";
+import { meetingPage } from "@/lib/meeting-notices";
 
 /**
  * Derived figures, as pure functions of one community.
@@ -1435,12 +1436,13 @@ export function calendarEntries(c: Community) {
       id: `cal-${m.id}`,
       date: m.date,
       // A cancelled meeting stays on the calendar, marked, so nobody turns
-      // up for it; the Meetings page carries the reason.
+      // up for it; the meeting's own page carries the reason.
       title: m.status === "cancelled" ? `Cancelled: ${m.title}` : m.title,
       detail: `${m.time} · ${m.location}`,
       kind: "meeting",
-      // The meeting's own row on the calendar page, where the RSVP is.
-      href: `/resident/calendar#meeting-${m.id}`,
+      // The meeting's own page, where the agenda, the join details, the
+      // RSVP and the minutes live.
+      href: meetingPage(m.id),
     });
   }
   for (const b of c.ballots) {

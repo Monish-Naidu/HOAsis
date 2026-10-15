@@ -10,10 +10,13 @@ import {
   announcementEmail,
   ballotOpenEmail,
   boardMessageEmail,
+  meetingCancelledEmail,
+  meetingMovedEmail,
   meetingNoticeEmail,
   requestUpdateEmail,
 } from "./templates";
 import { meetingJoin } from "@/lib/meetings/video";
+import { meetingPage } from "@/lib/meeting-notices";
 import { emailSender, resendKey } from "./sender";
 import { unsubscribeUrl } from "./tokens";
 import { replyToFor } from "./reply-to";
@@ -32,10 +35,10 @@ import {
 /**
  * Everything the board sends that is not a dues run or an invitation.
  *
- * One sender for six moments, because they share every rule that matters:
- * the recipient list comes from `email_recipients`, which owns the opt out;
- * each person gets one link that signs them in; every attempt lands in
- * `email_log`, sent or not; and the words come from the row the board just
+ * One sender for the board's notices, because they share every rule that
+ * matters: the recipient list comes from `email_recipients`, which owns the
+ * opt out; each person gets one link that signs them in; every attempt lands
+ * in `email_log`, sent or not; and the words come from the row the board just
  * wrote, read back here, rather than from whatever the browser posted.
  *
  * A notice to more than one home passes over anybody who got the same
@@ -49,7 +52,15 @@ import {
  * runs, and this trusts that check the way the dues sender does.
  */
 
-export type NotifyKind = "announcement" | "meeting" | "ballot" | "letter" | "message" | "request";
+export type NotifyKind =
+  | "announcement"
+  | "meeting"
+  | "meeting-moved"
+  | "meeting-cancelled"
+  | "ballot"
+  | "letter"
+  | "message"
+  | "request";
 
 type Category = Database["public"]["Enums"]["email_category"];
 
@@ -95,6 +106,11 @@ export interface NotifyResult {
 const CATEGORY: Record<NotifyKind, Category> = {
   announcement: "community",
   meeting: "meeting",
+  // A moved or cancelled meeting is notice of that meeting, so it rides the
+  // statutory category: the log, the repeat guard and the opt-out rule all
+  // read it as the meeting notice they follow.
+  "meeting-moved": "meeting",
+  "meeting-cancelled": "meeting",
   ballot: "ballot",
   letter: "delinquency",
   message: "message",
@@ -105,6 +121,8 @@ const CATEGORY: Record<NotifyKind, Category> = {
 const LANDING: Record<NotifyKind, string> = {
   announcement: "/resident",
   meeting: "/resident/calendar",
+  "meeting-moved": "/resident/calendar",
+  "meeting-cancelled": "/resident/calendar",
   ballot: "/resident/vote",
   letter: "/resident/pay",
   message: "/resident/messages",
@@ -172,6 +190,10 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
   let path = LANDING[input.kind];
   if (input.kind === "request" && content.reference)
     path = `/resident/requests/${content.reference}`;
+  // The notice of a move or a cancellation lands on the meeting itself, where
+  // the new date and the reason are, not on the list it sits in.
+  if ((input.kind === "meeting-moved" || input.kind === "meeting-cancelled") && input.id)
+    path = meetingPage(input.id);
 
   // Resend allows two requests a second, and the function has a time limit.
   // The pacer keeps under the first and stops the loop before the second
@@ -355,6 +377,62 @@ async function readContent(admin: Admin, input: NotifyInput): Promise<Content | 
             passcode: join.passcode || undefined,
             videoUrl: join.videoUrl,
             agenda: Array.isArray(data.agenda) ? (data.agenda as string[]) : [],
+          }),
+      };
+    }
+    case "meeting-moved": {
+      if (!input.id) return null;
+      const meetingId = input.id;
+      const { data } = await admin
+        .from("meetings")
+        .select(
+          "title, held_on, held_at, location, dial_in, passcode, agenda, rescheduled_from, status",
+        )
+        .eq("id", meetingId)
+        .eq("association_id", input.associationId)
+        .maybeSingle();
+      // A meeting cancelled while its move was on the way has a cancellation
+      // notice of its own coming after, which says more than the new date.
+      if (!data || data.status === "cancelled") return null;
+      const join = meetingJoin(
+        { id: meetingId, dialIn: data.dial_in, passcode: data.passcode },
+        input.associationId,
+      );
+      return {
+        build: (p) =>
+          meetingMovedEmail({
+            ...p,
+            title: data.title,
+            was: data.rescheduled_from ?? undefined,
+            date: data.held_on,
+            time: clockTime(data.held_at ?? ""),
+            location: data.location,
+            dialIn: join.dialIn || undefined,
+            passcode: join.passcode || undefined,
+            videoUrl: join.videoUrl,
+            agenda: Array.isArray(data.agenda) ? (data.agenda as string[]) : [],
+          }),
+      };
+    }
+    case "meeting-cancelled": {
+      if (!input.id) return null;
+      const { data } = await admin
+        .from("meetings")
+        .select("title, held_on, held_at, cancel_reason, status")
+        .eq("id", input.id)
+        .eq("association_id", input.associationId)
+        .maybeSingle();
+      // Only a meeting that is cancelled on the record is announced as one,
+      // so a stale request cannot un-cancel a meeting in somebody's inbox.
+      if (!data || data.status !== "cancelled") return null;
+      return {
+        build: (p) =>
+          meetingCancelledEmail({
+            ...p,
+            title: data.title,
+            date: data.held_on,
+            time: clockTime(data.held_at ?? ""),
+            reason: data.cancel_reason ?? "",
           }),
       };
     }
