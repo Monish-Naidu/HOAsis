@@ -742,6 +742,103 @@ export function meetingNoticeEmail(
   };
 }
 
+/**
+ * A meeting has moved. Statutory, like the notice it follows: the new date is
+ * the subject, so an owner scanning a phone knows when it now is. The body
+ * carries the whole meeting again (where, how to join, the agenda), because
+ * the old notice in the same inbox now names a day that is wrong.
+ *
+ * `was` is the date the meeting was first noticed for, when the board has
+ * moved it before. A move that only changed the time or the place has none,
+ * and the email says what is new without it.
+ */
+export function meetingMovedEmail(
+  input: NoticeEmailInput & {
+    title: string;
+    was?: string;
+    date: string;
+    time: string;
+    location: string;
+    dialIn?: string;
+    passcode?: string;
+    /** The link everyone joins by, from `lib/meetings/video.ts`. */
+    videoUrl?: string;
+    agenda: string[];
+  },
+) {
+  const when = `${longDate(input.date)} at ${input.time}`;
+  const subject = `${input.title} moved to ${when} · ${input.associationName}`;
+  const phone = input.dialIn
+    ? `dial ${input.dialIn}${input.passcode ? ` (passcode ${input.passcode})` : ""}`
+    : "";
+  const lines = [
+    input.was
+      ? `It was ${longDate(input.was)} and is now ${when}, ${input.location}.`
+      : `It is now ${when}, ${input.location}.`,
+    input.videoUrl
+      ? `Join by video: ${input.videoUrl}${phone ? `, or ${phone}` : ""}.`
+      : phone
+        ? `Join by phone: ${phone}.`
+        : "",
+  ].filter(Boolean);
+  const agenda = input.agenda.length
+    ? `<p style="margin:12px 0 4px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#6b7789;">Agenda</p><ol style="margin:0 0 10px;padding-left:20px;font-size:15px;line-height:1.6;color:#3d4a5e;">${input.agenda
+        .map((a) => `<li>${escapeHtml(a)}</li>`)
+        .join("")}</ol>`
+    : "";
+  const body = `${heading(`${input.title} has moved`)}${paragraphs(lines.join("\n\n"))}${agenda}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: input.was
+        ? `Now ${when}, ${input.location}.`
+        : `The time or the place has changed. Now ${when}, ${input.location}.`,
+      body,
+      cta: { label: "See the meeting", url: input.url },
+      signsIn: input.hasAccount !== false,
+      footer: noticeFooter(input, "This is notice of a meeting of the association."),
+    }),
+    text: `${input.title} has moved\n\n${lines.join("\n")}${
+      input.agenda.length
+        ? `\n\nAgenda:\n${input.agenda.map((a, i) => `${i + 1}. ${a}`).join("\n")}`
+        : ""
+    }\n\n${input.url}\n\n${input.associationName}`,
+  };
+}
+
+/**
+ * A meeting is cancelled. Statutory: the fact and the day are the subject.
+ * The board's own reason goes out as typed, because "no quorum" and
+ * "storm warning" are one line each and the owner can read the board's
+ * words without an intermediary.
+ */
+export function meetingCancelledEmail(
+  input: NoticeEmailInput & {
+    title: string;
+    date: string;
+    time: string;
+    reason: string;
+  },
+) {
+  const when = `${longDate(input.date)} at ${input.time}`;
+  const subject = `${input.title} on ${longDate(input.date)} is cancelled · ${input.associationName}`;
+  const lines = [`${input.title} on ${when} is cancelled.`, input.reason.trim()].filter(Boolean);
+  const body = `${heading(`${input.title} is cancelled`)}${paragraphs(lines.join("\n\n"))}`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `The meeting on ${longDate(input.date)} is cancelled.`,
+      body,
+      cta: { label: "See the meeting", url: input.url },
+      signsIn: input.hasAccount !== false,
+      footer: noticeFooter(input, "This is notice about a meeting of the association."),
+    }),
+    text: `${input.title} is cancelled\n\n${lines.join("\n\n")}\n\n${input.url}\n\n${input.associationName}`,
+  };
+}
+
 /** A vote is open. Statutory: the closing date is in the subject. */
 export function ballotOpenEmail(
   input: NoticeEmailInput & { title: string; body: string[]; closesDate: string },

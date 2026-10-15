@@ -16,6 +16,7 @@ import {
   kindTone,
   monthGrid,
   monthName,
+  openingMonth,
   upcomingFrom,
   type CalendarEntry,
 } from "@/lib/calendar";
@@ -34,9 +35,10 @@ export function CalendarView({
   /** Off where the page lists what is coming itself, with the RSVPs. */
   showUpcoming?: boolean;
 }) {
-  const today = new Date(`${asOf}T12:00:00Z`);
-  const [year, setYear] = useState(today.getUTCFullYear());
-  const [month, setMonth] = useState(today.getUTCMonth());
+  // Opens on the next meeting's month rather than on today's, which for an
+  // association whose meetings sit a month out was a grid with nothing in it.
+  const [year, setYear] = useState(() => openingMonth(entries, asOf).year);
+  const [month, setMonth] = useState(() => openingMonth(entries, asOf).month);
   // Nothing picked until somebody taps a day. Opening on today's empty box
   // said "Nothing on this day" before anybody had asked.
   const [selected, setSelected] = useState<string | null>(null);

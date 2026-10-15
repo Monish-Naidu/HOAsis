@@ -44,6 +44,8 @@ function refuse(error: string, status: number) {
 const KINDS: NotifyKind[] = [
   "announcement",
   "meeting",
+  "meeting-moved",
+  "meeting-cancelled",
   "ballot",
   "letter",
   "message",
@@ -62,6 +64,10 @@ const KINDS: NotifyKind[] = [
 const ALLOWED: Record<NotifyKind, ("communications" | "finances" | "requests" | "voting")[]> = {
   announcement: ["communications"],
   meeting: ["communications", "voting"],
+  // The notice of a move or a cancellation follows from the same write, so
+  // the same seats may send it.
+  "meeting-moved": ["communications", "voting"],
+  "meeting-cancelled": ["communications", "voting"],
   ballot: ["communications", "voting"],
   letter: ["communications", "finances"],
   message: ["communications", "finances"],
