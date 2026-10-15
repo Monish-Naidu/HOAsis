@@ -13,13 +13,24 @@ on:
     types: [opened, edited]
 
 jobs:
-  droid:
+  # See droid-review.yml: without the FACTORY_API_KEY secret the action fails
+  # hard, so the mention job is gated on the key the same way.
+  has-key:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@droid')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@droid')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@droid')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@droid') || contains(github.event.issue.title, '@droid'))) ||
       (github.event_name == 'pull_request' && (contains(github.event.pull_request.body, '@droid') || contains(github.event.pull_request.title, '@droid')))
+    runs-on: ubuntu-latest
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - id: check
+        run: echo "present=${{ secrets.FACTORY_API_KEY != '' }}" >> "$GITHUB_OUTPUT"
+  droid:
+    needs: has-key
+    if: needs.has-key.outputs.present == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
