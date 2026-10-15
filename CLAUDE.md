@@ -31,7 +31,7 @@ reviewers in `.claude/agents/`, the paste-able missions in
 - **Branch, pull request, checks, merge.** The pull request says what
   changes in plain words, what was checked (suite counts, migrations applied)
   and what was not clicked through. Merge only when Monish says so, and push
-  everything before saying it is ready. Vercel deploys `main` by itself.
+  everything before saying it is ready. GitHub Actions deploys `main` to Azure by itself.
 - **Delete what is unused.** No dead files, no commented-out code, no second
   way of doing a thing kept "just in case".
 

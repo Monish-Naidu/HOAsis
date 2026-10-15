@@ -13,7 +13,7 @@ import { recordCronRun } from "@/lib/cron-runs";
 /**
  * The daily pass over every association's trial.
  *
- * Vercel calls this once a day (vercel.json) with the CRON_SECRET it was
+ * The daily job (infra/apps.bicep) calls this once a day with the CRON_SECRET it was
  * given, and nothing else may. For each live association without a
  * subscription it does two things and no more: sends the one trial notice
  * that is due today (fourteen days out, three days out, or the day itself),

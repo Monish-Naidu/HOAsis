@@ -52,12 +52,12 @@ Every sender reads `emailSender()` in `src/lib/email/sender.ts`. It treats a
 blank `EMAIL_FROM` as unset and falls back to `Your HOAsis
 <onboarding@resend.dev>`, which Resend delivers to the account owner only.
 
-Found during the audit: Vercel production has `EMAIL_FROM=""` (empty).
+Found during the audit (2026-09, on Vercel then): production had `EMAIL_FROM=""` (empty).
 Every route did `process.env.EMAIL_FROM ?? fallback`, which keeps the empty
 string, so production posted `from: ""` and Resend refused every message.
 Fixed in code by the shared `emailSender()`; the env var still needs setting
-(below). `pnpm db:verify` (`scripts/verify-email.mjs`) now pulls the
-production value through the Vercel CLI and fails when it is empty or a
+(below). `pnpm db:verify` (`scripts/verify-email.mjs`) reads the
+production value from `.env.azure` and fails when it is empty or a
 `resend.dev` address.
 
 `RESEND_API_KEY` is a sending-only key: it cannot read or add domains
@@ -91,15 +91,15 @@ so the domain has to be verified by hand.
 
 3. Back in Resend press Verify. It usually clears within minutes at
    Cloudflare; up to 72 hours worst case.
-4. Vercel, one change: set `EMAIL_FROM` for Production to
+4. One change in `.env.azure`: set `EMAIL_FROM` to
    `Your HOAsis <hello@send.yourhoasis.com>` (any mailbox on the verified
    subdomain works; replies will go there, so either watch it or set a
-   `reply_to` later). Then redeploy so the value is picked up:
+   `reply_to` later). Then load it into the vault and redeploy so the value
+   is picked up:
 
    ```bash
-   vercel env rm EMAIL_FROM production --yes
-   vercel env add EMAIL_FROM production   # paste: Your HOAsis <hello@send.yourhoasis.com>
-   vercel --prod
+   scripts/azure/secrets.sh
+   scripts/azure/deploy.sh
    ```
 
 5. Put the same value in `.env.local` and run

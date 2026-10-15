@@ -92,18 +92,14 @@ describe("cron batching", () => {
 });
 
 describe("cron continuation hosts", () => {
-  it("allows Vercel's own hostnames with nothing set", () => {
+  it("allows nothing with nothing set", () => {
     const hosts = continuationHosts(undefined);
-    expect(hosts).toEqual(["vercel.app"]);
-    expect(continuationAllowed("https://your-hoasis.vercel.app/api/billing/sweep", hosts)).toBe(
-      true,
-    );
-    expect(continuationAllowed("https://vercel.app/api/billing/sweep", hosts)).toBe(true);
+    expect(hosts).toEqual([]);
+    expect(continuationAllowed("https://yourhoasis.com/api/billing/sweep", hosts)).toBe(false);
   });
 
   it("reads the named hosts, trimmed and lowercased", () => {
     expect(continuationHosts(" App.Example.COM ,, hoasis.azurecontainerapps.io ")).toEqual([
-      "vercel.app",
       "app.example.com",
       "hoasis.azurecontainerapps.io",
     ]);
@@ -129,7 +125,9 @@ describe("cron continuation hosts", () => {
     expect(continuationAllowed("https://evil.test/?x=hoasis.azurecontainerapps.io", hosts)).toBe(
       false,
     );
-    expect(continuationAllowed("https://notvercel.app/api/autopay/run", hosts)).toBe(false);
+    expect(
+      continuationAllowed("https://nothoasis.azurecontainerapps.io/api/autopay/run", hosts),
+    ).toBe(false);
   });
 
   it("refuses anything that is not a URL", () => {
@@ -143,7 +141,12 @@ describe("cron continuation hosts", () => {
     } as unknown as NextRequest;
     scheduleContinuation(request, "https://evil.test/api/email/bills");
     expect(after).not.toHaveBeenCalled();
-    scheduleContinuation(request, "https://your-hoasis.vercel.app/api/email/bills");
-    expect(after).toHaveBeenCalledTimes(1);
+    vi.stubEnv("CRON_ALLOWED_HOSTS", "yourhoasis.com");
+    try {
+      scheduleContinuation(request, "https://yourhoasis.com/api/email/bills");
+      expect(after).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

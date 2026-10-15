@@ -4,8 +4,8 @@ import { scrubFields, type LogFields } from "@/lib/log";
 /**
  * One row per cron call, written when the call ends.
  *
- * "Did autopay run this morning?" used to mean opening the Vercel dashboard.
- * Now the ops page reads the latest row per job. A call that Vercel kills
+ * "Did autopay run this morning?" used to mean opening the host's dashboard.
+ * Now the ops page reads the latest row per job. A call the host kills
  * at the time limit writes nothing, which the page shows as a run older
  * than a day, which is the right alarm.
  *

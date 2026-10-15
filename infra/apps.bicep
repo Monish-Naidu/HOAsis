@@ -27,7 +27,7 @@ param deploySupabaseStack bool = true
 @description('The custom domains already bound to the web app, as the app reports them, so a redeploy keeps them. provision.sh reads them; an empty list on first deploy.')
 param webCustomDomains array = []
 
-@description('Hosts the cron continuation may fetch, comma separated, beside the vercel.app default in src/lib/cron.ts: the app own address, where the five jobs point their calls, and any bound domain. Without it a run that spends its 40 second budget stops there and its rows wait for the next day.')
+@description('Hosts the cron continuation may fetch, comma separated (src/lib/cron.ts allows nothing by itself): the app own address, where the five jobs point their calls, and any bound domain. Without it a run that spends its 40 second budget stops there and its rows wait for the next day.')
 param cronAllowedHosts string = ''
 
 @description('"production" or "staging"; what the app and Sentry call this deployment.')
@@ -310,7 +310,7 @@ resource supabase 'Microsoft.App/containerApps@2024-03-01' = if (deploySupabaseS
 
 // ------------------------------------------------------------------ jobs
 
-// The same five calls vercel.json makes, at the same UTC minutes. A job is a
+// The five daily calls, at the UTC minutes the Vercel crons used to fire. A job is a
 // curl with the cron secret; the route does the work and continues itself.
 var crons = [
   { name: 'assessments', path: '/api/assessments/run', schedule: '0 13 * * *' }

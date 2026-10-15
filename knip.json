@@ -12,6 +12,5 @@
   ],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.mjs", "tests/**/*.{test,spec}.{ts,tsx}"],
   "ignore": ["scripts/.qa/**", "src/lib/tokens.ts"],
-  "ignoreDependencies": ["tailwindcss"],
-  "ignoreBinaries": ["vercel"]
+  "ignoreDependencies": ["tailwindcss"]
 }

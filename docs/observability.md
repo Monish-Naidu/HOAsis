@@ -1,7 +1,8 @@
 # Observability
 
-How to find bugs and read logs, for one person running this on Vercel and
-Supabase. Written 2026-09-25 against the code. Short on purpose: the
+How to find bugs and read logs, for one person running this on Azure
+(Container Apps, Postgres, Log Analytics). Written 2026-09-25 against the
+code, moved from Vercel to Azure on 2026-10-15. Short on purpose: the
 decisions are made, the click paths are here, do them in order.
 
 ## The one habit
@@ -15,8 +16,10 @@ then:
 
 1. `/admin`, **Latest errors**, find the reference. That gives route, message
    and association.
-2. Vercel, Project, **Logs**, search the reference. That gives every line
-   the request wrote, in order, with timings (`durationMs`).
+2. Azure portal, Log Analytics workspace `log-hoasis`, **Logs**, query
+   `ContainerAppConsoleLogs_CL | where Log_s has "K7QM2X4P" | order by
+TimeGenerated asc`. That gives every line the request wrote, in order,
+   with timings (`durationMs`).
 3. Sentry (once set up), search `reference:K7QM2X4P`. That gives the stack
    with source maps.
 
@@ -25,23 +28,22 @@ the digest as the reference when it has one, so the same lookup works.
 
 ## What exists already, for free
 
-| Where                                                         | What                                                                                                                                                                    | Limits                                                                           |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Vercel, Project, **Logs**                                     | Every `console.*` line from route handlers, server components and crons. Ours are JSON (`src/lib/log.ts`), so filter by `route`, `level`, `requestId`, `associationId`. | Hobby: 1 hour of runtime logs. Pro: 1 day. Then gone. Hence the log drain below. |
-| Vercel, Project, **Deployments**, a deployment, **Functions** | Per-function invocations, errors, duration, cold starts.                                                                                                                | Same retention.                                                                  |
-| Vercel, Project, **Speed Insights** and **Web Analytics**     | Core Web Vitals per page; page views. Enable with one click each; both have a free tier.                                                                                | Sampling on Hobby.                                                               |
-| Vercel, Project, **Settings**, **Crons**                      | Whether each of the three crons fired and what status it got.                                                                                                           | Last few runs only. Our `cron_runs` table keeps the history.                     |
-| Supabase, Project, **Logs**                                   | Postgres logs (slow queries, errors), API logs (every PostgREST call with status), Auth logs (sign-ins, failures). Logs Explorer takes SQL.                             | Free: 1 day. Pro: 7 days.                                                        |
-| Supabase, Project, **Reports**                                | Query performance, index usage, connection count. Where "the page got slow" gets answered.                                                                              |                                                                                  |
-| Stripe, **Developers**, **Events**                            | Every event with its payload. **Webhooks**, an endpoint, an event: every delivery attempt, our status code and response body, with a **Resend** button.                 | 30 days.                                                                         |
-| Resend, **Emails**                                            | Every send, its status ladder (sent, delivered, bounced), the rendered message. **Webhooks** shows deliveries to `/api/email/webhook`.                                  | Free: 1 day of detail (was 3); check the current plan.                           |
-| This app, `email_log`                                         | Every email we sent, per association, with Resend's id and status. Board sees theirs under Communications.                                                              | Capped at 300 per load on the board side; `/admin` reads failures directly.      |
-| This app, `autopay_runs`                                      | One row per home per month the autopay cron decided: charged, skipped, failed, with the reason.                                                                         |                                                                                  |
-| This app, `payments`                                          | `pending` is money Stripe has not settled yet. ACH takes about four days; pending past five is a missed webhook.                                                        |                                                                                  |
-| This app, `app_errors` (new)                                  | What the server and the browsers caught, with the reference. Service role only.                                                                                         |                                                                                  |
-| This app, `cron_runs` (new)                                   | One row per cron call with a summary (`checked`, `charged`, `errors`...).                                                                                               |                                                                                  |
-| This app, `/api/health` (new)                                 | 200 when the database answers and the Stripe, Resend and cron keys are present; 503 with the missing name otherwise.                                                    |                                                                                  |
-| This app, `/admin` (new)                                      | All of the above for the last seven days on one page. See below.                                                                                                        |                                                                                  |
+| Where                                                     | What                                                                                                                                                                                                                                | Limits                                                                      |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Log Analytics `log-hoasis`, **Logs**                      | Every `console.*` line from the web app and the five jobs, in `ContainerAppConsoleLogs_CL`. Ours are JSON (`src/lib/log.ts`): `extend j = parse_json(Log_s)` then filter by `j.route`, `j.level`, `j.requestId`, `j.associationId`. | 30 days (`infra/platform.bicep`).                                           |
+| Container App `ca-hoasis-web`, **Metrics**, **Revisions** | Requests, response codes, replica count, restarts, per revision.                                                                                                                                                                    | 93 days of metrics.                                                         |
+| Jobs `caj-hoasis-*`, **Execution history**                | Whether each daily job fired and whether the call succeeded.                                                                                                                                                                        | Recent executions only. Our `cron_runs` table keeps the history.            |
+| Supabase, Project, **Logs**                               | Postgres logs (slow queries, errors), API logs (every PostgREST call with status), Auth logs (sign-ins, failures). Logs Explorer takes SQL.                                                                                         | Free: 1 day. Pro: 7 days.                                                   |
+| Supabase, Project, **Reports**                            | Query performance, index usage, connection count. Where "the page got slow" gets answered.                                                                                                                                          |                                                                             |
+| Stripe, **Developers**, **Events**                        | Every event with its payload. **Webhooks**, an endpoint, an event: every delivery attempt, our status code and response body, with a **Resend** button.                                                                             | 30 days.                                                                    |
+| Resend, **Emails**                                        | Every send, its status ladder (sent, delivered, bounced), the rendered message. **Webhooks** shows deliveries to `/api/email/webhook`.                                                                                              | Free: 1 day of detail (was 3); check the current plan.                      |
+| This app, `email_log`                                     | Every email we sent, per association, with Resend's id and status. Board sees theirs under Communications.                                                                                                                          | Capped at 300 per load on the board side; `/admin` reads failures directly. |
+| This app, `autopay_runs`                                  | One row per home per month the autopay cron decided: charged, skipped, failed, with the reason.                                                                                                                                     |                                                                             |
+| This app, `payments`                                      | `pending` is money Stripe has not settled yet. ACH takes about four days; pending past five is a missed webhook.                                                                                                                    |                                                                             |
+| This app, `app_errors` (new)                              | What the server and the browsers caught, with the reference. Service role only.                                                                                                                                                     |                                                                             |
+| This app, `cron_runs` (new)                               | One row per cron call with a summary (`checked`, `charged`, `errors`...).                                                                                                                                                           |                                                                             |
+| This app, `/api/health` (new)                             | 200 when the database answers and the Stripe, Resend and cron keys are present; 503 with the missing name otherwise.                                                                                                                |                                                                             |
+| This app, `/admin` (new)                                  | All of the above for the last seven days on one page. See below.                                                                                                                                                                    |                                                                             |
 
 ## What to add, in order
 
@@ -60,15 +62,13 @@ Click path:
 
 1. sentry.io, **Create project**, platform **Next.js**, name `your-hoasis`.
    Copy the DSN.
-2. Vercel, Project, **Settings**, **Integrations**, **Browse Marketplace**,
-   **Sentry**, **Add integration**, pick this project, link it to the Sentry
-   project. This sets `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT`
-   on the Vercel project, which is what makes the build upload source maps.
-3. Vercel, Project, **Settings**, **Environment Variables**, add for
-   Production and Preview:
-   - `NEXT_PUBLIC_SENTRY_DSN` = the DSN (browser, and the server falls back to it)
-   - `SENTRY_DSN` = the same DSN (server and edge)
-4. Redeploy. Sentry, project, **Alerts**, **Create alert**, "Issues", "a new
+2. `.env.azure`: `NEXT_PUBLIC_SENTRY_DSN` = the DSN. `scripts/azure/provision.sh`
+   hands it to the app as both the browser DSN and `SENTRY_DSN`.
+3. Source maps: Sentry, **Settings**, **Auth Tokens**, make one with
+   `project:releases`; put `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
+   `SENTRY_PROJECT` in the image build (`scripts/azure/deploy.sh` build
+   args). Without them errors still arrive, minified.
+4. `scripts/azure/deploy.sh`. Sentry, project, **Alerts**, **Create alert**, "Issues", "a new
    issue is created", action **Send an email to** you. One alert, that is all.
 5. Sentry, **Settings**, **Projects**, the project, **Client Keys**, add
    `yourhoasis.com` to allowed domains so nobody else can post to your DSN.
@@ -76,25 +76,18 @@ Click path:
 Locally, leave the three unset. To test once, put the DSN in `.env.local`,
 open a page that throws, delete it again.
 
-### 2. A log drain (logs that outlive an hour)
+### 2. Log queries worth saving (Log Analytics keeps 30 days)
 
-Vercel forgets Hobby runtime logs after an hour. A drain copies every line
-to somewhere searchable. **Axiom** (free: 500 GB a month, 30 days) or
-**Better Stack Logs** (free: 1 GB, 3 days). Take Axiom for the retention.
+Every container and job writes to the workspace `log-hoasis` already; there
+is no drain to set up. Save these in the portal's **Logs** blade:
 
-1. axiom.co, sign up, **Datasets**, **New dataset** `vercel`.
-2. Vercel, **Integrations**, **Browse Marketplace**, **Axiom**, **Add
-   integration**, pick this project, pick the dataset. Vercel starts sending.
-   (Axiom's integration is a log drain; nothing to add to the code and no env
-   var.)
-3. In Axiom, the JSON on each line is already parsed: `['vercel'] | where
-requestId == "K7QM2X4P"` or `| where level == "error" | summarize count()
-by route`. Save the second one as a dashboard panel.
-4. Axiom, **Monitors**, new monitor on `level == "error"` count over 10 in 15
-   minutes, notify by email. One monitor.
+1. Errors by route, last day:
+   `ContainerAppConsoleLogs_CL | extend j = parse_json(Log_s) | where j.level == "error" | summarize count() by tostring(j.route)`.
+2. One request: `| where Log_s has "K7QM2X4P" | order by TimeGenerated asc`.
+3. A job's last run: `| where ContainerName_s startswith "caj-hoasis" | order by TimeGenerated desc`.
 
-If Better Stack instead: Vercel, Project, **Settings**, **Log Drains**,
-**Add**, choose JSON, paste the HTTP endpoint and token Better Stack shows.
+An alert rule on the first query (count over 10 in 15 minutes, email) is
+the one alert worth having. **Alerts**, **Create**, log search, that query.
 
 ### 3. Uptime checks
 
@@ -169,17 +162,16 @@ fires per error, which is noise the moment one page loops.
 
 ## Env vars
 
-| Name                                                | Where                                         | Value                                               |
-| --------------------------------------------------- | --------------------------------------------- | --------------------------------------------------- |
-| `PLATFORM_OWNER_EMAILS`                             | Vercel (Production, Preview) and `.env.local` | `monishnaidu18@gmail.com`; comma separated for more |
-| `NEXT_PUBLIC_SENTRY_DSN`                            | Vercel (Production, Preview)                  | the project DSN                                     |
-| `SENTRY_DSN`                                        | Vercel (Production, Preview)                  | the same DSN                                        |
-| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | set by the Vercel Sentry integration          | do not type these by hand                           |
+| Name                                                | Where                                       | Value                                               |
+| --------------------------------------------------- | ------------------------------------------- | --------------------------------------------------- |
+| `PLATFORM_OWNER_EMAILS`                             | `.env.azure` and `.env.local`               | `monishnaidu18@gmail.com`; comma separated for more |
+| `NEXT_PUBLIC_SENTRY_DSN`                            | `.env.azure`                                | the project DSN; the server reads the same value    |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | image build args, if source maps are wanted | see Sentry step 3                                   |
 
-Vercel: Project, **Settings**, **Environment Variables**, **Add**, then
-**Redeploy** (env changes do not reach a running deployment).
+A changed value reaches the app through `scripts/azure/provision.sh`
+(plain settings) or `scripts/azure/secrets.sh` plus a redeploy (secrets).
 
-## Reading a Vercel log line
+## Reading a log line
 
 ```json
 {

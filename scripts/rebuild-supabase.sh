@@ -5,9 +5,10 @@
 # Written 2026-09-19, the day the Supabase project turned out to be gone.
 # Runs setup-supabase.sh (create, link, push every migration, write
 # .env.local, regenerate types), then the parts that script never did:
-# auth URLs for the production site, the seed accounts, the Vercel
-# environment, and the verifiers. Needs a fresh personal access token in
-# .env.local as SUPABASE_ACCESS_TOKEN, and `vercel` logged in.
+# auth URLs for the production site, the seed accounts, and the verifiers.
+# Needs a fresh personal access token in .env.local as SUPABASE_ACCESS_TOKEN.
+# Since 2026-10-15 the site runs on the Azure stack (docs/azure-migration-plan.md);
+# this rebuilds the hosted project only.
 #
 #   scripts/rebuild-supabase.sh [project-name] [region]
 set -euo pipefail
@@ -35,7 +36,6 @@ print(json.dumps({
     "uri_allow_list": ",".join([
         f"{site}/**",
         "http://localhost:3000/**",
-        "https://*-monish-naidus-projects.vercel.app/**",
     ]),
     "mailer_autoconfirm": False,
 }))
@@ -45,14 +45,8 @@ PY
 echo "==> Seeding Oakview Commons and Cedar Hollow"
 pnpm db:seed
 
-echo "==> Vercel environment"
-for env in production preview development; do
-  for key in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
-    vercel env rm "$key" "$env" --yes > /dev/null 2>&1 || true
-    printf '%s' "${!key}" | vercel env add "$key" "$env" > /dev/null
-  done
-done
-echo "Vercel has the new keys. Redeploy: vercel --prod, or push to main."
+echo "The new keys are in .env.local. A deployment that should use them takes"
+echo "them from .env.azure: scripts/azure/secrets.sh, then scripts/azure/deploy.sh."
 
 echo "==> Verifying"
 pnpm db:verify
