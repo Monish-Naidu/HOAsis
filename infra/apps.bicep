@@ -27,6 +27,9 @@ param deploySupabaseStack bool = true
 @description('The custom domains already bound to the web app, as the app reports them, so a redeploy keeps them. provision.sh reads them; an empty list on first deploy.')
 param webCustomDomains array = []
 
+@description('Hosts the cron continuation may fetch, comma separated, beside the vercel.app default in src/lib/cron.ts: the app own address, where the five jobs point their calls, and any bound domain. Without it a run that spends its 40 second budget stops there and its rows wait for the next day.')
+param cronAllowedHosts string = ''
+
 @description('"production" or "staging"; what the app and Sentry call this deployment.')
 param appEnv string = 'staging'
 
@@ -124,6 +127,7 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'STRIPE_WEBHOOK_SECRET', secretRef: 'stripe-webhook-secret' }
             { name: 'STRIPE_BILLING_WEBHOOK_SECRET', secretRef: 'stripe-billing-webhook-secret' }
             { name: 'CRON_SECRET', secretRef: 'cron-secret' }
+            { name: 'CRON_ALLOWED_HOSTS', value: cronAllowedHosts }
             { name: 'RESEND_API_KEY', secretRef: 'resend-api-key' }
             { name: 'EMAIL_TOKEN_SECRET', secretRef: 'email-token-secret' }
           ]

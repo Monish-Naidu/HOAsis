@@ -140,6 +140,18 @@ fi
 custom_domains=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" --query "properties.configuration.ingress.customDomains" -o json 2>/dev/null || echo '[]')
 [ "$custom_domains" = "null" ] && custom_domains='[]'
 
+# The hosts a cron continuation may fetch (src/lib/cron.ts): the app's own
+# address, where the five jobs point their calls, and any domain bound by
+# hand, which is how a person reaches a cron route. vercel.app is always
+# allowed by the code itself.
+cron_hosts=$(python3 - "$AZ_WEB_APP.$env_domain" "$custom_domains" <<'PY'
+import json, sys
+bound = [d.get("name") for d in json.loads(sys.argv[2])]
+hosts = [sys.argv[1]] + [h for h in bound if h]
+print(",".join(dict.fromkeys(hosts)))
+PY
+)
+
 echo "== 4. apps and jobs"
 params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentityName="id-$AZ_BASE-app" \
   acrLoginServer="$acr.azurecr.io" storageAccountName="$storage_account" webImage="$web_image" \
@@ -148,7 +160,8 @@ params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentit
   stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" sentryDsn="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
   siteHost="$(read_env NEXT_PUBLIC_SITE_HOST)" authCookieDomain="$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)" \
   emailFrom="$(read_env EMAIL_FROM)" platformOwnerEmails="$(read_env PLATFORM_OWNER_EMAILS)" \
-  testLogins="$(read_env NEXT_PUBLIC_TEST_LOGINS)" webCustomDomains="$custom_domains"
+  testLogins="$(read_env NEXT_PUBLIC_TEST_LOGINS)" webCustomDomains="$custom_domains" \
+  cronAllowedHosts="$cron_hosts"
 az deployment group create -g "$AZ_RG" -n apps --template-file "$ROOT/infra/apps.bicep" \
   --parameters "@$work/apps.json" --only-show-errors --query "properties.outputs" -o json > "$work/apps-out.json"
 web=$(out "$work/apps-out.json" webFqdn)
