@@ -21,7 +21,8 @@ server; 3100 is for the main session's own screenshots.
 
 Then launch, in the background, in one message:
 
-- **Walkers** (`.claude/agents/walker.md`): one per kind of person, each
+- **Walkers** (the `walker` agent, `.claude/agents/walker.md` in Claude
+  Code and `.factory/droids/walker.md` in Factory): one per kind of person, each
   with a hard scope so they do not overlap. The ones that have earned their
   keep: a founder setting up a brand-new association; a treasurer moving an
   existing one over (balances, import); an officer running the board for a
@@ -31,7 +32,8 @@ Then launch, in the background, in one message:
   out, they use `/demo` and `/demo?as=owner`. Signed in, give them a test
   login from `.env.local`'s `NEXT_PUBLIC_TEST_LOGINS` and the test
   association only; never a real customer.
-- **The scenario reviewer** (`.claude/agents/scenario-reviewer.md`) with a
+- **The scenario reviewer** (the `scenario-reviewer` agent, in the same
+  two folders) with a
   numbered list of situations. Write the list for the stage the product is
   at: first year (sale, two owners, partial payment, bounced check, dispute,
   dues change, autopay failure, Stripe restricted, president leaves) was

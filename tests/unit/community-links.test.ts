@@ -8,6 +8,7 @@ import {
   placeLabel,
   sameAssociationName,
   slugFromHost,
+  wwwForApex,
   slugify,
   uniqueSlug,
 } from "@/lib/community-links";
@@ -132,5 +133,26 @@ describe("placeLabel", () => {
     expect(placeLabel("Bothell", "WA")).toBe("Bothell, WA");
     expect(placeLabel("", "WA")).toBe("WA");
     expect(placeLabel(null, undefined)).toBe("");
+  });
+});
+
+describe("wwwForApex", () => {
+  it("sends a page on the bare domain to www", () => {
+    expect(wwwForApex("yourhoasis.com", "/pricing")).toBe("www.yourhoasis.com");
+    expect(wwwForApex("YOURHOASIS.com:443", "/")).toBe("www.yourhoasis.com");
+  });
+
+  it("serves API routes and the auth callback where they arrive", () => {
+    expect(wwwForApex("yourhoasis.com", "/api/stripe/webhook")).toBeNull();
+    expect(wwwForApex("yourhoasis.com", "/api/health")).toBeNull();
+    expect(wwwForApex("yourhoasis.com", "/auth/callback")).toBeNull();
+  });
+
+  it("leaves every other host alone", () => {
+    expect(wwwForApex("www.yourhoasis.com", "/pricing")).toBeNull();
+    expect(wwwForApex("oakview-commons.yourhoasis.com", "/")).toBeNull();
+    expect(wwwForApex("ca-hoasis-web.yellowwater.westus.azurecontainerapps.io", "/")).toBeNull();
+    expect(wwwForApex("localhost:3000", "/")).toBeNull();
+    expect(wwwForApex(null, "/")).toBeNull();
   });
 });

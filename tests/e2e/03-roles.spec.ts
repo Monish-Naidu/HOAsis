@@ -137,16 +137,26 @@ test.describe("resident experience", () => {
       // A row with something waiting carries its count inside the link, so
       // "Payments" reads "Payments1". Anchoring on the bare label skipped
       // exactly the rows a resident with a balance most needs to work.
-      const present = await page
+      const row = page
         .locator(`a[href^="/resident"]`)
         .filter({ hasText: new RegExp(`^${tab}\\d*$`) })
         .locator("visible=true")
-        .count();
+        .first();
+
       if (MODULE_GATED.has(tab)) {
-        test.skip(present === 0, `${tab} is switched off for this association`);
-      } else {
-        expect(present, `${tab} is missing from the resident rail`).toBeGreaterThan(0);
+        // A gated row is absent by design when the module is off, so absence
+        // is an answer rather than a slow paint: give the rail a moment to
+        // settle, then skip rather than fail.
+        const shown = await row
+          .waitFor({ state: "visible", timeout: 2_000 })
+          .then(() => true)
+          .catch(() => false);
+        test.skip(!shown, `${tab} is switched off for this association`);
       }
+
+      // Retried, not counted once: the rail settles a beat after
+      // `networkidle`, and a single count read that beat as a missing row.
+      await expect(row, `${tab} is missing from the resident rail`).toBeVisible();
 
       await openTab(page, "/resident", tab);
       await expectHealthy(page, `resident ${tab}`);

@@ -86,6 +86,13 @@ above, in the order they matter:
     Point-in-Time Recovery is the add-on that makes "undo the last hour"
     possible. Until then, `pg_dump` by hand before anything risky.
 
+17. **Azure.** Done 2026-10-15: `yourhoasis.com` is served from Azure,
+    database and all (`docs/azure-migration-plan.md`). Still yours: pause
+    the Supabase project and delete the Vercel project after 2026-11-14;
+    move `rg-hoasis` to a pay-as-you-go subscription before the first
+    paying association (the credit is dev/test, with a hard stop at $150 a
+    month); items 6 and 7 above (Supabase Pro, Vercel Pro) are void.
+
 ## Deploy, then check
 
 10. Push `main` and let Vercel deploy. Then:

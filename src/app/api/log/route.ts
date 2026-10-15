@@ -80,6 +80,9 @@ export async function POST(request: NextRequest) {
     extra,
   });
 
-  log[level]("client error", { reference, message, route: str(body.route, 200) });
+  // One of the three methods by name. The level comes from the body, so it
+  // is chosen here rather than used to index the logger.
+  const write = level === "warn" ? log.warn : level === "info" ? log.info : log.error;
+  write("client error", { reference, message, route: str(body.route, 200) });
   return NextResponse.json({ reference });
 }

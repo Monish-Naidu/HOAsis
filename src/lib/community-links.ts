@@ -128,6 +128,31 @@ export function slugFromHost(
 }
 
 /**
+ * The host a page request should be redirected to, or null to serve it.
+ * One address per page, and the address is `www.yourhoasis.com`:
+ * `yourhoasis.com/pricing` goes to `www.yourhoasis.com/pricing`. Vercel
+ * did a redirect for us; on Azure the proxy does it.
+ *
+ * Only pages. Stripe's webhooks and the daily jobs call `/api/...` on the
+ * bare domain and do not follow redirects, and a magic link lands on
+ * `/auth/callback` there; those are served where they arrive. A vanity host,
+ * a preview address and localhost are left alone.
+ */
+export function wwwForApex(
+  host: string | null | undefined,
+  pathname: string,
+  roots: readonly string[] = VANITY_ROOTS,
+): string | null {
+  if (!host) return null;
+  if (pathname.startsWith("/api/") || pathname.startsWith("/auth/")) return null;
+  const bare = host.toLowerCase().replace(/:\d+$/, "");
+  for (const root of roots) {
+    if (bare === root && root !== "localhost") return `www.${root}`;
+  }
+  return null;
+}
+
+/**
  * The canonical path for a page inside an association. `path` is the route
  * as the app knows it (`/board/settings`); the result is what goes in an
  * email or on a clipboard.
