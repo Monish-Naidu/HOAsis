@@ -10,16 +10,17 @@ import {
   TIME_MESSAGE,
   addressKey,
   associationNameProblem,
-  checkMeetingTime,
   checkManualPayment,
+  checkMeetingTime,
   checkPayAmount,
-  dollarsToCents,
-  homeOverpayNote,
   checkPhone,
   closingDateProblem,
+  dollarsToCents,
   duesProblem,
   duesTextProblem,
   emailProblem,
+  homeDuesToStore,
+  homeOverpayNote,
   lateFeeAmountProblem,
   lateFeeDaysProblem,
   overpayNote,
@@ -307,5 +308,16 @@ describe("the pay screen's other amount", () => {
       ok: false,
       message: "Use whole cents, like 12.50",
     });
+  });
+});
+
+describe("homeDuesToStore", () => {
+  it("stores an amount that differs from the standard rate as the home's own", () => {
+    expect(homeDuesToStore(30000, 28500)).toBe(30000);
+    expect(homeDuesToStore(1, 28500)).toBe(1);
+  });
+
+  it("clears the home's own amount when the standard rate is typed back in", () => {
+    expect(homeDuesToStore(28500, 28500)).toBeNull();
   });
 });
