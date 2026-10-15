@@ -12,9 +12,11 @@ where to click and what it unlocks. Written 2026-09-26; strike lines as you go.
    `.env.azure` carries `EMAIL_FROM="Your HOAsis <hello@yourhoasis.com>"`
    and `RESEND_WEBHOOK_SECRET`. Resend's status page for the domain is the
    place to look if a send fails with a domain error.
-2. **Support mailbox.** Cloudflare → Email → Email Routing → route
-   `support@yourhoasis.com` to your inbox. The Help item in every account
-   menu, the error page, and the Terms and Privacy pages already point at it.
+2. ~~**Support mailbox.**~~ Done 2026-10-15: Cloudflare Email Routing is
+   on for yourhoasis.com; `support@` and `hello@` forward to your Gmail,
+   proven with one message each. Replies to anything the app sends land in
+   the same inbox. The Help item in every account menu, the error page, and
+   the Terms and Privacy pages already point at `support@`.
 3. **Stripe live mode.** dashboard.stripe.com → toggle off test mode →
    Developers → API keys. Then, from the repo:
    `pnpm stripe:setup https://yourhoasis.com` with the live secret key in

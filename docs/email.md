@@ -100,8 +100,14 @@ scripts/azure/secrets.sh
 APPS_ONLY=true scripts/azure/provision.sh
 ```
 
-Replies go to `hello@yourhoasis.com`; route it in Cloudflare Email
-Routing or set a `reply_to` before boards start writing back.
+Replies go to `hello@yourhoasis.com`. Cloudflare Email Routing (on since
+2026-10-15) forwards `hello@` and `support@` to Monish's Gmail; the
+catch-all drops. Cloudflare manages its own records for that: three MX on
+the root, `cf2024-1._domainkey` and an SPF TXT on the root
+(`v=spf1 include:_spf.mx.cloudflare.net ~all`). They do not touch Resend's
+records, which live on `send` and `rsend`. Disabling Email Routing removes
+them. There is no `dmarc@` mailbox yet, so the DMARC record carries no
+`rua=` address; add both together when reports are wanted.
 
 The auth service on Azure sends its own mail (sign-up confirmations,
 magic links, password resets, email-change links) through Resend's SMTP
