@@ -17,7 +17,8 @@ require_env_file
 
 # Writes an ARM parameters file from key=value pairs. A file, not --parameters
 # on the command line, because the CLI would parse the test logins (JSON) into
-# an object and the template wants a string. Booleans are the word true or false.
+# an object and the template wants a string. Booleans are the word true or
+# false; only the custom domains list is JSON, by name.
 params() {
   local out="$1"; shift
   python3 - "$out" "$@" <<'PY'
@@ -26,8 +27,8 @@ out, pairs = sys.argv[1], sys.argv[2:]
 values = {}
 for pair in pairs:
     key, _, value = pair.partition("=")
-    if value.startswith("[") or value.startswith("{"):
-        values[key] = {"value": json.loads(value)}
+    if key in ("webCustomDomains",):
+        values[key] = {"value": json.loads(value or "[]")}
     else:
         values[key] = {"value": {"true": True, "false": False}.get(value, value)}
 json.dump({"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
