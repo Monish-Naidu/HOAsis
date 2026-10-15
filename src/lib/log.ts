@@ -89,10 +89,15 @@ export function maskEmail(value: string): string {
   return value.replace(EMAIL, (_, first: string, domain: string) => `${first}***@${domain}`);
 }
 
-function scrubString(value: string): string {
+/**
+ * Masks what must never be printed, then cuts to fit. The mask runs first, so
+ * a cut can never leave half an address behind with no domain left to match.
+ * The limit is a parameter because a stack earns more room than a field.
+ */
+function scrubString(value: string, limit = MAX_STRING): string {
   if (SECRET_VALUE.test(value)) return "[redacted]";
   const masked = maskEmail(value);
-  return masked.length > MAX_STRING ? `${masked.slice(0, MAX_STRING)}…` : masked;
+  return masked.length > limit ? `${masked.slice(0, limit)}…` : masked;
 }
 
 function scrubValue(value: unknown, depth: number): unknown {
@@ -104,7 +109,7 @@ function scrubValue(value: unknown, depth: number): unknown {
     return {
       name: value.name,
       message: scrubString(value.message),
-      stack: value.stack ? scrubString(value.stack.slice(0, MAX_STACK)) : undefined,
+      stack: value.stack ? scrubString(value.stack, MAX_STACK) : undefined,
     };
   }
   if (depth >= MAX_DEPTH) return "[…]";

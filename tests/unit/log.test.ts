@@ -132,6 +132,23 @@ describe("masking", () => {
     expect((out.long as string).length).toBeLessThanOrEqual(301);
     expect(JSON.stringify(out.deep)).toContain("[…]");
   });
+
+  it("keeps a whole stack, not the first few frames of one", () => {
+    // The stack has its own, larger limit. Before that was passed through, the
+    // generic 300-character cut won and every trace arrived four frames deep.
+    const stack = "at x\n".repeat(500);
+    const out = scrubFields({ err: Object.assign(new Error("boom"), { stack }) });
+    const printed = (out.err as { stack?: string }).stack ?? "";
+    expect(printed.length).toBeGreaterThan(1000);
+    expect(printed.length).toBeLessThanOrEqual(1501);
+  });
+
+  it("masks a stack before it cuts it, so a cut never splits an address", () => {
+    const stack = `${"at x\n".repeat(298)}carol@example.com\n${"at y\n".repeat(50)}`;
+    const out = scrubFields({ err: Object.assign(new Error("boom"), { stack }) });
+    const printed = (out.err as { stack?: string }).stack ?? "";
+    expect(printed).not.toContain("carol@");
+  });
 });
 
 describe("logger", () => {
