@@ -39,6 +39,25 @@ with_stack="${WITH_SUPABASE_STACK:-true}"
 budget_email="$(read_env BUDGET_EMAIL)"
 [ -n "$budget_email" ] || { echo "BUDGET_EMAIL is empty in $ENV_FILE" >&2; exit 1; }
 
+# The addresses, once the environment's domain is known (both paths below).
+urls() {
+  # The stack's own address is known before it exists: app name plus the
+  # environment's domain. The web app keeps talking to the hosted project
+  # until WEB_ON_AZURE_DB=true, the switch flipped after the data has moved.
+  stack_url="https://$AZ_SUPABASE_APP.$env_domain"
+  web_url="https://$AZ_WEB_APP.$env_domain"
+  # Where the auth service may send a person after a magic link or a reset:
+  # the product's domain, this deployment's own address, the site host if
+  # one is set, and a laptop.
+  site_host="$(read_env NEXT_PUBLIC_SITE_HOST)"
+  allow_list="https://yourhoasis.com/**,https://www.yourhoasis.com/**,$web_url/**,http://localhost:3000/**"
+  [ -n "$site_host" ] && allow_list="https://$site_host/**,$allow_list"
+  supabase_url="$(read_env NEXT_PUBLIC_SUPABASE_URL)"
+  if [ "$with_stack" = "true" ] && [ "${WEB_ON_AZURE_DB:-false}" = "true" ]; then
+    supabase_url="$stack_url"
+  fi
+}
+
 # APPS_ONLY=true redeploys the apps and jobs from the templates with the
 # image already running: for a change to a setting, the gateway's config or
 # a service version, without the platform pass, the secrets or a build.
@@ -51,6 +70,7 @@ if [ "${APPS_ONLY:-false}" = "true" ]; then
   github_client=$(out "$work/platform-out.json" githubClientId)
   storage_account=$(out "$work/platform-out.json" storageAccountName)
   web_image=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" --query "properties.template.containers[0].image" -o tsv)
+  urls
   echo "== apps and jobs only, web image $web_image"
 fi
 
@@ -81,6 +101,7 @@ env_domain=$(out "$work/platform-out.json" environmentDomain)
 github_client=$(out "$work/platform-out.json" githubClientId)
 storage_account=$(out "$work/platform-out.json" storageAccountName)
 echo "   registry $acr, vault $kv, environment domain $env_domain"
+urls
 
 # The vault is in RBAC mode, which means even the subscription owner needs a
 # data-plane role to write a secret. Grant it to whoever is running this.
@@ -108,21 +129,6 @@ az acr build --registry "$acr" --image "hoasis-web:$tag" --file "$ROOT/Dockerfil
 web_image="$acr.azurecr.io/hoasis-web:$tag"
 fi
 
-# The stack's own address is known before it exists: app name plus the
-# environment's domain. The web app keeps talking to the hosted project until
-# WEB_ON_AZURE_DB=true, which is the switch flipped after the data has moved.
-stack_url="https://$AZ_SUPABASE_APP.$env_domain"
-web_url="https://$AZ_WEB_APP.$env_domain"
-# Where the auth service may send a person after a magic link or a reset:
-# the product's domain, this deployment's own address, the site host if
-# one is set, and a laptop.
-site_host="$(read_env NEXT_PUBLIC_SITE_HOST)"
-allow_list="https://yourhoasis.com/**,https://www.yourhoasis.com/**,$web_url/**,http://localhost:3000/**"
-[ -n "$site_host" ] && allow_list="https://$site_host/**,$allow_list"
-supabase_url="$(read_env NEXT_PUBLIC_SUPABASE_URL)"
-if [ "$with_stack" = "true" ] && [ "${WEB_ON_AZURE_DB:-false}" = "true" ]; then
-  supabase_url="$stack_url"
-fi
 
 echo "== 4. apps and jobs"
 params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentityName="id-$AZ_BASE-app" \
