@@ -86,12 +86,12 @@ above, in the order they matter:
     Point-in-Time Recovery is the add-on that makes "undo the last hour"
     possible. Until then, `pg_dump` by hand before anything risky.
 
-17. **Azure.** The hosting, jobs, secrets and database are written to move
-    to the Azure credit from work; nothing is created until you sign in.
-    `az login --use-device-code`, fill `.env.azure` from `.env.azure.example`,
-    then `WITH_SUPABASE_STACK=false scripts/azure/provision.sh`. The order,
-    the cut-over night and the credit's dev/test terms are in
-    `docs/azure-migration-plan.md`.
+17. **Azure.** Done 2026-10-15: `yourhoasis.com` is served from Azure,
+    database and all (`docs/azure-migration-plan.md`). Still yours: pause
+    the Supabase project and delete the Vercel project after 2026-11-14;
+    move `rg-hoasis` to a pay-as-you-go subscription before the first
+    paying association (the credit is dev/test, with a hard stop at $150 a
+    month); items 6 and 7 above (Supabase Pro, Vercel Pro) are void.
 
 ## Deploy, then check
 

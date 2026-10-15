@@ -3,9 +3,10 @@
 Written 2026-10-06 as a plan; rewritten 2026-10-11 as the plan and the
 runbook, when Monish said to use the $150 a month of Azure credit from
 work for hosting, the database and everything else. **Phase 1 ran on the
-night of 2026-10-11 to 12**: the app is on Azure and healthy, the database
-is still the hosted Supabase project, Vercel still serves `yourhoasis.com`.
-What phase 1 found is under "What the first run taught".
+night of 2026-10-11 to 12, phase 2 the same night, and the cut-over on
+2026-10-15 at one in the morning: `yourhoasis.com` is served from Azure,
+database and all.** What the runs found is under "What the first run
+taught".
 
 ## The short version
 
@@ -240,7 +241,30 @@ Then point the web app at the new stack: `WEB_ON_AZURE_DB=true
 scripts/azure/provision.sh`. Sign in, pay with a test card, upload a
 document, change an email: the four flows that cross all three services.
 
-### The cut-over night (one evening, with a rollback that is one DNS change)
+### The cut-over night (done 2026-10-15, 01:13 to 02:05 Pacific)
+
+What happened, in order: production settings (`APP_ENV=production`,
+`NEXT_PUBLIC_SITE_HOST`) and the real domain's Stripe webhook secrets (the
+endpoints already existed for `yourhoasis.com`, so the Azure app took the
+same secrets) into the vault and a rebuild; the two `asuid` TXT records
+and the hostnames on the app; a fresh copy of the database (row counts
+matching) and the 117 files with the services offline for two minutes;
+then the apex A record to the environment's address `52.225.55.197` and
+`www` CNAME to the app, both DNS-only; managed certificates bound (the
+apex by HTTP validation, `www` by CNAME). `https://yourhoasis.com` answered
+from Azure with a DigiCert certificate, health green, the webhook route
+answering, within minutes of the record change.
+
+One trap on the night: the production redeploy dropped the two hostnames,
+because the template did not know them. `provision.sh` now reads the bound
+domains back and passes them through (`webCustomDomains`).
+
+Vercel and the hosted Supabase project are untouched and stay for thirty
+days. Rolling back is the two records back to `76.76.21.21` and
+`cname.vercel-dns.com`; anything written on Azure in between would need
+copying the other way.
+
+The plan as it was written, for the record:
 
 1. Announce a window. Set the app to read-only or show the maintenance
    notice (the billing gate can say "back in an hour").
