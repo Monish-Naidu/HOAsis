@@ -125,7 +125,6 @@ build_args=(
   --build-arg "NEXT_PUBLIC_SUPABASE_URL=$supabase_url"
   --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)"
   --build-arg "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)"
-  --build-arg "NEXT_PUBLIC_SENTRY_DSN=$(read_env NEXT_PUBLIC_SENTRY_DSN)"
   --build-arg "NEXT_PUBLIC_SITE_HOST=$(read_env NEXT_PUBLIC_SITE_HOST)"
   --build-arg "NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)"
   --build-arg "NEXT_PUBLIC_TEST_LOGINS_B64=$(read_env NEXT_PUBLIC_TEST_LOGINS | base64 | tr -d '\n')"
@@ -158,7 +157,7 @@ params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentit
   acrLoginServer="$acr.azurecr.io" storageAccountName="$storage_account" webImage="$web_image" \
   deploySupabaseStack="$with_stack" appEnv="$(read_env APP_ENV)" \
   supabaseUrl="$supabase_url" stackUrl="$stack_url" gotrueUriAllowList="$allow_list" supabaseAnonKey="$(read_env NEXT_PUBLIC_SUPABASE_ANON_KEY)" \
-  stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" sentryDsn="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
+  stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" appInsightsConnectionString="$(out "$work/platform-out.json" appInsightsConnectionString 2>/dev/null || true)" \
   siteHost="$(read_env NEXT_PUBLIC_SITE_HOST)" authCookieDomain="$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)" \
   emailFrom="$(read_env EMAIL_FROM)" platformOwnerEmails="$(read_env PLATFORM_OWNER_EMAILS)" \
   testLogins="$(read_env NEXT_PUBLIC_TEST_LOGINS)" webCustomDomains="$custom_domains" \

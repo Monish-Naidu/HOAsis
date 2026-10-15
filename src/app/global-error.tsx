@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import * as Sentry from "@sentry/nextjs";
 import { themeScript } from "@/components/app/theme";
 import { reportClientError } from "@/components/app/error-reporter";
 import { referenceFor } from "@/lib/log";
@@ -25,7 +24,6 @@ export default function GlobalError({
   const reference = referenceFor(error);
 
   useEffect(() => {
-    Sentry.captureException(error, { tags: { reference } });
     reportClientError({
       reference,
       message: error.message || error.name,

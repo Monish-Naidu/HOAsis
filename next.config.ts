@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
   // The container image (Dockerfile) runs the standalone server, which is
@@ -7,6 +6,17 @@ const nextConfig: NextConfig = {
   // Only when asked for: `next start` and the browser suite want the
   // ordinary output, and standalone makes `next start` complain.
   output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
+  // Application Insights patches `http` and `fetch` at start with require
+  // hooks, which only see modules Node itself loads. Keep the telemetry
+  // packages out of the server bundle so the hooks, and the one global
+  // OpenTelemetry API instance, work (src/instrumentation.node.ts).
+  serverExternalPackages: [
+    "@microsoft/opentelemetry",
+    "@opentelemetry/api",
+    "@opentelemetry/api-logs",
+    "@opentelemetry/instrumentation",
+    "@opentelemetry/instrumentation-undici",
+  ],
   // The trace that decides what standalone carries takes two files of
   // @swc/helpers and misses the ESM ones Next's own require hook asks for at
   // start, with pnpm's layout. Carry the whole package; it is small.
@@ -26,18 +36,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-/**
- * Sentry's build step: source maps to Sentry when SENTRY_AUTH_TOKEN is set
- * (nothing sets it today), nothing at all when it is not. The
- * runtime SDK is separately inert without a DSN (sentry.*.config.ts).
- */
-export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: true,
-  telemetry: false,
-  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
-  widenClientFileUpload: true,
-  bundleSizeOptimizations: { excludeDebugStatements: true },
-});
+export default nextConfig;

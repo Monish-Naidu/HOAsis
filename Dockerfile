@@ -23,7 +23,6 @@ COPY . .
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-ARG NEXT_PUBLIC_SENTRY_DSN
 ARG NEXT_PUBLIC_SITE_HOST
 ARG NEXT_PUBLIC_AUTH_COOKIE_DOMAIN
 # Base64, because it is JSON with spaces and the registry build runner splits
@@ -33,7 +32,6 @@ ARG NEXT_PUBLIC_APP_ENV=production
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
-    NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN \
     NEXT_PUBLIC_SITE_HOST=$NEXT_PUBLIC_SITE_HOST \
     NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=$NEXT_PUBLIC_AUTH_COOKIE_DOMAIN \
     NEXT_PUBLIC_APP_ENV=$NEXT_PUBLIC_APP_ENV \
@@ -48,6 +46,14 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static
 COPY --from=build --chown=app:app /app/public ./public
+COPY --from=build --chown=app:app /app/telemetry.mjs ./telemetry.mjs
+# pnpm keeps every package under node_modules/.pnpm and reaches it through a
+# link. The trace carries the files the server bundle reaches, which is the
+# whole telemetry package, but not the top-level link telemetry.mjs needs to
+# find it by name before Next is up; so, the link.
+RUN mkdir -p node_modules/@microsoft && ln -s "../.pnpm/$(ls node_modules/.pnpm | grep '^@microsoft+opentelemetry@')/node_modules/@microsoft/opentelemetry" node_modules/@microsoft/opentelemetry \
+    && node --input-type=module -e "await import('@microsoft/opentelemetry')"
 USER app
 EXPOSE 3000
-CMD ["node", "server.js"]
+# Telemetry first, so its hooks see the server Next is about to create.
+CMD ["node", "--import", "./telemetry.mjs", "server.js"]

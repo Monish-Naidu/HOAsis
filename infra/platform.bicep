@@ -58,6 +58,10 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   properties: {
     sku: { name: 'PerGB2018' }
     retentionInDays: 30
+    // A page that loops, or a bot, cannot run the bill up: past a gigabyte
+    // a day the workspace drops the rest until midnight UTC. The app writes
+    // well under a tenth of that.
+    workspaceCapping: { dailyQuotaGb: 1 }
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
   }
 }
@@ -378,7 +382,76 @@ resource uptimeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (uptimeUr
   }
 }
 
+// Two more emails from inside the app, both read from the workspace every
+// fifteen minutes. Errors: any JSON line the app wrote at level error (the
+// trace in Application Insights has the same reference). Failures: three or
+// more answers of 500 and up in the window, which is a broken deploy or a
+// dependency down, not one person's bad request.
+var consoleLines = 'ContainerAppConsoleLogs_CL | where ContainerAppName_s == "ca-${baseName}-web" | extend line = parse_json(Log_s)'
+
+resource errorAlert 'Microsoft.Insights/scheduledQueryRules@2022-06-15' = if (uptimeUrl != '') {
+  name: 'alert-${baseName}-errors'
+  location: location
+  tags: tags
+  kind: 'LogAlert'
+  properties: {
+    displayName: 'Your HOAsis wrote an error'
+    description: 'The app logged at level error in the last fifteen minutes. The reference on the line is in /admin and in Application Insights.'
+    severity: 2
+    enabled: true
+    scopes: [ logs.id ]
+    evaluationFrequency: 'PT15M'
+    windowSize: 'PT15M'
+    criteria: {
+      allOf: [
+        {
+          query: '${consoleLines} | where tostring(line.level) == "error" | project TimeGenerated, route = tostring(line.route), msg = tostring(line.msg), reference = tostring(line.requestId)'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+        }
+      ]
+    }
+    autoMitigate: true
+    actions: { actionGroups: [ alertEmail.id ] }
+  }
+}
+
+resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2022-06-15' = if (uptimeUrl != '') {
+  name: 'alert-${baseName}-failures'
+  location: location
+  tags: tags
+  kind: 'LogAlert'
+  properties: {
+    displayName: 'Your HOAsis is answering 5xx'
+    description: 'Three or more requests failed with a server error in fifteen minutes.'
+    severity: 1
+    enabled: true
+    scopes: [ logs.id ]
+    evaluationFrequency: 'PT15M'
+    windowSize: 'PT15M'
+    criteria: {
+      allOf: [
+        {
+          query: 'AppRequests | where toint(ResultCode) >= 500 | project TimeGenerated, Name, ResultCode, OperationId'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 2
+          failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+        }
+      ]
+    }
+    autoMitigate: true
+    actions: { actionGroups: [ alertEmail.id ] }
+  }
+}
+
 // ---------------------------------------------------------------- outputs
+
+// What the web app ships telemetry to (apps.bicep). Not a secret by
+// Microsoft's definition: it names the resource, it does not grant reads.
+output appInsightsConnectionString string = uptimeUrl != '' ? insights!.properties.ConnectionString : ''
 
 output acrName string = acr.name
 output acrLoginServer string = acr.properties.loginServer

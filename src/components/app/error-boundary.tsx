@@ -28,8 +28,8 @@ interface State {
  * Catches render errors so one broken panel does not blank the whole page.
  *
  * This is a class because React only offers the lifecycle for it on classes.
- * `componentDidCatch` is where a real deployment would forward to Sentry; the
- * hook it calls is left injectable so tests can assert on it.
+ * `componentDidCatch` is where the error is reported; the hook it calls is
+ * left injectable so tests can assert on it.
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };

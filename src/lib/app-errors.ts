@@ -7,9 +7,9 @@ import { isRequestId, maskEmail, newRequestId, scrubFields, type LogFields } fro
  *
  * Server only. Called from `/api/log` (what a browser caught) and from
  * `src/instrumentation.ts` (what the server caught). The row is deliberately
- * small: the message and a cut stack, the reference, who and where. Sentry
- * gets the full event when it is configured; this table is what works with
- * no account at all, and what /admin reads.
+ * small: the message and a cut stack, the reference, who and where. Application
+ * Insights gets the same error with its trace when it is configured; this
+ * table is what works with no account at all, and what /admin reads.
  *
  * Never throws. An error recorder that fails must not turn one error into
  * two.
