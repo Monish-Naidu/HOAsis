@@ -31,8 +31,8 @@ param budgetAmount int = 120
 @description('First day of the month the budget starts. Defaults to this month.')
 param budgetStart string = '${utcNow('yyyy-MM')}-01T00:00:00Z'
 
-@description('GitHub repository allowed to deploy, as owner/name.')
-param githubRepo string = 'Monish-Naidu/HOAsis'
+@description('GitHub repository allowed to deploy, as owner/name. GitHub puts the owner and repository ids in the token subject (owner@id/repo@id), so those ids are part of it; `gh api repos/<owner>/<name> --jq .owner.id,.id` prints them.')
+param githubRepo string = 'Monish-Naidu@31556176/HOAsis@1341136801'
 
 @description('Branch whose pushes may deploy.')
 param githubBranch string = 'main'
