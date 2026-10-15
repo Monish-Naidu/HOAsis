@@ -26,7 +26,10 @@ out, pairs = sys.argv[1], sys.argv[2:]
 values = {}
 for pair in pairs:
     key, _, value = pair.partition("=")
-    values[key] = {"value": {"true": True, "false": False}.get(value, value)}
+    if value.startswith("[") or value.startswith("{"):
+        values[key] = {"value": json.loads(value)}
+    else:
+        values[key] = {"value": {"true": True, "false": False}.get(value, value)}
 json.dump({"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
            "contentVersion": "1.0.0.0", "parameters": values}, open(out, "w"))
 PY
@@ -130,6 +133,12 @@ web_image="$acr.azurecr.io/hoasis-web:$tag"
 fi
 
 
+# A domain bound by hand (az containerapp hostname bind) lives only in the
+# app's ingress; a deploy from the template would drop it. Read it back and
+# pass it through.
+custom_domains=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" --query "properties.configuration.ingress.customDomains" -o json 2>/dev/null || echo '[]')
+[ "$custom_domains" = "null" ] && custom_domains='[]'
+
 echo "== 4. apps and jobs"
 params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentityName="id-$AZ_BASE-app" \
   acrLoginServer="$acr.azurecr.io" storageAccountName="$storage_account" webImage="$web_image" \
@@ -138,7 +147,7 @@ params "$work/apps.json" environmentName="$AZ_ENV" keyVaultName="$kv" appIdentit
   stripePublishableKey="$(read_env NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)" sentryDsn="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
   siteHost="$(read_env NEXT_PUBLIC_SITE_HOST)" authCookieDomain="$(read_env NEXT_PUBLIC_AUTH_COOKIE_DOMAIN)" \
   emailFrom="$(read_env EMAIL_FROM)" platformOwnerEmails="$(read_env PLATFORM_OWNER_EMAILS)" \
-  testLogins="$(read_env NEXT_PUBLIC_TEST_LOGINS)"
+  testLogins="$(read_env NEXT_PUBLIC_TEST_LOGINS)" webCustomDomains="$custom_domains"
 az deployment group create -g "$AZ_RG" -n apps --template-file "$ROOT/infra/apps.bicep" \
   --parameters "@$work/apps.json" --only-show-errors --query "properties.outputs" -o json > "$work/apps-out.json"
 web=$(out "$work/apps-out.json" webFqdn)

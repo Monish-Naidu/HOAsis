@@ -24,6 +24,9 @@ param webImage string
 @description('Run the Supabase services here (false while the database is still hosted by Supabase).')
 param deploySupabaseStack bool = true
 
+@description('The custom domains already bound to the web app, as the app reports them, so a redeploy keeps them. provision.sh reads them; an empty list on first deploy.')
+param webCustomDomains array = []
+
 @description('"production" or "staging"; what the app and Sentry call this deployment.')
 param appEnv string = 'staging'
 
@@ -84,6 +87,7 @@ resource web 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: 3000
         transport: 'auto'
         allowInsecure: false
+        customDomains: webCustomDomains
       }
       registries: [ { server: acrLoginServer, identity: identity.id } ]
       secrets: [
