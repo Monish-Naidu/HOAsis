@@ -213,7 +213,7 @@ export const ADMIN_TABS = [
 export const BOARD_SECTION_TABS: Record<string, { row: string; tabs: string[] }> = {
   "/board/money": {
     row: "Finances",
-    tabs: ["Overview", "Transactions", "Past due", "Reserves", "Statements"],
+    tabs: ["Overview", "Transactions", "Past due", "Reserves", "Statements", "Annual records"],
   },
   "/board/requests": { row: "Requests", tabs: ["Requests", "Notices"] },
   "/board/communications": { row: "Messages", tabs: ["Inbox", "Announcements", "Community"] },

@@ -39,6 +39,38 @@ export function isPaymentReversal(line: Pick<ChargeLine, "kind" | "label" | "cat
   return /^(payment reversed|refund of)\b/i.test(line.label);
 }
 
+/** What a set of statement lines added up to: billed, paid, credited. */
+export interface StatementTotals {
+  billedCents: Cents;
+  paidCents: Cents;
+  creditedCents: Cents;
+}
+
+/**
+ * The arithmetic a statement's year does: what was billed, what was paid and
+ * what was credited.
+ *
+ * Every screen that shows these three figures reads them from here, on one
+ * home's year or on every home's year at once, so a records export and the
+ * Statements page cannot disagree about a figure. The rules are the ones a
+ * statement is read by: a line that undoes a payment takes the money back off
+ * paid and never off billed, a credit is its own figure, and neither is billed.
+ */
+export function statementTotals(
+  lines: Pick<ChargeLine, "kind" | "label" | "category" | "amountCents">[],
+): StatementTotals {
+  let billedCents = 0;
+  let paidCents = 0;
+  let creditedCents = 0;
+  for (const line of lines) {
+    if (line.kind === "payment") paidCents += -line.amountCents;
+    else if (line.kind === "credit") creditedCents += -line.amountCents;
+    else if (isPaymentReversal(line)) paidCents -= line.amountCents;
+    else billedCents += line.amountCents;
+  }
+  return { billedCents, paidCents, creditedCents };
+}
+
 /**
  * Oldest first: by date, and on one date charges before payments, so a
  * running balance never dips below zero before the bill the payment settles.
@@ -251,25 +283,18 @@ export function statementFor(community: Community, homeId: string, year: number)
           return later ? later.balanceAfterCents - later.amountCents : 0;
         })();
 
-  let billedCents = 0;
-  let paidCents = 0;
-  let creditedCents = 0;
-  const rows: StatementRow[] = inYear.map((l) => {
-    if (l.kind === "payment") paidCents += -l.amountCents;
-    else if (l.kind === "credit") creditedCents += -l.amountCents;
-    else if (isPaymentReversal(l)) paidCents -= l.amountCents;
-    else billedCents += l.amountCents;
-    return {
-      id: l.id,
-      date: l.date,
-      label: l.label,
-      method: l.method,
-      chargeCents: l.amountCents > 0 ? l.amountCents : 0,
-      paymentCents: l.amountCents < 0 ? -l.amountCents : 0,
-      balanceCents: l.balanceAfterCents,
-    };
-  });
-
+  // The totals come from the shared rule, not from a second copy of it that
+  // the records export could drift away from.
+  const { billedCents, paidCents, creditedCents } = statementTotals(inYear);
+  const rows: StatementRow[] = inYear.map((l) => ({
+    id: l.id,
+    date: l.date,
+    label: l.label,
+    method: l.method,
+    chargeCents: l.amountCents > 0 ? l.amountCents : 0,
+    paymentCents: l.amountCents < 0 ? -l.amountCents : 0,
+    balanceCents: l.balanceAfterCents,
+  }));
   const history = community.history;
   const held = stored.length;
   const unfetched =

@@ -4,7 +4,9 @@ import { useSyncExternalStore } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { hasSupabase } from "@/lib/supabase/env";
 import {
+  loadAnnualRecords,
   loadCommunity,
+  loadCompleteRecords,
   loadLedgerBefore,
   loadMyAssociations,
   loadWholeStatement,
@@ -12,6 +14,8 @@ import {
 } from "./remote";
 import { slugFromHost } from "@/lib/community-links";
 import { withReversals } from "@/lib/ledger-corrections";
+import { statementPeriod } from "@/lib/statement";
+import type { CompleteRecords, YearRecords } from "@/lib/records/rows";
 import type { Community } from "./community";
 
 /**
@@ -559,5 +563,46 @@ export async function refreshRemote(): Promise<void> {
   } catch {
     // Leave the last good copy on screen rather than blanking it. The write
     // that prompted this either landed or reported its own failure.
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Rows for a records export                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One fiscal year of the rows the screens only load a window of.
+ *
+ * Resolves null in the demo, which holds every line already, and null when
+ * the read failed, having said so: a zip built from a failed read would be an
+ * association's records with the books missing, and a download nobody can
+ * tell is short is worse than one that did not happen.
+ */
+export async function annualRecordsRows(year: number): Promise<YearRecords | null> {
+  const c = state.community;
+  if (!hasSupabase || !c) return null;
+  try {
+    return await loadAnnualRecords(
+      supabaseBrowser(),
+      c.id,
+      statementPeriod(c.association.fiscalYearStart, year),
+    );
+  } catch (error) {
+    reportRemoteError(error instanceof Error ? error.message : "Could not read the year's records");
+    return null;
+  }
+}
+
+/** Every row the complete export reads, for the association on screen. */
+export async function completeRecordsRows(): Promise<CompleteRecords | null> {
+  const c = state.community;
+  if (!hasSupabase || !c) return null;
+  try {
+    return await loadCompleteRecords(supabaseBrowser(), c.id);
+  } catch (error) {
+    reportRemoteError(
+      error instanceof Error ? error.message : "Could not read the association's records",
+    );
+    return null;
   }
 }
