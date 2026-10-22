@@ -128,6 +128,21 @@ function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
   return typeof subscription === "string" ? subscription : subscription.id;
 }
 
+/**
+ * The invoice as Stripe sees it now. The event's snapshot may be old — a
+ * payment_failed replayed after the board's card cleared still says failed —
+ * so the current object decides what applies, exactly like subscriptions.
+ * An invoice Stripe can no longer find has nothing current to apply.
+ */
+async function currentInvoice(snapshot: Stripe.Invoice): Promise<Stripe.Invoice | null> {
+  try {
+    return await stripe().invoices.retrieve(snapshot.id);
+  } catch (caught) {
+    if ((caught as { code?: string } | null)?.code === "resource_missing") return null;
+    throw caught;
+  }
+}
+
 async function applyInvoice(
   admin: Admin,
   invoice: Stripe.Invoice,
@@ -281,12 +296,29 @@ export async function POST(request: NextRequest) {
       }
       case "invoice.payment_failed":
       case "invoice.paid": {
-        const outcome = await applyInvoice(
-          admin,
-          event.data.object,
-          event.type === "invoice.paid" ? "paid" : "failed",
-        );
-        if (outcome !== "applied") log.info("event did not apply", { type: event.type, outcome });
+        const invoice = await currentInvoice(event.data.object);
+        // Deleted between the event and now: nothing current to apply.
+        if (!invoice) break;
+        // Paid at Stripe wins over an old failure snapshot; a paid event whose
+        // invoice is not paid writes nothing rather than mark a recovery that
+        // has not happened.
+        const outcome =
+          invoice.status === "paid"
+            ? "paid"
+            : event.type === "invoice.payment_failed"
+              ? "failed"
+              : null;
+        if (!outcome) {
+          log.info("invoice event did not match current state", {
+            type: event.type,
+            invoice: invoice.id,
+            status: invoice.status,
+          });
+          break;
+        }
+        const applied = await applyInvoice(admin, invoice, outcome);
+        if (applied !== "applied")
+          log.info("event did not apply", { type: event.type, outcome: applied });
         break;
       }
       default:

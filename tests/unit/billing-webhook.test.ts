@@ -20,6 +20,7 @@ process.env.STRIPE_BILLING_WEBHOOK_SECRET = SECRET;
 const stripeApi = {
   setupIntents: { retrieve: vi.fn() },
   subscriptions: { create: vi.fn(), retrieve: vi.fn() },
+  invoices: { retrieve: vi.fn() },
   paymentMethods: { retrieve: vi.fn() },
   prices: { list: vi.fn(), create: vi.fn() },
 };
@@ -103,6 +104,11 @@ beforeEach(() => {
   // By default Stripe answers a retrieve with the subscription as the event
   // described it; tests that need drift override this.
   stripeApi.subscriptions.retrieve.mockImplementation(async (id: string) => subscription({ id }));
+  // The invoice as Stripe holds it now: still open and unpaid, unless a test
+  // says it cleared. A replayed failure then must not re-mark past due.
+  stripeApi.invoices.retrieve.mockImplementation(async (id: string) =>
+    invoice({ id, status: "open" }),
+  );
 });
 
 describe("signature and routing", () => {
@@ -490,6 +496,7 @@ describe("invoice events", () => {
   });
 
   it("clears past due on a paid invoice", async () => {
+    stripeApi.invoices.retrieve.mockResolvedValue(invoice({ status: "paid" }));
     const response = await POST(
       signed({ id: "evt_paid", type: "invoice.paid", data: { object: invoice() } }) as never,
     );
@@ -497,8 +504,70 @@ describe("invoice events", () => {
     expect(invoiceApplies()[0]).toMatchObject({ p_outcome: "paid" });
   });
 
+  it("a replayed failure applies the recovery once Stripe has the invoice paid", async () => {
+    // The delivery is old: the board's card cleared after it was sent. The
+    // invoice Stripe holds now is paid, so that is what applies.
+    stripeApi.invoices.retrieve.mockResolvedValue(invoice({ status: "paid" }));
+    const response = await POST(
+      signed({
+        id: "evt_stale_fail",
+        type: "invoice.payment_failed",
+        data: { object: invoice() },
+      }) as never,
+    );
+    expect(response.status).toBe(200);
+    expect(stripeApi.invoices.retrieve).toHaveBeenCalledWith("in_1");
+    expect(invoiceApplies()).toEqual([
+      { p_customer_id: "cus_1", p_subscription_id: "sub_1", p_outcome: "paid" },
+    ]);
+  });
+
+  it("an invoice Stripe can no longer find is acknowledged without a write", async () => {
+    stripeApi.invoices.retrieve.mockRejectedValue({ code: "resource_missing" });
+    const response = await POST(
+      signed({
+        id: "evt_gone",
+        type: "invoice.payment_failed",
+        data: { object: invoice() },
+      }) as never,
+    );
+    expect(response.status).toBe(200);
+    expect(invoiceApplies()).toHaveLength(0);
+  });
+
+  it("a Stripe outage while reconciling an invoice answers 500 so the delivery is retried", async () => {
+    stripeApi.invoices.retrieve.mockRejectedValue(new Error("socket hangup"));
+    const response = await POST(
+      signed({
+        id: "evt_inv_outage",
+        type: "invoice.payment_failed",
+        data: { object: invoice() },
+      }) as never,
+    );
+    expect(response.status).toBe(500);
+    expect(invoiceApplies()).toHaveLength(0);
+  });
+
+  it("a paid event whose invoice is not paid at Stripe writes nothing", async () => {
+    // The current object wins over the snapshot in both directions.
+    stripeApi.invoices.retrieve.mockResolvedValue(invoice({ status: "open" }));
+    const response = await POST(
+      signed({ id: "evt_paid_not", type: "invoice.paid", data: { object: invoice() } }) as never,
+    );
+    expect(response.status).toBe(200);
+    expect(invoiceApplies()).toHaveLength(0);
+  });
+
   it("a failed invoice for an old subscription is acknowledged but not applied", async () => {
     fake.on("rpc:apply_billing_invoice", { data: "stale-subscription" });
+    stripeApi.invoices.retrieve.mockResolvedValue(
+      invoice({
+        parent: {
+          type: "subscription_details",
+          subscription_details: { subscription: "sub_old" },
+        },
+      }),
+    );
     const response = await POST(
       signed({
         id: "evt_stale_invoice",
