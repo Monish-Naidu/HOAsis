@@ -1,4 +1,5 @@
 import type { CommunityDraft, DraftHousehold } from "@/lib/data/new-community";
+import type { FoundingBooks } from "@/lib/founding-books";
 import { nextDueOnOrAfter } from "@/lib/utils";
 
 /**
@@ -120,4 +121,33 @@ export function firstBillDate(draft: CommunityDraft, today: string): string {
     books.billingStartsOn ??
     nextDueOnOrAfter(today, draft.dueDay, draft.duesCadence, books.fiscalYearStart)
   );
+}
+
+/**
+ * The books as they will be saved after founding, with every default
+ * resolved now: the first bill the question showed, whether or not the board
+ * touched it, so a retry tomorrow saves what they were told today. The rows
+ * come from the finalized draft, keyed by the labels founding gives the homes.
+ */
+export function foundingBooksFor(
+  draft: CommunityDraft,
+  final: CommunityDraft,
+  today: string,
+): FoundingBooks {
+  const books = booksOf(draft, today);
+  return {
+    fiscalYearStart: books.fiscalYearStart,
+    billingStartsOn: firstBillDate(draft, today),
+    openingAsOf: books.openingAsOf,
+    rows: householdsNeedingBooks(final).map((h) => ({
+      line: 0,
+      name: h.name,
+      email: h.email,
+      unit: h.unit,
+      address: h.address ?? "",
+      phone: h.phone ?? "",
+      openingBalanceCents: h.openingBalanceCents,
+      problems: [],
+    })),
+  };
 }

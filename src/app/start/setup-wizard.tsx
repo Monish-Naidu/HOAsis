@@ -47,12 +47,13 @@ import {
   booksOf,
   extrasOf,
   firstBillDate,
-  householdsNeedingBooks,
+  foundingBooksFor,
   nextDueOnOrAfter,
   wallToday,
   withBooks,
   type Books,
 } from "./books";
+import { PendingBooksPanel } from "./pending-books-panel";
 import {
   anyRangeStartProblem,
   billingStartProblem,
@@ -62,6 +63,15 @@ import {
   wholeCentsProblem,
 } from "./wizard-checks";
 import { importRoster, setBooksStart } from "@/lib/roster/apply";
+import {
+  booksDone,
+  clearPendingBooks,
+  finishFoundingBooks,
+  pendingBooksFor,
+  pendingBooksStore,
+  savePendingBooks,
+  type PendingBooks,
+} from "@/lib/founding-books";
 import { connectLinkedAccount } from "@/lib/payments/bank-accounts";
 import { SameNameNote } from "@/components/app/same-name-note";
 import {
@@ -213,6 +223,17 @@ function WizardQuestions({
     () => null,
   );
   const [resumeDismissed, setResumeDismissed] = useState(false);
+  // Founded, with its dates or opening balances not yet saved. Held on the
+  // device until they land, so a reload offers them back instead of the
+  // Create button that would found the association a second time.
+  const pendingBooks = pendingBooksFor(
+    useSyncExternalStore(
+      (fn) => pendingBooksStore.subscribe(fn),
+      () => pendingBooksStore.getSnapshot(),
+      () => null,
+    ),
+    auth.user?.id,
+  );
 
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -319,15 +340,15 @@ function WizardQuestions({
         // The look-around copy has the one account its Finances screens need,
         // plainly named. It is not connected to anything: money goes through
         // Stripe, set up after founding.
-        createCommunity(
-          finalizeDraft({
-            ...draft,
-            bankAccount: connectLinkedAccount(
-              { institution: "Operating account", mask: "", kind: "operating" },
-              wallToday(),
-            ),
-          }),
-        );
+        const final = finalizeDraft({
+          ...draft,
+          bankAccount: connectLinkedAccount(
+            { institution: "Operating account", mask: "", kind: "operating" },
+            wallToday(),
+          ),
+        });
+        // The same books the signed-in path saves, applied in this browser.
+        createCommunity(final, foundingBooksFor(draft, final, wallToday()));
         clearProgress();
         router.push("/start/plan");
         return;
@@ -335,59 +356,65 @@ function WizardQuestions({
       flow.jump("account");
       return;
     }
+    const userId = auth.user.id;
     setBusy(true);
-    try {
-      // No bank from this wizard, even one left in a draft saved by an older
-      // version of it.
-      const final = finalizeDraft({ ...draft, bankAccount: undefined });
-      const associationId = await createRemoteAssociation(final);
-      // The fiscal year, the first bill, and what each home owed: none of it
-      // is a founding parameter, so it lands right after, keyed by the
-      // labels create_association just gave the homes. A failure here is
-      // not a failed founding; the association exists and Homeowners can
-      // redo the balances. Refounding on retry would make two.
+    // Books already waiting means the association exists: finish those, and
+    // never found it again.
+    let pendingNow = pendingBooksFor(pendingBooksStore.getSnapshot(), userId);
+    if (!pendingNow) {
       try {
-        const today = wallToday();
-        const books = booksOf(draft, today);
-        await setBooksStart(associationId, {
-          fiscalYearStart: books.fiscalYearStart,
-          // The date the question showed, whether or not the board touched
-          // it, so the record says exactly what they were told.
-          billingStartsOn:
-            books.billingStartsOn ??
-            nextDueOnOrAfter(today, draft.dueDay, draft.duesCadence, books.fiscalYearStart),
-        });
-        const rows = householdsNeedingBooks(final);
-        if (rows.length) {
-          await importRoster(
+        // No bank from this wizard, even one left in a draft saved by an older
+        // version of it.
+        const final = finalizeDraft({ ...draft, bankAccount: undefined });
+        const books = foundingBooksFor(draft, final, wallToday());
+        await createRemoteAssociation(final, (associationId) => {
+          pendingNow = {
             associationId,
-            rows.map((h) => ({
-              line: 0,
-              name: h.name,
-              email: h.email,
-              unit: h.unit,
-              address: h.address ?? "",
-              phone: h.phone ?? "",
-              openingBalanceCents: h.openingBalanceCents,
-              problems: [],
-            })),
-            books.openingAsOf,
-          );
-        }
+            associationName: final.name,
+            userId,
+            books,
+            datesSaved: false,
+            rosterSaved: books.rows.length === 0,
+          };
+          savePendingBooks(pendingNow);
+        });
       } catch (error) {
-        console.error("[hoasis] books follow-up after founding failed", error);
+        setFailure(
+          error instanceof Error
+            ? error.message
+            : "The association could not be created. Try again.",
+        );
+        setBusy(false);
+        return;
       }
-      clearProgress();
-      // Straight to the plan rather than the dashboard. A board that lands on
-      // an empty workspace has to work out what to do next; one that lands
-      // on a plan is asked, in the order that gets money moving first.
-      router.push("/start/plan");
-    } catch (error) {
-      setFailure(
-        error instanceof Error ? error.message : "The association could not be created. Try again.",
-      );
-      setBusy(false);
     }
+    if (pendingNow) await saveBooks(pendingNow);
+    else setBusy(false);
+  }
+
+  /**
+   * The fiscal year, the first bill, and what each home owed, into the
+   * association that exists. None of it is a founding parameter, so it lands
+   * after, keyed by the labels create_association gave the homes. A failure
+   * leaves the panel up with the figures and what did land; only a full
+   * save clears them and moves on.
+   */
+  async function saveBooks(pendingNow: PendingBooks) {
+    setBusy(true);
+    const after = await finishFoundingBooks(pendingNow, {
+      dates: setBooksStart,
+      roster: importRoster,
+    });
+    if (!booksDone(after)) {
+      setBusy(false);
+      return;
+    }
+    clearPendingBooks();
+    clearProgress();
+    // Straight to the plan rather than the dashboard. A board that lands on
+    // an empty workspace has to work out what to do next; one that lands
+    // on a plan is asked, in the order that gets money moving first.
+    router.push("/start/plan");
   }
 
   const w = wordingFor(homeTypesOf(draft), draft.origin);
@@ -674,6 +701,22 @@ function WizardQuestions({
 
   if (sentToEmail && !auth.user) {
     return <CheckEmailPanel draft={draft} email={draft.founder.email.trim()} />;
+  }
+
+  if (pendingBooks) {
+    return (
+      <PendingBooksPanel
+        pending={pendingBooks}
+        busy={busy}
+        onRetry={() => void saveBooks(pendingBooks)}
+        onLater={() => router.push("/start/plan")}
+        onDiscard={() => {
+          clearPendingBooks();
+          clearProgress();
+          router.push("/start/plan");
+        }}
+      />
+    );
   }
 
   return (

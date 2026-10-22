@@ -37,3 +37,31 @@ export function sameOriginPath(next: string | null | undefined, origin: string):
   }
   return path;
 }
+
+/** Every loopback name Next.js folds into "localhost" when it parses a request URL. */
+const LOOPBACK = /^(?:localhost|127(?:\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)){3}|\[::1\])$/;
+
+/**
+ * The origin to send somebody back to, as the browser addressed this server.
+ *
+ * Next.js rewrites a request for 127.0.0.1 or [::1] to "localhost" in
+ * `nextUrl`. A callback opened on http://127.0.0.1:3100 therefore redirected
+ * to http://localhost:3100, a different site to the browser, where the
+ * session cookie just set does not exist. Only that rewrite is undone: the
+ * Host header is believed only when it names a loopback address on the same
+ * port, so a real deployment keeps the origin the server parsed, and a
+ * forwarded host is never read at all.
+ */
+export function requestOrigin(nextUrl: URL, host: string | null): string {
+  const parsed = nextUrl.origin;
+  if (nextUrl.hostname !== "localhost" || !host) return parsed;
+  let asked: URL;
+  try {
+    asked = new URL(`${nextUrl.protocol}//${host}`);
+  } catch {
+    return parsed;
+  }
+  if (!LOOPBACK.test(asked.hostname) || asked.port !== nextUrl.port) return parsed;
+  if (asked.username || asked.password || asked.pathname !== "/" || asked.search) return parsed;
+  return asked.origin;
+}

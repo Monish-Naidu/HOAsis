@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/primitives";
+import { AlertTriangle } from "lucide-react";
+import { Button, Callout } from "@/components/ui/primitives";
+import { pendingBooksFor, pendingBooksStore } from "@/lib/founding-books";
 import { SetupFlow } from "@/components/app/setup-plan";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
@@ -30,6 +32,14 @@ export function PlanScreen() {
   const auth = useAuth();
   const remote = useRemote();
   const foundedHere = useFoundedHere(community.id);
+  const pendingBooks = pendingBooksFor(
+    useSyncExternalStore(
+      (fn) => pendingBooksStore.subscribe(fn),
+      () => pendingBooksStore.getSnapshot(),
+      () => null,
+    ),
+    auth.user?.id,
+  );
 
   // The plan belongs to an association the visitor founded or belongs to.
   // Opened cold and signed out, the page used to show the demo association
@@ -66,5 +76,26 @@ export function PlanScreen() {
   // Keyed on the requested task, so a link to another question from inside
   // the flow (the closing list, the overview) opens that question rather than
   // changing the address under a finished flow.
-  return <SetupFlow key={task ?? ""} welcome />;
+  return (
+    <>
+      {pendingBooks ? (
+        <div className="mx-auto w-full max-w-2xl px-5 pt-6">
+          <Callout
+            tone="warn"
+            icon={<AlertTriangle className="size-4" />}
+            title={`The books for ${pendingBooks.associationName || "your association"} are not saved yet`}
+            action={
+              <Button size="sm" variant="primary" onClick={() => router.push("/start")}>
+                Finish saving them
+              </Button>
+            }
+          >
+            Its budget year, first bill or opening balances are kept on this device until they are
+            saved.
+          </Callout>
+        </div>
+      ) : null}
+      <SetupFlow key={task ?? ""} welcome />
+    </>
+  );
 }

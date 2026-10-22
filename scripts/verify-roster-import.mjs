@@ -171,6 +171,72 @@ try {
     JSON.stringify(after),
   );
 
+  // 2b. The founding wizard's follow-up, sent twice as a retry after a lost
+  //     answer sends it: the founder's own date update and the identical
+  //     import. One home per label and one opening line per home, to the cent.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { error: datesError, count: datesCount } = await founder.client
+      .from("associations")
+      .update({ fiscal_year_start: "07-01", billing_starts_on: "2026-12-01" }, { count: "exact" })
+      .eq("id", associationId);
+    check(
+      `the founder saves the books dates (try ${attempt + 1})`,
+      !datesError && datesCount === 1,
+      datesError?.message ?? `count ${datesCount}`,
+    );
+    const { error: replayError } = await founder.client.rpc("import_households", {
+      p_association_id: associationId,
+      p_as_of: "2026-09-20",
+      p_rows: [
+        {
+          unit: "2",
+          name: "",
+          email: "",
+          phone: "425-555-0114",
+          address: "",
+          opening_balance_cents: 18551,
+        },
+        { unit: "3", name: "", email: "", phone: "", address: "", opening_balance_cents: -2001 },
+      ],
+    });
+    check(
+      `the identical import runs (try ${attempt + 1})`,
+      !replayError,
+      replayError?.message ?? "",
+    );
+  }
+  const { data: datesRow } = await founder.client
+    .from("associations")
+    .select("fiscal_year_start, billing_starts_on")
+    .eq("id", associationId)
+    .single();
+  check(
+    "the dates are exactly what was sent",
+    datesRow?.fiscal_year_start === "07-01" && datesRow?.billing_starts_on === "2026-12-01",
+    JSON.stringify(datesRow),
+  );
+  const { data: replayUnits } = await founder.client
+    .from("units")
+    .select("id")
+    .eq("association_id", associationId);
+  check(
+    "a replay adds no home",
+    (replayUnits ?? []).length === 4,
+    String((replayUnits ?? []).length),
+  );
+  const { data: replayLines } = await founder.client
+    .from("charges")
+    .select("unit_id, amount_cents, due_on")
+    .eq("association_id", associationId)
+    .eq("label", "Balance brought forward");
+  check(
+    "a replay leaves one opening line per home, totalling the cents sent",
+    (replayLines ?? []).length === 2 &&
+      new Set((replayLines ?? []).map((l) => l.unit_id)).size === 2 &&
+      (replayLines ?? []).reduce((sum, l) => sum + l.amount_cents, 0) === 16550 &&
+      (replayLines ?? []).every((l) => l.due_on === "2026-09-20"),
+    JSON.stringify(replayLines),
+  );
   // 3. The guard: a period the opening balances cover is not billed to those homes.
   //    The association was founded today, so the books are told to start
   //    earlier first; otherwise nothing before today bills at all, which is

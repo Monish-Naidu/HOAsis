@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
-import { sameOriginPath } from "./next-path";
+import { requestOrigin, sameOriginPath } from "./next-path";
 
 /**
  * Where a confirmation link lands.
@@ -23,13 +23,16 @@ import { sameOriginPath } from "./next-path";
  */
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
+  // The origin the link was opened on, so the session cookie set here is the
+  // one the next page reads.
+  const origin = requestOrigin(url, request.headers.get("host"));
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type");
   // Set when the board sent somebody straight to a bill. Only ever a path on
   // this site, so a crafted link cannot use us to bounce somebody somewhere
   // else; anything that resolves off this origin is dropped here.
-  const next = sameOriginPath(url.searchParams.get("next"), url.origin);
+  const next = sameOriginPath(url.searchParams.get("next"), origin);
 
   const supabase = await supabaseServer();
 
@@ -52,7 +55,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (failed) {
-    const back = new URL("/signin", url.origin);
+    const back = new URL("/signin", origin);
     back.searchParams.set("error", failed);
     // A link in a notice lasts an hour and is spent by the first thing that
     // opens it, which is sometimes a mail scanner. Keep where it was going,
@@ -67,7 +70,7 @@ export async function GET(request: NextRequest) {
 
   // Honour an explicit destination. Already reduced to a path on this site.
   if (next) {
-    return NextResponse.redirect(new URL(next, url.origin));
+    return NextResponse.redirect(new URL(next, origin));
   }
 
   const { data: memberships } = await supabase.rpc("my_associations");
@@ -79,9 +82,9 @@ export async function GET(request: NextRequest) {
     // does not have, or might be a founder who has not started. The resident
     // side tells those apart and offers the right door to each. Sending them
     // all to the founder's setup was answering a question most had not asked.
-    return NextResponse.redirect(new URL("/resident", url.origin));
+    return NextResponse.redirect(new URL("/resident", origin));
   }
 
   const runsSomething = rows.some((m) => m.role !== "resident");
-  return NextResponse.redirect(new URL(runsSomething ? "/board" : "/resident", url.origin));
+  return NextResponse.redirect(new URL(runsSomething ? "/board" : "/resident", origin));
 }
