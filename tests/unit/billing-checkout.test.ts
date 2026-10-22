@@ -554,3 +554,94 @@ describe("return origin", () => {
     expect(state.op?.return_origin).toBe("http://127.0.0.1:3100");
   });
 });
+
+describe("database faults stay retryable", () => {
+  it("a failed reservation answers 500 and creates nothing at Stripe", async () => {
+    signIn();
+    setupAdmin();
+    adminFake.on("rpc:begin_billing_operation", {
+      data: null,
+      error: { message: "connection reset" },
+    });
+    const response = await POST(request());
+    expect(response.status).toBe(500);
+    expect(stripeFake.customers.create).not.toHaveBeenCalled();
+    expect(stripeFake.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("a customer whose id could not be stored is adopted on retry, not duplicated", async () => {
+    signIn();
+    setupAdmin();
+    // The create reached Stripe; writing its id down did not.
+    adminFake.once("billing_operations.update", {
+      data: null,
+      error: { message: "connection reset" },
+    });
+    expect((await POST(request())).status).toBe(500);
+    expect(stripeFake.customers.create).toHaveBeenCalledTimes(1);
+    expect(state.op?.customer_id).toBeNull();
+    expect(stripeFake.checkout.sessions.create).not.toHaveBeenCalled();
+
+    // The retry finds the customer the first attempt actually made, and
+    // finishes the same operation instead of opening another one.
+    stripeFake.customers.search.mockResolvedValue({ data: [{ id: "cus_1" }] });
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(stripeFake.customers.create).toHaveBeenCalledTimes(1);
+    expect(stripeFake.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    expect(state.op?.customer_id).toBe("cus_1");
+    expect((await response.json()).url).toContain("cs_1");
+  });
+
+  it("a session whose id could not be stored is adopted on retry, not duplicated", async () => {
+    signIn();
+    setupAdmin();
+    const sticky = (call: (typeof adminFake.calls)[number]) => {
+      if (!filtersHold(state, call.chain)) return { data: [] };
+      Object.assign(state.op!, call.argsOf("update")![0] as Record<string, unknown>);
+      return { data: [state.op] };
+    };
+    // The customer claim succeeds; the session claim after the create fails.
+    adminFake.once("billing_operations.update", sticky, {
+      data: null,
+      error: { message: "connection reset" },
+    });
+    expect((await POST(request())).status).toBe(500);
+    expect(stripeFake.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    expect(state.op?.session_id).toBeNull();
+
+    // The retry reconciles what Stripe already holds for this operation:
+    // the open session is adopted, and no second session is created.
+    stripeFake.checkout.sessions.list.mockResolvedValue({
+      data: [
+        {
+          id: "cs_1",
+          client_reference_id: "op-1",
+          url: "https://checkout.stripe.com/c/pay/cs_1",
+        },
+      ],
+    });
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(stripeFake.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    expect(stripeFake.checkout.sessions.create.mock.calls[0][1]).toEqual({
+      idempotencyKey: "bill-sess-op-1",
+    });
+    expect(state.op?.session_id).toBe("cs_1");
+  });
+
+  it("a failed customer record on the association row answers 500, not success", async () => {
+    signIn();
+    setupAdmin();
+    adminFake.on("associations.update", { data: null, error: { message: "connection reset" } });
+    const response = await POST(request());
+    expect(response.status).toBe(500);
+    // Nothing downstream of the failed write ran: no session was made.
+    expect(stripeFake.checkout.sessions.create).not.toHaveBeenCalled();
+
+    adminFake.on("associations.update", { data: [{ id: ASSOC }] });
+    expect((await POST(request())).status).toBe(200);
+    expect(stripeFake.customers.create).toHaveBeenCalledTimes(1);
+    expect(stripeFake.checkout.sessions.create).toHaveBeenCalledTimes(1);
+  });
+});

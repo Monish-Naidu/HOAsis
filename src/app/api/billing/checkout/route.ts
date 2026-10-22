@@ -39,19 +39,23 @@ async function storeCustomerId(
   op: BillingOperation,
   customerId: string,
 ): Promise<string | null> {
-  const { data } = await admin
+  const { data, error } = await admin
     .from("billing_operations")
     .update({ customer_id: customerId })
     .eq("id", op.id)
     .eq("status", "open")
     .is("customer_id", null)
     .select("customer_id");
+  // A write that failed is not a lost race: the caller must retry, or the
+  // customer Stripe just made would be stranded off the record.
+  if (error) throw new Error(`could not store the customer: ${error.message}`);
   if (data?.length) return customerId;
-  const { data: again } = await admin
+  const { data: again, error: rereadError } = await admin
     .from("billing_operations")
     .select("customer_id")
     .eq("id", op.id)
     .single();
+  if (rereadError) throw new Error(`could not re-read the operation: ${rereadError.message}`);
   return again?.customer_id ?? null;
 }
 
@@ -61,18 +65,20 @@ async function storeSessionId(
   op: BillingOperation,
   sessionId: string,
 ): Promise<boolean> {
-  const { data } = await admin
+  const { data, error } = await admin
     .from("billing_operations")
     .update({ session_id: sessionId })
     .eq("id", op.id)
     .eq("status", "open")
     .is("session_id", null)
     .select("id");
+  if (error) throw new Error(`could not store the session: ${error.message}`);
   return Boolean(data?.length);
 }
 
 async function readOperation(admin: Admin, id: string): Promise<BillingOperation | null> {
-  const { data } = await admin.from("billing_operations").select("*").eq("id", id).single();
+  const { data, error } = await admin.from("billing_operations").select("*").eq("id", id).single();
+  if (error) throw new Error(`could not re-read the operation: ${error.message}`);
   return (data as BillingOperation | null) ?? null;
 }
 
@@ -83,11 +89,12 @@ async function markCompleted(
   sessionId: string,
   subscriptionId: string | null,
 ): Promise<void> {
-  await admin
+  const { error } = await admin
     .from("billing_operations")
     .update({ status: "completed", session_id: sessionId, subscription_id: subscriptionId })
     .eq("id", op.id)
     .eq("status", "open");
+  if (error) throw new Error(`could not close the billing operation: ${error.message}`);
 }
 
 /** The Checkout parameters, built only from what the operation froze. */
@@ -232,11 +239,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Could not start checkout" }, { status: 500 });
     }
     // The webhook finds the association by this column when metadata is lost.
-    await admin
+    const { error: linkError } = await admin
       .from("associations")
       .update({ billing_customer_id: customerId, billing_email: op.customer_email })
       .eq("id", associationId)
       .is("billing_customer_id", null);
+    if (linkError) throw new Error(`could not record the customer: ${linkError.message}`);
 
     // One usable Checkout session per operation. A stored session is reused
     // while it is open, reported when it completed and replaced only once it

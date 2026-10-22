@@ -43,6 +43,7 @@ const SUITES = [
   "two-homes",
   "billing-lock",
   "billing-checkout",
+  "billing-webhook",
   "append-only",
   "rollups",
   "fiscal-years",
