@@ -505,6 +505,57 @@ describe("replacement after expiry", () => {
   });
 });
 
+describe("a completed setup-mode session", () => {
+  // A setup Checkout never carries a subscription: Stripe makes none. The
+  // webhook creates it under the operation's own key, so the operation must
+  // still be open when the webhook arrives. Closing it here with a null
+  // subscription strands the association billed-never with a card on file.
+  function setupOp(over: Partial<BillingOperation> = {}): BillingOperation {
+    return {
+      ...opFrom({
+        p_mode: "setup",
+        p_quantity: 3,
+        p_trial_end_ts: Math.floor(Date.now() / 1000) + 36 * 3600,
+        p_customer_name: "Test HOA",
+        p_customer_email: "p@example.com",
+        p_return_origin: "http://localhost:3100",
+      }),
+      customer_id: "cus_1",
+      ...over,
+    };
+  }
+
+  it("a repeat click after hosted setup completed keeps the operation open for the webhook", async () => {
+    signIn();
+    setupAdmin();
+    state.op = setupOp({ session_id: "cs_setup" });
+    stripeFake.checkout.sessions.retrieve.mockResolvedValue({
+      id: "cs_setup",
+      status: "complete",
+      mode: "setup",
+      subscription: null,
+    });
+    const response = await POST(request());
+    // The card IS on file at Stripe, so the answer stays the same; what must
+    // not happen is closing the operation before its subscription exists.
+    expect(response.status).toBe(409);
+    expect(state.op).toMatchObject({ status: "open", subscription_id: null });
+    expect(stripeFake.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("an orphan reconcile that finds the completed setup session also keeps the operation open", async () => {
+    signIn();
+    setupAdmin();
+    state.op = setupOp();
+    stripeFake.checkout.sessions.list.mockResolvedValueOnce({ data: [] }).mockResolvedValueOnce({
+      data: [{ id: "cs_setup", client_reference_id: "op-1", mode: "setup", subscription: null }],
+    });
+    const response = await POST(request());
+    expect(response.status).toBe(409);
+    expect(state.op).toMatchObject({ status: "open", subscription_id: null });
+    expect(stripeFake.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+});
 describe("trial boundaries", () => {
   it("takes the setup path with the exact end when under 48 hours remain", async () => {
     signIn();

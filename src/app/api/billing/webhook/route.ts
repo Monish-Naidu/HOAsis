@@ -180,8 +180,27 @@ async function completeSetup(admin: Admin, session: Stripe.Checkout.Session): Pr
     .maybeSingle();
   if (readError) throw new Error(`could not read the billing operation: ${readError.message}`);
   const op = row as BillingOperation | null;
-  // No open operation: this delivery already ran to completion. Replays end here.
-  if (!op) return;
+  if (!op) {
+    // No open operation. Acknowledging is safe only for a genuine replay,
+    // which the closed operation proves by carrying this setup's
+    // subscription. Without it the subscription was never made — the old
+    // checkout race closed operations with a null one — so fail and let
+    // Stripe retry rather than lose the subscription to a 200.
+    const { data: done, error: doneError } = await admin
+      .from("billing_operations")
+      .select("subscription_id")
+      .eq("association_id", associationId)
+      .eq("mode", "setup")
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (doneError) {
+      throw new Error(`could not re-read the billing operation: ${doneError.message}`);
+    }
+    if (done?.subscription_id) return;
+    throw new Error("setup session completed but no subscription is on record");
+  }
 
   const client = stripe();
   const setupIntentId =

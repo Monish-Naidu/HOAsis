@@ -82,16 +82,25 @@ async function readOperation(admin: Admin, id: string): Promise<BillingOperation
   return (data as BillingOperation | null) ?? null;
 }
 
-/** The operation ran its course; keep the outcome on the row. */
+/**
+ * The operation ran its course; keep the outcome on the row — but only once
+ * the session carries its subscription. A setup-mode session completes
+ * without one: the webhook creates that subscription under the operation's
+ * own key. Closing the operation first would leave the webhook no open
+ * operation to find, so the card would sit on file at Stripe while the
+ * association is never billed. No subscription, no close: the operation
+ * stays open for the webhook and the caller's card answer stands.
+ */
 async function markCompleted(
   admin: Admin,
   op: BillingOperation,
-  sessionId: string,
-  subscriptionId: string | null,
+  session: Stripe.Checkout.Session,
 ): Promise<void> {
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+  if (!subscriptionId) return;
   const { error } = await admin
     .from("billing_operations")
-    .update({ status: "completed", session_id: sessionId, subscription_id: subscriptionId })
+    .update({ status: "completed", session_id: session.id, subscription_id: subscriptionId })
     .eq("id", op.id)
     .eq("status", "open");
   if (error) throw new Error(`could not close the billing operation: ${error.message}`);
@@ -255,9 +264,7 @@ export async function POST(request: NextRequest) {
         const existing = await client.checkout.sessions.retrieve(op.session_id);
         if (existing.status === "open") return NextResponse.json({ url: existing.url });
         if (existing.status === "complete") {
-          const subscriptionId =
-            typeof existing.subscription === "string" ? existing.subscription : null;
-          await markCompleted(admin, op, existing.id, subscriptionId);
+          await markCompleted(admin, op, existing);
           return NextResponse.json({ error: "A card is already on file" }, { status: 409 });
         }
         // Expired: the replacement must name the old row so two replacers
@@ -300,9 +307,7 @@ export async function POST(request: NextRequest) {
       });
       const finished = doneAtStripe.data.find((s) => s.client_reference_id === op.id);
       if (finished) {
-        const subscriptionId =
-          typeof finished.subscription === "string" ? finished.subscription : null;
-        await markCompleted(admin, op, finished.id, subscriptionId);
+        await markCompleted(admin, op, finished);
         return NextResponse.json({ error: "A card is already on file" }, { status: 409 });
       }
 

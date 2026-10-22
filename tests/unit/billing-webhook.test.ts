@@ -429,6 +429,58 @@ describe("checkout.session.completed", () => {
     expect(stripeApi.subscriptions.create.mock.calls[0][0].trial_end).toBeUndefined();
   });
 
+  it("a replayed setup completion is acknowledged only because the subscription is on record", async () => {
+    // The operation already closed carrying its subscription: a redelivery
+    // of the same event is a replay and must not create a second one.
+    fake.on("billing_operations.select", (call) => {
+      const status = call.chain.find((step) => step[0] === "eq" && step[1] === "status")?.[2];
+      return status === "open" ? { data: null } : { data: { subscription_id: "sub_1" } };
+    });
+    const response = await POST(
+      signed({
+        id: "evt_setup_replay",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_setup_1",
+            object: "checkout.session",
+            mode: "setup",
+            customer: "cus_1",
+            setup_intent: "seti_1",
+            metadata: { association_id: "assoc-1" },
+          },
+        },
+      }) as never,
+    );
+    expect(response.status).toBe(200);
+    expect(stripeApi.subscriptions.create).not.toHaveBeenCalled();
+  });
+
+  it("a setup completion with no subscription on record is retried, not acknowledged", async () => {
+    // Neither an open operation nor a closed one with its subscription: the
+    // subscription was never made, so acknowledging would lose it forever.
+    fake.on("billing_operations.select", { data: null });
+    const response = await POST(
+      signed({
+        id: "evt_setup_stranded",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_setup_9",
+            object: "checkout.session",
+            mode: "setup",
+            customer: "cus_1",
+            setup_intent: "seti_1",
+            metadata: { association_id: "assoc-1" },
+          },
+        },
+      }) as never,
+    );
+    expect(response.status).toBe(500);
+    expect(await response.json()).not.toMatchObject({ received: true });
+    expect(stripeApi.subscriptions.create).not.toHaveBeenCalled();
+  });
+
   it("a lost result write after creating the subscription retries without a duplicate", async () => {
     fake.on("billing_operations.select", {
       data: {
