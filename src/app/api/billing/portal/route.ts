@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requestOrigin } from "@/app/auth/callback/next-path";
 import { portalConfigurationId } from "@/lib/stripe/portal";
 import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
@@ -42,9 +43,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No card on file yet" }, { status: 404 });
   }
 
+  // The browser's own origin, so a local 127.0.0.1 session survives the
+  // round trip (Next folds it to "localhost" in nextUrl; see next-path.ts).
+  const origin = requestOrigin(request.nextUrl, request.headers.get("host"));
   const session = await stripe().billingPortal.sessions.create({
     customer: row.billing_customer_id,
-    return_url: `${request.nextUrl.origin}/board/settings`,
+    return_url: `${origin}/board/settings`,
     // Ours, with cancelling switched on. See src/lib/stripe/portal.ts.
     configuration: await portalConfigurationId(stripe()),
   });

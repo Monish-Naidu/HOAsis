@@ -39,7 +39,8 @@ export type QuantitySync =
   /** Over at Stripe, or with no line to change. Left alone. */
   | { outcome: "skipped"; why: string };
 
-/** What Checkout would have charged for: every home, and never fewer than one. */
+/** What Checkout would have charged for: every home on the register (retired
+ * homes are off it), and never fewer than one. */
 export function quantityFor(homes: number): number {
   return Math.max(1, Math.trunc(homes));
 }

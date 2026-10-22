@@ -42,6 +42,7 @@ const SUITES = [
   "owners",
   "two-homes",
   "billing-lock",
+  "billing-checkout",
   "append-only",
   "rollups",
   "fiscal-years",

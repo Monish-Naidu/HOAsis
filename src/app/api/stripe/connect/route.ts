@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { requestOrigin } from "@/app/auth/callback/next-path";
 import { stripe } from "@/lib/stripe/server";
 import { registerPayDomains, syncAccountStatus } from "@/lib/stripe/account-status";
 import { accountPrefill } from "@/lib/stripe/onboarding";
@@ -100,7 +101,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No such association" }, { status: 404 });
   }
 
-  const origin = request.nextUrl.origin;
+  // The origin the browser addressed, with the 127.0.0.1-to-localhost fold
+  // undone, so the return from Stripe lands where the session cookie lives.
+  const origin = requestOrigin(request.nextUrl, request.headers.get("host"));
   let accountId = row.stripe_account_id;
   if (!accountId) {
     // Stripe checks the business URL, so a localhost origin would fail it;

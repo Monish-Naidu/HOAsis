@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
 import { statusFromStripe } from "@/lib/billing";
+import { platformPriceId } from "@/lib/stripe/platform-price";
 import { stripe } from "@/lib/stripe/server";
+import type { BillingOperation } from "@/lib/stripe/billing-operation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/log";
 
@@ -80,6 +82,63 @@ async function writeSubscription(admin: Admin, subscription: Stripe.Subscription
     .eq("id", associationId);
 }
 
+/**
+ * A setup Checkout that was completed: the card is on file and the
+ * subscription has to be made here, with the exact trial end the operation
+ * promised. Checkout refuses a trial ending under 48 hours out, which is the
+ * whole reason the short tail arrives this way; the subscriptions API takes
+ * the end down to the second. If the trial ran out while the treasurer was
+ * typing, no new trial is invented: the subscription starts and the first
+ * invoice is simply the first invoice, as the billing copy already says.
+ */
+async function completeSetup(admin: Admin, session: Stripe.Checkout.Session): Promise<void> {
+  const associationId = session.metadata?.association_id;
+  if (!associationId) return;
+  const { data: row } = await admin
+    .from("billing_operations")
+    .select("*")
+    .eq("association_id", associationId)
+    .eq("status", "open")
+    .eq("mode", "setup")
+    .maybeSingle();
+  const op = row as BillingOperation | null;
+  if (!op) return;
+
+  const client = stripe();
+  const setupIntentId =
+    typeof session.setup_intent === "string" ? session.setup_intent : session.setup_intent?.id;
+  if (!setupIntentId) throw new Error("completed setup session has no setup intent");
+  const setupIntent = await client.setupIntents.retrieve(setupIntentId);
+  const paymentMethod =
+    typeof setupIntent.payment_method === "string"
+      ? setupIntent.payment_method
+      : setupIntent.payment_method?.id;
+  const customer = typeof session.customer === "string" ? session.customer : session.customer?.id;
+  if (!customer) throw new Error("completed setup session has no customer");
+
+  const subscription = await client.subscriptions.create(
+    {
+      customer,
+      items: [{ price: await platformPriceId(client), quantity: op.quantity }],
+      default_payment_method: paymentMethod ?? undefined,
+      ...(op.trial_end_ts && op.trial_end_ts * 1000 > Date.now()
+        ? { trial_end: op.trial_end_ts }
+        : {}),
+      metadata: { association_id: associationId },
+    },
+    // The operation's own key, so a redelivered event or a lost answer
+    // continues the same subscription instead of opening a second one.
+    { idempotencyKey: op.subscription_key },
+  );
+
+  await admin
+    .from("billing_operations")
+    .update({ status: "completed", session_id: session.id, subscription_id: subscription.id })
+    .eq("id", op.id)
+    .eq("status", "open");
+  await writeSubscription(admin, subscription);
+}
+
 export async function POST(request: NextRequest) {
   const log = logger("billing/webhook", request);
   const secret = process.env.STRIPE_BILLING_WEBHOOK_SECRET;
@@ -104,11 +163,23 @@ export async function POST(request: NextRequest) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
+      if (session.mode === "setup") {
+        await completeSetup(admin, session);
+        break;
+      }
       if (session.mode !== "subscription" || !session.subscription) break;
       const id =
         typeof session.subscription === "string" ? session.subscription : session.subscription.id;
       const subscription = await stripe().subscriptions.retrieve(id);
       await writeSubscription(admin, subscription);
+      // The operation this session belonged to is done with it.
+      if (session.client_reference_id) {
+        await admin
+          .from("billing_operations")
+          .update({ status: "completed", session_id: session.id, subscription_id: id })
+          .eq("id", session.client_reference_id)
+          .eq("status", "open");
+      }
       break;
     }
     case "customer.subscription.created":
