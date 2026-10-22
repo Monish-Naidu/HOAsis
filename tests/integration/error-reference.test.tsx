@@ -147,6 +147,39 @@ describe("a client error on a page whose address carries a bare fragment", () =>
     expectClean(row);
     expectClean(lines);
   });
+
+  it("stores no part of a fragment that carries its own closing parenthesis", async () => {
+    // `)` is valid inside a fragment, so the whole of `#section)PLANTED…`
+    // is the fragment; only the stack frame's own bracket stays.
+    window.history.pushState({}, "", "/resident/pay#section)PLANTEDFRAGMENT55");
+    const posted: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        posted.push(String(init.body));
+        return new Response("{}");
+      }),
+    );
+    const error = new Error(
+      "Could not open http://localhost:3000/resident/pay#section)PLANTEDFRAGMENT55",
+    );
+    error.stack = `Error: boom\n    at render (http://localhost:3000/resident/pay#section)PLANTEDFRAGMENT55)`;
+    const { default: RouteError } = await import("@/app/error");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<RouteError error={error} reset={() => {}} />);
+
+    const shown = screen.getByText(/^[A-HJ-NP-Z2-9]{8}$/).textContent!;
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(await post(posted[0])).toEqual({ reference: shown });
+    const row = stored[0];
+    expect(row).toMatchObject({ reference: shown, route: "/resident/pay" });
+    expect((row.extra as { href: string }).href).toBe(
+      "http://localhost:3000/resident/pay#[redacted]",
+    );
+    expect(row.message).toBe("Could not open http://localhost:3000/resident/pay#[redacted]");
+    expectClean(row);
+    expectClean(lines);
+  });
 });
 
 describe("a server error's reference", () => {

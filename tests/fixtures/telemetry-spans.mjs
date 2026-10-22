@@ -79,10 +79,13 @@ const app = http.createServer(async (_request, response) => {
   const failing = await fetch(`${base}/fail?access_token=${markers.token}`);
   await failing.text();
   const span = trace.getActiveSpan();
+  // `)` is a legal fragment character, so the planted fragment sits behind
+  // one: a scrubber that ends a fragment at any `)` leaks it, in the message
+  // outright and in the stack next to the frame's own closing bracket.
   const failure = new Error(
-    `could not reach ${markers.email} with password=${markers.password} from ${base}/resident/pay#${markers.fragment}`,
+    `could not reach ${markers.email} with password=${markers.password} from ${base}/resident/pay#section)${markers.fragment}`,
   );
-  failure.stack = `Error: ${failure.message}\n    at pay (${base}/resident/pay#${markers.fragment})`;
+  failure.stack = `Error: ${failure.message}\n    at pay (${base}/resident/pay#section)${markers.fragment})`;
   span?.recordException(failure);
   span?.setStatus({
     code: SpanStatusCode.ERROR,

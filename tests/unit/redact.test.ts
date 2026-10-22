@@ -41,6 +41,28 @@ describe("scrubText", () => {
     );
   });
 
+  it("redacts a fragment with an internal closing parenthesis in full", () => {
+    expect(
+      scrubText("at http://localhost:3100/resident/pay#section)PLANTEDFRAGMENT55 failed"),
+    ).toBe("at http://localhost:3100/resident/pay#[redacted] failed");
+    expect(scrubText("loaded /resident/pay#section)PLANTEDFRAGMENT55")).toBe(
+      "loaded /resident/pay#[redacted]",
+    );
+    expect(scrubText("at pay (http://x.test/p#section)PLANTED)")).toBe(
+      "at pay (http://x.test/p#[redacted])",
+    );
+  });
+
+  it("keeps a closing parenthesis that belongs to the text around the address", () => {
+    expect(scrubText("at pay (http://x.test/p#PLANTED)")).toBe(
+      "at pay (http://x.test/p#[redacted])",
+    );
+    expect(scrubText("(see /resident/pay#PLANTED)")).toBe("(see /resident/pay#[redacted])");
+    expect(scrubText("wrapped (http://x.test/p#foo(bar)) done")).toBe(
+      "wrapped (http://x.test/p#[redacted]) done",
+    );
+  });
+
   it("leaves a hash that is not part of an address alone", () => {
     expect(scrubText("issue #12 and color #fff")).toBe("issue #12 and color #fff");
   });

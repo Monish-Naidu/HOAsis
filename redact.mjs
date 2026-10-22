@@ -20,17 +20,56 @@ const QUERY_VALUE = /([?&#;])([^=\s&#;?"'<>]+)=([^&#;\s"'<>]*)/g;
  * (`/resident/pay#...`). Sign-in links carry their tokens there, and a
  * fragment is never sent to a server, so nothing downstream needs it. One
  * made only of `key=value` pairs is left to QUERY_VALUE, which keeps the
- * names; anything else in it goes whole. A closing parenthesis ends it, so
- * a stack frame keeps its shape.
+ * names; anything else in it goes whole. A parenthesis is a legal fragment
+ * character, so the match runs to real whitespace and splitAddressEnd
+ * pushes back only a trailing `)` that closes a bracket opened before the
+ * address, keeping a stack frame's shape.
  */
 const FRAGMENT_PAIR = String.raw`[A-Za-z0-9_.-]{1,40}=[^\s"'<>\`)&#;]*`;
-const FRAGMENT_END = String.raw`[\s"'<>\`)]`;
-const FRAGMENT_TAIL = String.raw`#(?!\[redacted\])(?!${FRAGMENT_PAIR}(?:[&;]${FRAGMENT_PAIR})*(?:${FRAGMENT_END}|$))[^\s"'<>\`)]+`;
+const FRAGMENT_PAIRS_ONLY = new RegExp(String.raw`^(?:${FRAGMENT_PAIR})(?:[&;]${FRAGMENT_PAIR})*$`);
+const FRAGMENT_TAIL = String.raw`#(?!\[redacted\])[^\s"'<>\`]+`;
 const URL_FRAGMENT = new RegExp(
-  String.raw`(\b[a-z][a-z0-9+.-]*:\/\/[^\s#"'<>\`]*)` + FRAGMENT_TAIL,
+  String.raw`(\b[a-z][a-z0-9+.-]*:\/\/[^\s#"'<>\`]*)(` + FRAGMENT_TAIL + `)`,
   "gi",
 );
-const PATH_FRAGMENT = new RegExp(String.raw`(^|[\s(="'\`])(\/[^\s#"'<>\`]*)` + FRAGMENT_TAIL, "g");
+const PATH_FRAGMENT = new RegExp(
+  String.raw`(^|[\s(="'\`])(\/[^\s#"'<>\`]*)(` + FRAGMENT_TAIL + `)`,
+  "g",
+);
+
+/**
+ * Splits an address into the part that is really the address and trailing
+ * `)` characters that close brackets opened before it: in
+ * `at pay (http://x/p#frag)` the last bracket is the sentence's, while in
+ * `http://x/p#section)frag` the parenthesis sits inside the fragment and
+ * stays. A trailing bracket goes back only while the address has more
+ * closing than opening parentheses, so balanced pairs inside a fragment
+ * are untouched.
+ */
+function splitAddressEnd(address) {
+  let end = address.length;
+  while (end > 0 && address[end - 1] === ")") {
+    const kept = address.slice(0, end);
+    const opens = kept.split("(").length - 1;
+    const closes = kept.split(")").length - 1;
+    if (closes <= opens) break;
+    end -= 1;
+  }
+  return [address.slice(0, end), address.slice(end)];
+}
+
+/**
+ * Redacts the fragment of one matched address. A fragment of nothing but
+ * `key=value` pairs is left for QUERY_VALUE, which keeps the names; an
+ * empty one needs nothing done.
+ */
+function scrubHashedFragment(prefix, hashAndFragment) {
+  const address = prefix + hashAndFragment;
+  const [kept, trailing] = splitAddressEnd(address);
+  const fragment = kept.slice(prefix.length + 1);
+  if (fragment === "" || FRAGMENT_PAIRS_ONLY.test(fragment)) return address;
+  return `${prefix}#${REDACTED}${trailing}`;
+}
 const AUTH_SCHEME = /\b(Bearer|Basic|Token)\s+[A-Za-z0-9._~+/=-]+/gi;
 const JWT = /\beyJ[A-Za-z0-9_-]{10,}(?:\.[A-Za-z0-9_-]*){0,2}/g;
 const KEY_SHAPED = /\b(?:(?:sk|rk|pk)_(?:live|test)_|whsec_|re_)[A-Za-z0-9_]{6,}/g;
@@ -54,8 +93,13 @@ export function scrubText(value) {
   return maskEmail(
     String(value)
       .replace(URL_CREDENTIALS, "$1")
-      .replace(URL_FRAGMENT, `$1#${REDACTED}`)
-      .replace(PATH_FRAGMENT, `$1$2#${REDACTED}`)
+      .replace(URL_FRAGMENT, (_match, prefix, hashAndFragment) =>
+        scrubHashedFragment(prefix, hashAndFragment),
+      )
+      .replace(
+        PATH_FRAGMENT,
+        (_match, lead, path, hashAndFragment) => lead + scrubHashedFragment(path, hashAndFragment),
+      )
       .replace(AUTH_SCHEME, `$1 ${REDACTED}`)
       .replace(JWT, REDACTED)
       .replace(KEY_SHAPED, REDACTED)
