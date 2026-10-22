@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { hasSupabase } from "@/lib/supabase/env";
-import { isRequestId, maskEmail, newRequestId, scrubFields, type LogFields } from "@/lib/log";
+import { isRequestId, logger, newRequestId, scrubFields, type LogFields } from "@/lib/log";
+import { scrubText, stripUrl } from "../../redact.mjs";
 
 /**
  * Writing an error down where the owner can see it.
@@ -11,8 +12,14 @@ import { isRequestId, maskEmail, newRequestId, scrubFields, type LogFields } fro
  * Insights gets the same error with its trace when it is configured; this
  * table is what works with no account at all, and what /admin reads.
  *
+ * Every text field is scrubbed the way a log line is (redact.mjs): emails
+ * masked, query values, credentials and key-shaped strings redacted. The
+ * route loses its query altogether.
+ *
  * Never throws. An error recorder that fails must not turn one error into
- * two.
+ * two. When the insert fails it says so once on the log, with the reference,
+ * and stops there: the log line goes to the console and Application
+ * Insights, never back into this table.
  */
 
 export interface AppErrorInput {
@@ -34,9 +41,9 @@ const MAX_ROUTE = 200;
 const MAX_UA = 300;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function cut(value: string | null | undefined, max: number): string | null {
+function cut(value: string | null | undefined, max: number, clean = scrubText): string | null {
   if (!value) return null;
-  const masked = maskEmail(String(value));
+  const masked = clean(String(value));
   return masked.length > max ? `${masked.slice(0, max)}…` : masked;
 }
 
@@ -50,7 +57,7 @@ export function shapeAppError(input: AppErrorInput) {
     reference: isRequestId(input.reference) ? input.reference : newRequestId(),
     level: input.level ?? "error",
     source: input.source,
-    route: cut(input.route, MAX_ROUTE),
+    route: cut(input.route, MAX_ROUTE, stripUrl),
     message: cut(input.message, MAX_MESSAGE) ?? "Unknown error",
     stack: cut(input.stack, MAX_STACK),
     association_id: uuidOrNull(input.associationId),
@@ -60,14 +67,32 @@ export function shapeAppError(input: AppErrorInput) {
   };
 }
 
-/** Inserts the row. Returns the reference either way. */
-export async function recordAppError(input: AppErrorInput): Promise<string> {
+export interface RecordedAppError {
+  reference: string;
+  /** False when the row could not be written; the log line says why. */
+  stored: boolean;
+}
+
+/** Inserts the row. Returns the reference either way, and whether it was stored. */
+export async function recordAppError(input: AppErrorInput): Promise<RecordedAppError> {
   const row = shapeAppError(input);
-  if (!hasSupabase) return row.reference;
+  if (!hasSupabase) return { reference: row.reference, stored: false };
+  let problem: unknown = null;
   try {
-    await supabaseAdmin().from("app_errors").insert(row);
-  } catch {
-    // The log line already carries the reference; the row was a bonus.
+    const { error } = await supabaseAdmin().from("app_errors").insert(row);
+    problem = error;
+  } catch (thrown) {
+    problem = thrown;
   }
-  return row.reference;
+  if (!problem) return { reference: row.reference, stored: true };
+  logger("app-errors", null, { requestId: row.reference }).error("app error not stored", {
+    reference: row.reference,
+    source: row.source,
+    route: row.route,
+    err:
+      problem instanceof Error
+        ? problem
+        : String((problem as { message?: unknown }).message ?? problem),
+  });
+  return { reference: row.reference, stored: false };
 }

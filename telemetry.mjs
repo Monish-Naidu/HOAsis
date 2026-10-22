@@ -1,6 +1,7 @@
 import { useMicrosoftOpenTelemetry as startTelemetry } from "@microsoft/opentelemetry";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
+import { RedactingSpanProcessor } from "./redact.mjs";
 
 /**
  * Application Insights, started before Next loads (docs/observability.md).
@@ -23,6 +24,39 @@ function isNoise(url) {
   return !url || url === "/api/health" || url.startsWith("/_next/");
 }
 
+/**
+ * The distro's options. Exported so the instrumentation test starts the
+ * same configuration against a local ingestion endpoint.
+ */
+export function telemetryOptions(connectionString) {
+  return {
+    azureMonitor: {
+      azureMonitorExporterOptions: { connectionString },
+      enableLiveMetrics: true,
+      enableStandardMetrics: true,
+      enablePerformanceCounters: true,
+    },
+    // Every request, at this volume. Lower it when the bill says so. The
+    // distro's default rate limit of five traces a second would otherwise
+    // replace the ratio and drop most spans of a busy moment.
+    samplingRatio: 1,
+    tracesPerSecond: 0,
+    // Query strings, emails and keys are scrubbed from every span before
+    // the live view or the exporter reads it (redact.mjs).
+    spanProcessors: [new RedactingSpanProcessor()],
+    instrumentationOptions: {
+      // `enabled` must be named: an `http` entry without it replaces the
+      // distro's default and turns the instrumentation off.
+      http: { enabled: true, ignoreIncomingRequestHook: (request) => isNoise(request.url) },
+    },
+  };
+}
+
+/** Supabase and Resend go through `fetch`, which is undici in Node; the distro does not carry that one. */
+export function fetchInstrumentation() {
+  return new UndiciInstrumentation();
+}
+
 function start() {
   const connectionString = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
   if (!connectionString || globalThis[STARTED]) return false;
@@ -31,22 +65,8 @@ function start() {
   // Microsoft's distro: the global tracer, meter and logger providers, the
   // `http` instrumentation (Stripe's SDK uses `https`), standard metrics,
   // CPU and memory, and the live view in the portal.
-  startTelemetry({
-    azureMonitor: {
-      azureMonitorExporterOptions: { connectionString },
-      enableLiveMetrics: true,
-      enableStandardMetrics: true,
-      enablePerformanceCounters: true,
-    },
-    // Every request, at this volume. Lower it when the bill says so.
-    samplingRatio: 1,
-    instrumentationOptions: {
-      http: { ignoreIncomingRequestHook: (request) => isNoise(request.url) },
-    },
-  });
-  // Supabase and Resend go through `fetch`, which is undici in Node; the
-  // distro does not carry that one.
-  registerInstrumentations({ instrumentations: [new UndiciInstrumentation()] });
+  startTelemetry(telemetryOptions(connectionString));
+  registerInstrumentations({ instrumentations: [fetchInstrumentation()] });
   return true;
 }
 

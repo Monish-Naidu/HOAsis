@@ -77,11 +77,11 @@ confirmed and a fix is assigned), **Untested** (no check has run yet),
 
 ## Telemetry and job health
 
-| Item                                                            | Status  | Evidence                                                                             | Next action                                            |
-| --------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| Production telemetry arrives                                    | Working | Application Insights shows recent requests; read-only check.                         | None.                                                  |
-| Tokens, emails and secrets kept out of traces and stored errors | Fixing  | Audit finding: query values and embedded credentials can reach exported spans.       | Feature `private-actionable-telemetry-and-job-health`. |
-| Digest flags failed, missing and stale daily jobs               | Fixing  | Five latest jobs succeeded in production, but absence and staleness are not flagged. | Same feature.                                          |
+| Item                                                            | Status  | Evidence                                                                                                                                                                                                                           | Next action                                   |
+| --------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Production telemetry arrives                                    | Working | Application Insights shows recent requests; read-only check.                                                                                                                                                                       | None.                                         |
+| Tokens, emails and secrets kept out of traces and stored errors | Fixed   | `telemetry-spans.test.ts` reads real emitted http and fetch spans (4/4; 3 fail without the scrubber); `redact.test.ts` 7/7; `error-reference.test.tsx` 4/4. Found and fixed: incoming request tracing was off and sampling capped. | Confirm in Application Insights after deploy. |
+| Digest flags failed, missing and stale daily jobs               | Fixed   | `job-health.test.ts` 12/12 (schedules match `infra/apps.bicep`); `ops-digest.test.ts` 6/6; `ops-digest-route.test.ts` 7/7, digest records its own run.                                                                             | None.                                         |
 
 ## Support and recovery
 

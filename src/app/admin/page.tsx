@@ -8,13 +8,8 @@ import { ThemeToggle } from "@/components/app/theme";
 import { supabaseServer } from "@/lib/supabase/server";
 import { hasSupabase } from "@/lib/supabase/env";
 import { isPlatformOwner } from "@/lib/platform-owner";
-import {
-  CRON_JOBS,
-  loadOpsReport,
-  OPS_WINDOW_DAYS,
-  STUCK_PAYMENT_DAYS,
-  type OpsReport,
-} from "@/lib/ops";
+import { jobHealth, type JobState } from "@/lib/job-health";
+import { loadOpsReport, OPS_WINDOW_DAYS, STUCK_PAYMENT_DAYS, type OpsReport } from "@/lib/ops";
 import { RAIL_LABEL, type PaymentRail } from "@/lib/payments/instruments";
 import { money } from "@/lib/utils";
 
@@ -173,59 +168,68 @@ function Health({ report }: { report: OpsReport }) {
   );
 }
 
+const JOB_BADGE: Record<JobState, { tone: "ok" | "danger" | "warn"; label: string }> = {
+  ok: { tone: "ok", label: "ok" },
+  failed: { tone: "danger", label: "failed" },
+  missing: { tone: "warn", label: "missing" },
+  stale: { tone: "warn", label: "stale" },
+};
+
 function CronRuns({ report }: { report: OpsReport }) {
-  const missing = CRON_JOBS.filter((job) => !report.cronRuns.some((r) => r.job === job));
+  const jobs = jobHealth(report.cronRuns, report.cronSuccesses, report.now);
+  const summaries = new Map(report.cronRuns.map((r) => [r.job, r.summary]));
   return (
     <Card>
       <CardHeader
         title="Crons"
-        subtitle="Latest call per job. Each runs once a day (the scheduled jobs in infra/apps.bicep); a run older than a day is the alarm."
+        subtitle="Latest call per expected job. Each runs once a day (the scheduled jobs in infra/apps.bicep); missing, stale or failed is the alarm."
       />
       <Table
         head={["Job", "Started", "Took", "Result", "Summary", "Reference"]}
-        count={report.cronRuns.length + missing.length}
-        empty="No cron has recorded a run yet."
+        count={jobs.length}
+        empty="No daily job is expected."
       >
-        {report.cronRuns.map((r) => {
-          const took = Math.round(
-            (new Date(r.finished_at).getTime() - new Date(r.started_at).getTime()) / 1000,
-          );
-          const stale =
-            new Date(report.now).getTime() - new Date(r.started_at).getTime() > 26 * 3_600_000;
+        {jobs.map((j) => {
+          const r = j.latest;
+          const badge = JOB_BADGE[j.state];
+          const took = r
+            ? Math.round(
+                (new Date(r.finished_at).getTime() - new Date(r.started_at).getTime()) / 1000,
+              )
+            : null;
           return (
-            <tr key={r.job}>
-              <td className={`${cell} font-medium text-fg`}>{r.job}</td>
+            <tr key={j.job}>
+              <td className={`${cell} font-medium text-fg`}>{j.job}</td>
               <td className={cell}>
-                <span className="text-fg">{ago(r.started_at, report.now)}</span>
-                <span className="ml-2 font-mono text-caption text-fg-subtle">
-                  {when(r.started_at)}
-                </span>
-                {stale ? (
-                  <Badge tone="warn" className="ml-2">
-                    stale
-                  </Badge>
-                ) : null}
+                {r ? (
+                  <>
+                    <span className="text-fg">{ago(r.started_at, report.now)}</span>
+                    <span className="ml-2 font-mono text-caption text-fg-subtle">
+                      {when(r.started_at)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-fg-muted">Never</span>
+                )}
               </td>
-              <td className={`${cell} text-fg-muted`}>{took} s</td>
+              <td className={`${cell} text-fg-muted`}>{took == null ? "" : `${took} s`}</td>
               <td className={cell}>
-                <Badge tone={r.ok ? "ok" : "danger"} dot>
-                  {r.ok ? "ok" : "failed"}
+                <Badge tone={badge.tone} dot>
+                  {badge.label}
                 </Badge>
-                {r.error ? <span className="ml-2 text-danger">{r.error}</span> : null}
+                {j.state === "ok" ? null : (
+                  <span
+                    className={`ml-2 ${j.state === "failed" ? "text-danger" : "text-fg-muted"}`}
+                  >
+                    {j.detail}
+                  </span>
+                )}
               </td>
-              <td className={`${cell} text-fg-muted`}>{summarize(r.summary)}</td>
-              <td className={mono}>{r.request_id ?? ""}</td>
+              <td className={`${cell} text-fg-muted`}>{summarize(summaries.get(j.job) ?? {})}</td>
+              <td className={mono}>{r?.request_id ?? ""}</td>
             </tr>
           );
         })}
-        {missing.map((job) => (
-          <tr key={job}>
-            <td className={`${cell} font-medium text-fg`}>{job}</td>
-            <td className={`${cell} text-fg-muted`} colSpan={5}>
-              No run recorded in the table yet.
-            </td>
-          </tr>
-        ))}
       </Table>
     </Card>
   );

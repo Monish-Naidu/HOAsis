@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const reference = await recordAppError({
+  const { reference } = await recordAppError({
     reference: isRequestId(body.reference) ? body.reference : log.requestId,
     level,
     source: "client",
