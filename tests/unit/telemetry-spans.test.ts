@@ -92,8 +92,11 @@ describe("automatic HTTP and fetch spans", () => {
     expect(span.status.code).toBe(ERROR);
     expect(span.durationNs).toBeGreaterThan(0);
     const exception = span.events.find((e) => e.name === "exception");
-    expect(exception?.attributes["exception.message"]).toBe(
-      "could not reach p***@example.org with password=[redacted]",
+    expect(exception?.attributes["exception.message"]).toMatch(
+      /^could not reach p\*\*\*@example\.org with password=\[redacted\] from http:\/\/127\.0\.0\.1:\d+\/resident\/pay#\[redacted\]$/,
+    );
+    expect(exception?.attributes["exception.stacktrace"]).toMatch(
+      /at pay \(http:\/\/127\.0\.0\.1:\d+\/resident\/pay#\[redacted\]\)$/,
     );
   });
 

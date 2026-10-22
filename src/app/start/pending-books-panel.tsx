@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Check } from "lucide-react";
 import { Button, Callout, Card } from "@/components/ui/primitives";
-import { openingTotals, type PendingBooks } from "@/lib/founding-books";
+import { booksDone, openingTotals, type PendingBooks } from "@/lib/founding-books";
 import { formatDate, money } from "@/lib/utils";
 import { MONTHS } from "./books";
 
@@ -32,15 +32,20 @@ export function PendingBooksPanel({
   const opening = openingTotals(books);
   const phones = books.rows.filter((r) => r.phone.trim()).length;
   const name = pending.associationName || "Your association";
+  // Every figure landed and only opening the association is left.
+  const saved = booksDone(pending);
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-10">
       <h1 className="text-headline font-semibold text-fg">
-        {name} is set up. Its books are not saved yet.
+        {saved
+          ? `${name} is set up and its books are saved.`
+          : `${name} is set up. Its books are not saved yet.`}
       </h1>
       <p className="mt-1.5 text-body text-fg-muted">
-        Nothing you entered is lost. It is kept on this device until it is saved to {name}. Trying
-        again saves it there; it does not create another association.
+        {saved
+          ? `Opening ${name} again does not save anything twice.`
+          : `Nothing you entered is lost. It is kept on this device until it is saved to ${name}. Trying again saves it there; it does not create another association.`}
       </p>
 
       {pending.problem ? (
@@ -82,15 +87,23 @@ export function PendingBooksPanel({
       </Card>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Button variant="primary" onClick={onRetry} disabled={busy}>
-          {busy ? "Saving" : "Save the books"}
-        </Button>
-        <Button onClick={onLater} disabled={busy}>
-          Go to the plan and come back
-        </Button>
-        <Button variant="ghost" onClick={onDiscard} disabled={busy}>
-          Discard these figures
-        </Button>
+        {saved ? (
+          <Button variant="primary" onClick={onRetry} disabled={busy}>
+            {busy ? "Opening" : `Open ${name}`}
+          </Button>
+        ) : (
+          <>
+            <Button variant="primary" onClick={onRetry} disabled={busy}>
+              {busy ? "Saving" : "Save the books"}
+            </Button>
+            <Button onClick={onLater} disabled={busy}>
+              Go to the plan and come back
+            </Button>
+            <Button variant="ghost" onClick={onDiscard} disabled={busy}>
+              Discard these figures
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

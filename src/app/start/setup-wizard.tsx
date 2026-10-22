@@ -419,7 +419,7 @@ function WizardQuestions({
     // Straight to the plan rather than the dashboard. A board that lands on
     // an empty workspace has to work out what to do next; one that lands
     // on a plan is asked, in the order that gets money moving first.
-    await toPlanOf(after, true);
+    await toPlanOf(after, "saved");
   }
 
   /**
@@ -427,11 +427,31 @@ function WizardQuestions({
    * a reload the browser opens whichever association it remembers, which for
    * a founder who already belongs to one is not the one just founded. The
    * books are forgotten only after it is open, so the panel stays up meanwhile.
+   *
+   * Once saved, it is read again even when it is already open: founding read
+   * it before the dates were written, and with no opening balances there is
+   * no import to re-read it, so the plan would show the old budget year and
+   * first bill. If it does not open, nothing is forgotten and nothing moves;
+   * the panel says so, and trying again repeats only the open.
    */
-  async function toPlanOf(pendingNow: PendingBooks, forget: boolean) {
+  async function toPlanOf(pendingNow: PendingBooks, after: "saved" | "later" | "discard") {
     setBusy(true);
-    await openRemoteAssociation(pendingNow.associationId, pendingNow.userId);
-    if (forget) {
+    const opened = await openRemoteAssociation(pendingNow.associationId, pendingNow.userId, {
+      reload: after === "saved",
+    });
+    if (!opened.ok) {
+      const name = pendingNow.associationName || "Your association";
+      savePendingBooks({
+        ...pendingNow,
+        problem:
+          after === "saved"
+            ? `The books are saved, but ${name} did not open (${opened.message}).`
+            : `${name} did not open (${opened.message}).`,
+      });
+      setBusy(false);
+      return;
+    }
+    if (after !== "later") {
       setFinished(true);
       clearPendingBooks(pendingNow.userId);
       clearProgress();
@@ -731,8 +751,8 @@ function WizardQuestions({
         pending={pendingBooks}
         busy={busy}
         onRetry={() => void saveBooks(pendingBooks)}
-        onLater={() => void toPlanOf(pendingBooks, false)}
-        onDiscard={() => void toPlanOf(pendingBooks, true)}
+        onLater={() => void toPlanOf(pendingBooks, "later")}
+        onDiscard={() => void toPlanOf(pendingBooks, "discard")}
       />
     );
   }

@@ -49,6 +49,8 @@ vi.mock("@/lib/data/remote", async (original) => ({
 // above are in place.
 type Store = typeof import("@/lib/data/remote-store");
 let loadRemote: Store["loadRemote"];
+let openRemoteAssociation: Store["openRemoteAssociation"];
+let preferRemoteAssociation: Store["preferRemoteAssociation"];
 let preferRemoteSlug: Store["preferRemoteSlug"];
 let refreshRemote: Store["refreshRemote"];
 let remoteSnapshot: Store["remoteSnapshot"];
@@ -61,6 +63,8 @@ beforeAll(async () => {
   vi.resetModules();
   ({
     loadRemote,
+    openRemoteAssociation,
+    preferRemoteAssociation,
     preferRemoteSlug,
     refreshRemote,
     remoteSnapshot,
@@ -111,6 +115,7 @@ beforeEach(async () => {
   reads.loadCommunity.mockReset();
   reads.loadMyAssociations.mockReset();
   preferRemoteSlug(null);
+  preferRemoteAssociation(null);
   await loadRemote(null);
   expect(remoteSnapshot().status).toBe("signed-out");
 });
@@ -281,6 +286,54 @@ describe("a load that fails", () => {
     reads.loadMyAssociations.mockClear();
     await retryRemote();
     expect(reads.loadMyAssociations).not.toHaveBeenCalled();
+  });
+});
+
+describe("opening one association by id", () => {
+  it("is not opened when the list of associations fails, and the old one stays behind", async () => {
+    await signedIn();
+    reads.loadMyAssociations.mockRejectedValueOnce(new Error("list timeout"));
+    const result = await openRemoteAssociation("oak", "pat");
+    expect(result).toEqual({ ok: false, message: "list timeout" });
+    expect(remoteSnapshot()).toMatchObject({ status: "error", activeId: "maple" });
+  });
+
+  it("is not opened when its community fails to load", async () => {
+    await signedIn();
+    reads.loadCommunity.mockRejectedValueOnce(new Error("community timeout"));
+    const result = await openRemoteAssociation("oak", "pat");
+    expect(result).toEqual({ ok: false, message: "community timeout" });
+    expect(remoteSnapshot().activeId).toBe("maple");
+  });
+
+  it("is not opened when the load lands somewhere else", async () => {
+    await signedIn();
+    // Not on the list yet, so the load falls back to the remembered one.
+    reads.loadMyAssociations.mockResolvedValueOnce([MAPLE]);
+    reads.loadCommunity.mockResolvedValueOnce(copy("maple", "second"));
+    const result = await openRemoteAssociation("oak", "pat");
+    expect(result.ok).toBe(false);
+    expect(remoteSnapshot()).toMatchObject({ status: "ready", activeId: "maple" });
+  });
+
+  it("opens the one asked for", async () => {
+    await signedIn();
+    const oak = copy("oak", "first");
+    reads.loadCommunity.mockResolvedValueOnce(oak);
+    expect(await openRemoteAssociation("oak", "pat")).toEqual({ ok: true });
+    expect(remoteSnapshot()).toMatchObject({ status: "ready", activeId: "oak", community: oak });
+  });
+
+  it("reads an already open association again when asked to, so a write just made shows", async () => {
+    await signedIn();
+    reads.loadCommunity.mockClear();
+    expect(await openRemoteAssociation("maple", "pat")).toEqual({ ok: true });
+    expect(reads.loadCommunity).not.toHaveBeenCalled();
+
+    const fresh = copy("maple", "with its new budget year");
+    reads.loadCommunity.mockResolvedValueOnce(fresh);
+    expect(await openRemoteAssociation("maple", "pat", { reload: true })).toEqual({ ok: true });
+    expect(remoteSnapshot().community).toBe(fresh);
   });
 });
 

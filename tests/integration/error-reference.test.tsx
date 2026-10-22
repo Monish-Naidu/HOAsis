@@ -32,6 +32,7 @@ const PLANTED = [
   "sk_test_PLANTEDKEY99",
   "hunter2planted",
   "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwbGFudGVkIn0",
+  "PLANTEDFRAGMENT55",
 ];
 
 let stored: Record<string, unknown>[];
@@ -114,6 +115,37 @@ describe("a client error's reference", () => {
     const found = report.errors.filter((e) => e.reference === shown);
     expect(found).toHaveLength(1);
     expect(found[0].message).toBe(row.message);
+  });
+});
+
+describe("a client error on a page whose address carries a bare fragment", () => {
+  it("stores the address and the message without the fragment, and keeps the reference", async () => {
+    window.history.pushState({}, "", "/resident/pay#PLANTEDFRAGMENT55");
+    const posted: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        posted.push(String(init.body));
+        return new Response("{}");
+      }),
+    );
+    const error = new Error("Could not open http://localhost:3000/resident/pay#PLANTEDFRAGMENT55");
+    error.stack = `Error: boom\n    at render (http://localhost:3000/resident/pay#PLANTEDFRAGMENT55)`;
+    const { default: RouteError } = await import("@/app/error");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<RouteError error={error} reset={() => {}} />);
+
+    const shown = screen.getByText(/^[A-HJ-NP-Z2-9]{8}$/).textContent!;
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(await post(posted[0])).toEqual({ reference: shown });
+    const row = stored[0];
+    expect(row).toMatchObject({ reference: shown, route: "/resident/pay" });
+    expect((row.extra as { href: string }).href).toBe(
+      "http://localhost:3000/resident/pay#[redacted]",
+    );
+    expect(row.message).toBe("Could not open http://localhost:3000/resident/pay#[redacted]");
+    expectClean(row);
+    expectClean(lines);
   });
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Button, Callout } from "@/components/ui/primitives";
@@ -50,29 +50,80 @@ export function PlanScreen() {
   const hasPlan = isRemote || foundedHere;
   // Signed in with nothing founded yet is a person with a real next step.
   const signedInWithNothing = hasSupabase && Boolean(auth.user) && remote.status === "empty";
-  const sendToStart = !settling && !hasPlan && !signedInWithNothing;
   // Books still waiting belong to one association, and this is its plan
   // until they are saved. Opened straight from an address, the browser
   // would otherwise show whichever association it remembers under a notice
   // about another one.
-  const pendingId = pendingBooks?.associationId ?? null;
+  const pendingId = hasSupabase ? (pendingBooks?.associationId ?? null) : null;
+  const sendToStart = !settling && !hasPlan && !signedInWithNothing && pendingId === null;
+  const onPending =
+    remote.status === "ready" && remote.activeId === pendingId && community.id === pendingId;
+  // One automatic try per association. A load that failed, or landed on
+  // another association, is shown with a way to try again rather than
+  // tried again by itself for as long as the page is open.
+  const [openFailure, setOpenFailure] = useState<{ id: string; message: string } | null>(null);
+  const failedHere = openFailure !== null && openFailure.id === pendingId;
   const openPending =
     !settling &&
     pendingId !== null &&
+    !onPending &&
+    !failedHere &&
     remote.status === "ready" &&
-    remote.activeId !== pendingId &&
     remote.associations.some((a) => a.id === pendingId);
+  const pendingUnopened = !settling && pendingId !== null && !onPending && !openPending;
   const profileId = auth.user?.id ?? null;
 
   useEffect(() => {
     if (sendToStart) router.replace("/start");
   }, [sendToStart, router]);
   useEffect(() => {
-    if (openPending && pendingId && profileId) void openRemoteAssociation(pendingId, profileId);
+    if (!openPending || !pendingId || !profileId) return;
+    void openRemoteAssociation(pendingId, profileId).then((result) => {
+      if (!result.ok) setOpenFailure({ id: pendingId, message: result.message });
+    });
   }, [openPending, pendingId, profileId]);
+
+  async function openAgain() {
+    if (!pendingId || !profileId) return;
+    const result = await openRemoteAssociation(pendingId, profileId);
+    setOpenFailure(result.ok ? null : { id: pendingId, message: result.message });
+  }
 
   if (settling || sendToStart || openPending) {
     return <HummingbirdLoader className="min-h-[50dvh]" label="Opening your plan" />;
+  }
+
+  if (pendingUnopened && pendingBooks) {
+    const name = pendingBooks.associationName || "Your association";
+    const reason = failedHere
+      ? openFailure.message
+      : remote.status === "error"
+        ? remote.message
+        : remote.associations.some((a) => a.id === pendingId)
+          ? undefined
+          : "it is not on your list of associations yet";
+    return (
+      <div className="mx-auto w-full max-w-2xl px-5 py-16">
+        <Callout
+          tone="danger"
+          icon={<AlertTriangle className="size-4" />}
+          title={`${name} did not open`}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="primary" onClick={() => void openAgain()}>
+                Try again
+              </Button>
+              <Button size="sm" onClick={() => router.push("/start")}>
+                Back to setup
+              </Button>
+            </div>
+          }
+        >
+          {reason ? `It could not be loaded (${reason}). ` : ""}
+          Its plan is shown once it opens. Anything of its books not yet saved stays on this device.
+        </Callout>
+      </div>
+    );
   }
 
   // Somebody who has not founded anything has no plan to look at.

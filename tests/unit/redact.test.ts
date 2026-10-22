@@ -24,7 +24,30 @@ describe("scrubText", () => {
     expect(out).toContain("https://db.example.com/x?token=[redacted]&page=[redacted]");
   });
 
+  it("redacts a bare fragment in an embedded URL and keeps the rest of the address", () => {
+    expect(scrubText("at http://localhost:3100/resident/pay#PLANTEDFRAGMENT55 failed")).toBe(
+      "at http://localhost:3100/resident/pay#[redacted] failed",
+    );
+    expect(scrubText('{"href":"https://x.test/a?b=1#access-PLANTED"}')).toBe(
+      '{"href":"https://x.test/a?b=[redacted]#[redacted]"}',
+    );
+    expect(scrubText("loaded /resident/pay#PLANTEDFRAGMENT55")).toBe(
+      "loaded /resident/pay#[redacted]",
+    );
+    expect(scrubText("http://x.test/#")).toBe("http://x.test/#");
+    expect(scrubText("http://x.test/p#tok=abc&PLANTED")).toBe("http://x.test/p#[redacted]");
+    expect(scrubText("at pay (http://x.test/p#PLANTED)")).toBe(
+      "at pay (http://x.test/p#[redacted])",
+    );
+  });
+
+  it("leaves a hash that is not part of an address alone", () => {
+    expect(scrubText("issue #12 and color #fff")).toBe("issue #12 and color #fff");
+  });
+
   it("does not redact a value twice", () => {
+    const fragment = scrubText("https://x.test/p#abc");
+    expect(scrubText(fragment)).toBe(fragment);
     const once = scrubText("token=abc");
     expect(scrubText(once)).toBe(once);
   });

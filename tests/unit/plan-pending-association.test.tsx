@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { PlanScreen } from "@/app/start/plan/plan-screen";
 import { pendingBooksStore, savePendingBooks, type PendingBooks } from "@/lib/founding-books";
 
@@ -58,7 +59,12 @@ const PENDING: PendingBooks = {
 };
 
 beforeEach(() => {
-  h.remote = { ...h.remote, status: "ready", activeId: "assoc-old" };
+  h.remote = {
+    status: "ready",
+    activeId: "assoc-old",
+    associations: [{ id: "assoc-old" }, { id: "assoc-new" }],
+  };
+  h.open.mockResolvedValue({ ok: true });
   h.user = { id: "user-1" };
 });
 
@@ -78,10 +84,11 @@ describe("the plan while books are pending", () => {
 
     // The load lands on the pending association.
     h.remote = { ...h.remote, activeId: "assoc-new" };
+    h.open.mockClear();
     view.rerender(<PlanScreen />);
     expect(screen.getByText("Plan for assoc-new")).toBeInTheDocument();
     expect(screen.getByText("The books for Alder Court are not saved yet")).toBeInTheDocument();
-    expect(h.open).toHaveBeenCalledTimes(1);
+    expect(h.open).not.toHaveBeenCalled();
   });
 
   it("leaves the open association alone when the pending books are somebody else's", () => {
@@ -95,6 +102,47 @@ describe("the plan while books are pending", () => {
   it("shows the plan it has when nothing is pending", () => {
     render(<PlanScreen />);
     expect(screen.getByText("Plan for assoc-old")).toBeInTheDocument();
+    expect(h.open).not.toHaveBeenCalled();
+  });
+
+  it("shows no other association's plan when loading fails, and opens it again only when asked", async () => {
+    const user = userEvent.setup();
+    savePendingBooks(PENDING);
+    // The load of the list failed; the remembered association is still behind it.
+    h.remote = { ...h.remote, status: "error" };
+    const view = render(<PlanScreen />);
+    expect(await screen.findByText("Alder Court did not open")).toBeInTheDocument();
+    expect(screen.queryByText("Plan for assoc-old")).toBeNull();
+    expect(h.open).not.toHaveBeenCalled();
+
+    h.open.mockImplementationOnce(async () => {
+      h.remote = { ...h.remote, status: "ready", activeId: "assoc-new" };
+      return { ok: true };
+    });
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(h.open).toHaveBeenCalledWith("assoc-new", "user-1");
+    view.rerender(<PlanScreen />);
+    expect(await screen.findByText("Plan for assoc-new")).toBeInTheDocument();
+    expect(h.open).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not keep trying, or show the old plan, when the open lands somewhere else", async () => {
+    savePendingBooks(PENDING);
+    h.open.mockResolvedValue({ ok: false, message: "another association opened" });
+    const view = render(<PlanScreen />);
+    expect(await screen.findByText("Alder Court did not open")).toBeInTheDocument();
+    expect(screen.getByText(/another association opened/)).toBeInTheDocument();
+    view.rerender(<PlanScreen />);
+    expect(screen.queryByText("Plan for assoc-old")).toBeNull();
+    expect(h.open).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows no other plan when the pending association is not on the list", async () => {
+    savePendingBooks(PENDING);
+    h.remote = { ...h.remote, associations: [{ id: "assoc-old" }] };
+    render(<PlanScreen />);
+    expect(await screen.findByText("Alder Court did not open")).toBeInTheDocument();
+    expect(screen.queryByText("Plan for assoc-old")).toBeNull();
     expect(h.open).not.toHaveBeenCalled();
   });
 });

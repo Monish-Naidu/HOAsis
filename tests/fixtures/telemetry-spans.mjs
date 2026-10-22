@@ -79,9 +79,11 @@ const app = http.createServer(async (_request, response) => {
   const failing = await fetch(`${base}/fail?access_token=${markers.token}`);
   await failing.text();
   const span = trace.getActiveSpan();
-  span?.recordException(
-    new Error(`could not reach ${markers.email} with password=${markers.password}`),
+  const failure = new Error(
+    `could not reach ${markers.email} with password=${markers.password} from ${base}/resident/pay#${markers.fragment}`,
   );
+  failure.stack = `Error: ${failure.message}\n    at pay (${base}/resident/pay#${markers.fragment})`;
+  span?.recordException(failure);
   span?.setStatus({
     code: SpanStatusCode.ERROR,
     message: `failed for ${markers.email} ${markers.stripe}`,

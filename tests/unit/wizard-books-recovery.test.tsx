@@ -93,7 +93,7 @@ const pendingOf = (userId: string) => pendingBooksFor(pendingBooksStore.getSnaps
 
 beforeEach(() => {
   who.user = PAT;
-  remote.openRemoteAssociation.mockResolvedValue(undefined);
+  remote.openRemoteAssociation.mockResolvedValue({ ok: true });
   atBooks(draft);
   app.createRemoteAssociation.mockImplementation(
     async (_draft: CommunityDraft, onFounded?: (id: string) => void) => {
@@ -175,7 +175,9 @@ describe("a books follow-up that fails after founding", () => {
     expect(pendingOf("user-1")).toBeNull();
     expect(window.sessionStorage.getItem("hoasis-setup-progress")).toBeNull();
     // The association these books went into is the one the plan opens.
-    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-new", "user-1");
+    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-new", "user-1", {
+      reload: true,
+    });
     expect(remote.openRemoteAssociation.mock.invocationCallOrder.at(-1)).toBeLessThan(
       app.push.mock.invocationCallOrder.at(-1)!,
     );
@@ -281,7 +283,9 @@ describe("a books follow-up that fails after founding", () => {
     const leeAgain = open();
     await user.click(await screen.findByRole("button", { name: "Create the association" }));
     await waitFor(() => expect(app.push).toHaveBeenCalledWith("/start/plan"));
-    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-elm", "user-2");
+    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-elm", "user-2", {
+      reload: true,
+    });
     expect(pendingOf("user-2")).toBeNull();
     leeAgain.unmount();
 
@@ -308,7 +312,9 @@ describe("a books follow-up that fails after founding", () => {
       ["assoc-elm", [expect.objectContaining({ unit: "2", openingBalanceCents: 7 })], "2026-10-01"],
       ["assoc-new", EXPECTED_ROWS, "2026-10-15"],
     ]);
-    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-new", "user-1");
+    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-new", "user-1", {
+      reload: true,
+    });
     expect(pendingBooksStore.getSnapshot()).toEqual({});
   });
 
@@ -321,14 +327,107 @@ describe("a books follow-up that fails after founding", () => {
     await screen.findByText("Alder Court is set up. Its books are not saved yet.");
 
     remote.openRemoteAssociation.mockImplementationOnce(
-      () => new Promise<void>((resolve) => (opened = resolve)),
+      () => new Promise((resolve) => (opened = () => resolve({ ok: true }))),
     );
     await user.click(screen.getByRole("button", { name: "Go to the plan and come back" }));
-    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-new", "user-1");
+    expect(remote.openRemoteAssociation).toHaveBeenLastCalledWith("assoc-new", "user-1", {
+      reload: false,
+    });
     expect(app.push).not.toHaveBeenCalled();
     opened();
     await waitFor(() => expect(app.push).toHaveBeenCalledWith("/start/plan"));
     // Still pending: nothing was saved and nothing was thrown away.
     expect(pendingOf("user-1")).toMatchObject({ associationId: "assoc-new", datesSaved: false });
+  });
+
+  it("keeps the books and stays put when the association they went into will not open", async () => {
+    const user = userEvent.setup();
+    // Every write lands; the read of the association afterwards fails, then
+    // lands on another association this person belongs to.
+    remote.openRemoteAssociation
+      .mockResolvedValueOnce({ ok: false, message: "list timeout" })
+      .mockResolvedValueOnce({ ok: false, message: "another association opened" });
+    open();
+    await user.click(await screen.findByRole("button", { name: "Create the association" }));
+    expect(
+      await screen.findByText("The books are saved, but Alder Court did not open (list timeout)."),
+    ).toBeInTheDocument();
+    expect(app.push).not.toHaveBeenCalled();
+    expect(pendingOf("user-1")).toMatchObject({
+      associationId: "assoc-new",
+      datesSaved: true,
+      rosterSaved: true,
+      books: { fiscalYearStart: "07-01", billingStartsOn: "2026-12-01" },
+    });
+    // Nothing tries again by itself.
+    expect(remote.openRemoteAssociation).toHaveBeenCalledTimes(1);
+
+    // A reload keeps it, and offers to open it rather than to save again.
+    cleanup();
+    open();
+    await user.click(await screen.findByRole("button", { name: "Open Alder Court" }));
+    expect(
+      await screen.findByText(
+        "The books are saved, but Alder Court did not open (another association opened).",
+      ),
+    ).toBeInTheDocument();
+    expect(app.push).not.toHaveBeenCalled();
+    expect(pendingOf("user-1")).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Open Alder Court" }));
+    await waitFor(() => expect(app.push).toHaveBeenCalledWith("/start/plan"));
+    expect(pendingOf("user-1")).toBeNull();
+    // The writes that landed were not sent again, and nothing was founded twice.
+    expect(app.createRemoteAssociation).toHaveBeenCalledTimes(1);
+    expect(writes.setBooksStart).toHaveBeenCalledTimes(1);
+    expect(writes.importRoster).toHaveBeenCalledTimes(1);
+    expect(remote.openRemoteAssociation.mock.calls).toEqual([
+      ["assoc-new", "user-1", { reload: true }],
+      ["assoc-new", "user-1", { reload: true }],
+      ["assoc-new", "user-1", { reload: true }],
+    ]);
+  });
+
+  it("reads the association again after saving only its dates, before forgetting them", async () => {
+    // No opening balances and no phones: no import runs, so nothing else
+    // would re-read the budget year and first bill just saved.
+    const user = userEvent.setup();
+    atBooks(
+      withBooks(
+        { ...draft, households: [] },
+        { fiscalYearStart: "04-01", billingStartsOn: "2027-01-01", openingAsOf: "2026-10-15" },
+      ),
+    );
+    let pendingWhenOpened: unknown = "not opened";
+    remote.openRemoteAssociation.mockImplementationOnce(async () => {
+      pendingWhenOpened = pendingOf("user-1");
+      return { ok: true };
+    });
+    open();
+    await user.click(await screen.findByRole("button", { name: "Create the association" }));
+    await waitFor(() => expect(app.push).toHaveBeenCalledWith("/start/plan"));
+    expect(writes.setBooksStart).toHaveBeenCalledWith("assoc-new", {
+      fiscalYearStart: "04-01",
+      billingStartsOn: "2027-01-01",
+    });
+    expect(writes.importRoster).not.toHaveBeenCalled();
+    expect(remote.openRemoteAssociation).toHaveBeenCalledWith("assoc-new", "user-1", {
+      reload: true,
+    });
+    expect(pendingWhenOpened).toMatchObject({ datesSaved: true, rosterSaved: true });
+    expect(pendingOf("user-1")).toBeNull();
+  });
+
+  it("does not go to the plan to come back later when the association will not open", async () => {
+    const user = userEvent.setup();
+    writes.setBooksStart.mockRejectedValueOnce(new Error("network down"));
+    open();
+    await user.click(await screen.findByRole("button", { name: "Create the association" }));
+    await screen.findByText("Alder Court is set up. Its books are not saved yet.");
+    remote.openRemoteAssociation.mockResolvedValueOnce({ ok: false, message: "list timeout" });
+    await user.click(screen.getByRole("button", { name: "Go to the plan and come back" }));
+    expect(await screen.findByText("Alder Court did not open (list timeout).")).toBeInTheDocument();
+    expect(app.push).not.toHaveBeenCalled();
+    expect(pendingOf("user-1")).toMatchObject({ datesSaved: false });
   });
 });

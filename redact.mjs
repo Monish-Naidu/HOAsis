@@ -6,7 +6,8 @@
  * and the same rules also run in the browser and the Edge runtime.
  *
  * Masked: an email keeps its first letter and its domain. Redacted: the
- * value of a query parameter or fragment, credentials in a URL, a bearer or
+ * value of a query parameter, the whole fragment of a URL or path written
+ * anywhere in the text, credentials in a URL, a bearer or
  * basic token, anything shaped like a JWT or a Stripe, Resend or webhook key,
  * and the value after a word like `token=` or `password:`.
  */
@@ -14,6 +15,22 @@
 const EMAIL = /([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
 const URL_CREDENTIALS = /\b([a-z][a-z0-9+.-]*:\/\/)[^\s/?#@]+@/gi;
 const QUERY_VALUE = /([?&#;])([^=\s&#;?"'<>]+)=([^&#;\s"'<>]*)/g;
+/**
+ * A fragment after an address (`https://host/path#...`) or a path
+ * (`/resident/pay#...`). Sign-in links carry their tokens there, and a
+ * fragment is never sent to a server, so nothing downstream needs it. One
+ * made only of `key=value` pairs is left to QUERY_VALUE, which keeps the
+ * names; anything else in it goes whole. A closing parenthesis ends it, so
+ * a stack frame keeps its shape.
+ */
+const FRAGMENT_PAIR = String.raw`[A-Za-z0-9_.-]{1,40}=[^\s"'<>\`)&#;]*`;
+const FRAGMENT_END = String.raw`[\s"'<>\`)]`;
+const FRAGMENT_TAIL = String.raw`#(?!\[redacted\])(?!${FRAGMENT_PAIR}(?:[&;]${FRAGMENT_PAIR})*(?:${FRAGMENT_END}|$))[^\s"'<>\`)]+`;
+const URL_FRAGMENT = new RegExp(
+  String.raw`(\b[a-z][a-z0-9+.-]*:\/\/[^\s#"'<>\`]*)` + FRAGMENT_TAIL,
+  "gi",
+);
+const PATH_FRAGMENT = new RegExp(String.raw`(^|[\s(="'\`])(\/[^\s#"'<>\`]*)` + FRAGMENT_TAIL, "g");
 const AUTH_SCHEME = /\b(Bearer|Basic|Token)\s+[A-Za-z0-9._~+/=-]+/gi;
 const JWT = /\beyJ[A-Za-z0-9_-]{10,}(?:\.[A-Za-z0-9_-]*){0,2}/g;
 const KEY_SHAPED = /\b(?:(?:sk|rk|pk)_(?:live|test)_|whsec_|re_)[A-Za-z0-9_]{6,}/g;
@@ -37,6 +54,8 @@ export function scrubText(value) {
   return maskEmail(
     String(value)
       .replace(URL_CREDENTIALS, "$1")
+      .replace(URL_FRAGMENT, `$1#${REDACTED}`)
+      .replace(PATH_FRAGMENT, `$1$2#${REDACTED}`)
       .replace(AUTH_SCHEME, `$1 ${REDACTED}`)
       .replace(JWT, REDACTED)
       .replace(KEY_SHAPED, REDACTED)
