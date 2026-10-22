@@ -6,9 +6,9 @@
  * Oakview president with a password that stopped working.
  */
 import { createClient } from "@supabase/supabase-js";
-import { loadEnv } from "./env.mjs";
+import { loadVerifyEnv } from "./lib/verify-target.mjs";
 
-const env = loadEnv();
+const env = loadVerifyEnv();
 const url = env.NEXT_PUBLIC_SUPABASE_URL,
   anon = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const admin = createClient(url, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });

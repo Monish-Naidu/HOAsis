@@ -97,7 +97,7 @@ for expand and collapse.
 ```bash
 pnpm check        # lint, tsc, vitest, build: about two minutes
 pnpm e2e          # Playwright against a server already running (E2E_BASE to point elsewhere; never port 3000, that is Monish's dev server)
-pnpm db:verify    # every database check, against the real Supabase project in .env.local
+pnpm db:verify    # every database check; refuses a non-local project unless VERIFY_REMOTE_HOST names it
 node scripts/verify-all.mjs money late-fees   # one or more suites by name
 ```
 

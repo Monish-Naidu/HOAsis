@@ -46,8 +46,8 @@ Call `record_code_area(file_path="...", description="...")` after meaningful wor
 - `pnpm dev` starts the signed-out demo at `http://localhost:3000`; no secrets or services are needed.
 - `pnpm check` runs formatting, lint, types, documentation checks, tests, and a production build.
 - `pnpm e2e` exercises browser flows against an already-running server.
-- `pnpm db:verify` targets the Supabase project configured in `.env.local`; verify the target before running because checks perform writes.
-- Local Supabase setup is documented in `docs/local-development.md`.
+- `pnpm db:verify` targets the Supabase project in `.env.local` (or `ENV_FILE`) and performs writes, so it refuses any non-local host unless `VERIFY_REMOTE_HOST` names it.
+- Local Supabase setup, the isolated integration stack and its ports are documented in `docs/local-development.md`.
 
 Keep money in integer cents and dates as `YYYY-MM-DD`. Screens import through `@/lib/data`, use semantic color tokens, and test pure logic in `tests/unit`.
 

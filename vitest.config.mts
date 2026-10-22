@@ -9,7 +9,10 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    setupFiles: ["./tests/setup.ts"],
+    setupFiles: ["./tests/demo-env.ts", "./tests/setup.ts"],
+    // The machine also runs the dev server, a Docker stack and browsers; four
+    // workers keep the suite near thirty seconds without starving them.
+    maxWorkers: 4,
     include: ["tests/**/*.test.{ts,tsx}"],
     restoreMocks: true,
     clearMocks: true,
