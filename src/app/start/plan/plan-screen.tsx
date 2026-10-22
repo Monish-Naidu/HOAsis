@@ -9,7 +9,7 @@ import { SetupFlow } from "@/components/app/setup-plan";
 import { useAppState } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
 import { useFoundedHere } from "@/lib/resident-plan";
-import { useRemote } from "@/lib/data/remote-store";
+import { openRemoteAssociation, useRemote } from "@/lib/data/remote-store";
 import { hasSupabase } from "@/lib/supabase/env";
 import { HummingbirdLoader } from "@/components/app/hummingbird";
 
@@ -36,7 +36,7 @@ export function PlanScreen() {
     useSyncExternalStore(
       (fn) => pendingBooksStore.subscribe(fn),
       () => pendingBooksStore.getSnapshot(),
-      () => null,
+      () => pendingBooksStore.getServerSnapshot(),
     ),
     auth.user?.id,
   );
@@ -51,12 +51,27 @@ export function PlanScreen() {
   // Signed in with nothing founded yet is a person with a real next step.
   const signedInWithNothing = hasSupabase && Boolean(auth.user) && remote.status === "empty";
   const sendToStart = !settling && !hasPlan && !signedInWithNothing;
+  // Books still waiting belong to one association, and this is its plan
+  // until they are saved. Opened straight from an address, the browser
+  // would otherwise show whichever association it remembers under a notice
+  // about another one.
+  const pendingId = pendingBooks?.associationId ?? null;
+  const openPending =
+    !settling &&
+    pendingId !== null &&
+    remote.status === "ready" &&
+    remote.activeId !== pendingId &&
+    remote.associations.some((a) => a.id === pendingId);
+  const profileId = auth.user?.id ?? null;
 
   useEffect(() => {
     if (sendToStart) router.replace("/start");
   }, [sendToStart, router]);
+  useEffect(() => {
+    if (openPending && pendingId && profileId) void openRemoteAssociation(pendingId, profileId);
+  }, [openPending, pendingId, profileId]);
 
-  if (settling || sendToStart) {
+  if (settling || sendToStart || openPending) {
     return <HummingbirdLoader className="min-h-[50dvh]" label="Opening your plan" />;
   }
 

@@ -45,6 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
   process.env.RESEND_API_KEY = "re_test";
+  process.env.NEXT_PUBLIC_SITE_HOST = "yourhoasis.com";
 });
 
 describe("the resend route", () => {
@@ -58,7 +59,9 @@ describe("the resend route", () => {
     expect(send).toHaveBeenCalledTimes(1);
     const mail = send.mock.calls[0] as unknown as [{ to: string; text: string }];
     expect(mail[0].to).toBe("pat-a@example.com");
-    expect(mail[0].text).toContain("/auth/callback?token_hash=hash_9&type=magiclink");
+    expect(mail[0].text).toContain(
+      "https://yourhoasis.com/auth/callback?token_hash=hash_9&type=magiclink",
+    );
   });
 
   it("sends nothing, and answers the same, for an unknown or already confirmed address", async () => {

@@ -8,6 +8,7 @@ import {
   openingTotals,
   pendingBooksFor,
   pendingBooksStore,
+  savePendingBooks,
   withFoundingBooks,
   type FoundingBooks,
   type PendingBooks,
@@ -66,8 +67,10 @@ const PENDING: PendingBooks = {
   rosterSaved: false,
 };
 
+const mine = () => pendingBooksFor(pendingBooksStore.getSnapshot(), "user-1");
+
 afterEach(() => {
-  clearPendingBooks();
+  pendingBooksStore.reset();
   window.localStorage.clear();
 });
 
@@ -98,8 +101,8 @@ describe("finishFoundingBooks", () => {
     expect(after.problem).toBe(
       "The budget year and first bill date were not saved (network down).",
     );
-    expect(pendingBooksStore.getSnapshot()).toEqual(after);
-    expect(pendingBooksStore.getSnapshot()?.books).toEqual(BOOKS);
+    expect(mine()).toEqual(after);
+    expect(mine()?.books).toEqual(BOOKS);
   });
 
   it("keeps the saved dates when the roster fails, and a retry sends only the roster", async () => {
@@ -115,7 +118,7 @@ describe("finishFoundingBooks", () => {
     expect(failed.problem).toMatch(/opening balances and phone numbers were not saved/);
 
     const roster = vi.fn(async () => ({}));
-    const done = await finishFoundingBooks(pendingBooksStore.getSnapshot()!, { dates, roster });
+    const done = await finishFoundingBooks(mine()!, { dates, roster });
     expect(dates).toHaveBeenCalledTimes(1);
     expect(roster).toHaveBeenCalledTimes(1);
     expect(roster).toHaveBeenCalledWith("assoc-1", BOOKS.rows, "2026-10-15");
@@ -132,7 +135,7 @@ describe("finishFoundingBooks", () => {
       .mockResolvedValueOnce({});
     const dates = async () => {};
     await finishFoundingBooks(PENDING, { dates, roster });
-    await finishFoundingBooks(pendingBooksStore.getSnapshot()!, { dates, roster });
+    await finishFoundingBooks(mine()!, { dates, roster });
     expect(roster.mock.calls[0]).toEqual(roster.mock.calls[1]);
   });
 
@@ -147,12 +150,48 @@ describe("finishFoundingBooks", () => {
   });
 });
 
-describe("pendingBooksFor", () => {
+describe("pending books on a shared device", () => {
+  const OTHER: PendingBooks = {
+    associationId: "assoc-2",
+    associationName: "Elm Row",
+    userId: "user-2",
+    books: { ...BOOKS, fiscalYearStart: "01-01", rows: [BOOKS.rows[0]] },
+    datesSaved: true,
+    rosterSaved: false,
+  };
+
   it("offers the books only to the person who founded the association", () => {
-    expect(pendingBooksFor(PENDING, "user-1")).toBe(PENDING);
-    expect(pendingBooksFor(PENDING, "user-2")).toBeNull();
-    expect(pendingBooksFor(PENDING, null)).toBeNull();
-    expect(pendingBooksFor(null, "user-1")).toBeNull();
+    const all = { "user-1": PENDING };
+    expect(pendingBooksFor(all, "user-1")).toBe(PENDING);
+    expect(pendingBooksFor(all, "user-2")).toBeNull();
+    expect(pendingBooksFor(all, null)).toBeNull();
+    expect(pendingBooksFor({}, "user-1")).toBeNull();
+    expect(pendingBooksFor(all, "toString")).toBeNull();
+  });
+
+  it("keeps one founder's books when another founder saves, retries and clears theirs", async () => {
+    savePendingBooks(PENDING);
+    savePendingBooks(OTHER);
+    await finishFoundingBooks(OTHER, { dates: async () => {}, roster: async () => ({}) });
+    expect(pendingBooksFor(pendingBooksStore.getSnapshot(), "user-2")?.rosterSaved).toBe(true);
+    clearPendingBooks("user-2");
+
+    expect(pendingBooksStore.getSnapshot()).toEqual({ "user-1": PENDING });
+    expect(mine()?.books).toEqual(BOOKS);
+    expect(pendingBooksFor(pendingBooksStore.getSnapshot(), "user-2")).toBeNull();
+  });
+
+  it("reads the single record an older version kept, and drops one filed under another id", async () => {
+    // A fresh copy of the module, so the store reads storage instead of its cache.
+    async function stored(value: unknown) {
+      window.localStorage.setItem("hoasis:pending-books", JSON.stringify(value));
+      vi.resetModules();
+      const fresh = await import("@/lib/founding-books");
+      return fresh.pendingBooksStore.getSnapshot();
+    }
+    expect(await stored(PENDING)).toEqual({ "user-1": PENDING });
+    expect(await stored(null)).toEqual({});
+    expect(await stored({ "user-2": PENDING })).toEqual({});
   });
 });
 

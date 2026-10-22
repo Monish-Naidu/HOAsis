@@ -270,6 +270,22 @@ export async function retryRemote(): Promise<void> {
   await loadRemote(state.profileId);
 }
 
+/**
+ * Opens one association of this person's by id and waits for it, unless it
+ * is already the one on screen.
+ *
+ * For the wizard's pending books: the association they belong to has to be
+ * the one the plan shows, not whichever this browser remembers. Unlike
+ * `setRemoteAssociation` it does not make it the person's home association,
+ * because nobody chose it from the switcher.
+ */
+export async function openRemoteAssociation(id: string, profileId: string): Promise<void> {
+  if (!hasSupabase) return;
+  if (state.status === "ready" && state.profileId === profileId && state.activeId === id) return;
+  preferRemoteAssociation(id);
+  await loadRemote(profileId);
+}
+
 /** Switches association without signing out, since one person can hold several. */
 export async function setRemoteAssociation(id: string): Promise<void> {
   if (!hasSupabase) return;

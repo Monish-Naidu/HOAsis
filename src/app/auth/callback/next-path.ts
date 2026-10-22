@@ -39,7 +39,7 @@ export function sameOriginPath(next: string | null | undefined, origin: string):
 }
 
 /** Every loopback name Next.js folds into "localhost" when it parses a request URL. */
-const LOOPBACK = /^(?:localhost|127(?:\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)){3}|\[::1\])$/;
+export const LOOPBACK = /^(?:localhost|127(?:\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)){3}|\[::1\])$/;
 
 /**
  * The origin to send somebody back to, as the browser addressed this server.

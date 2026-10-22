@@ -43,8 +43,17 @@ export interface PendingBooks {
   problem?: string;
 }
 
-function isPendingBooks(value: unknown): value is PendingBooks | null {
-  if (value === null) return true;
+/**
+ * Every person's pending books on this device, by their user id.
+ *
+ * One entry per person rather than one for the device: two founders can
+ * share a browser, and the second founding (or finishing) an association
+ * must neither replace nor clear the first one's figures, which are the only
+ * copy of what they typed.
+ */
+export type PendingBooksByUser = Record<string, PendingBooks>;
+
+function isPending(value: unknown): value is PendingBooks {
   if (!isRecord(value) || !isRecord(value.books)) return false;
   return (
     typeof value.associationId === "string" &&
@@ -56,26 +65,47 @@ function isPendingBooks(value: unknown): value is PendingBooks | null {
   );
 }
 
-export const pendingBooksStore = new PersistedStore<PendingBooks | null>(
+function isPendingByUser(value: unknown): value is PendingBooksByUser {
+  return (
+    isRecord(value) &&
+    Object.entries(value).every(([userId, entry]) => isPending(entry) && entry.userId === userId)
+  );
+}
+
+/** The single record this store held before it was kept per person. */
+function byUser(value: unknown): unknown {
+  if (value === null) return {};
+  return isPending(value) ? { [value.userId]: value } : value;
+}
+
+export const pendingBooksStore = new PersistedStore<PendingBooksByUser>(
   "hoasis:pending-books",
-  null,
-  { validate: isPendingBooks },
+  {},
+  { validate: isPendingByUser, migrate: byUser },
 );
 
 export function savePendingBooks(pending: PendingBooks): void {
-  pendingBooksStore.set(pending);
+  pendingBooksStore.update((all) => ({ ...all, [pending.userId]: pending }));
 }
 
-export function clearPendingBooks(): void {
-  pendingBooksStore.set(null);
+/** Forgets one person's pending books and nobody else's. */
+export function clearPendingBooks(userId: string): void {
+  pendingBooksStore.update((all) => {
+    if (!(userId in all)) return all;
+    const rest = { ...all };
+    delete rest[userId];
+    return rest;
+  });
 }
 
 /** The books this person still has to save, or null. */
 export function pendingBooksFor(
-  pending: PendingBooks | null,
+  all: PendingBooksByUser,
   userId: string | null | undefined,
 ): PendingBooks | null {
-  return pending && userId && pending.userId === userId ? pending : null;
+  if (!userId || !Object.prototype.hasOwnProperty.call(all, userId)) return null;
+  const pending = all[userId];
+  return pending.userId === userId ? pending : null;
 }
 
 /** The opening balances in a set of books: how many homes, and their sum in cents. */

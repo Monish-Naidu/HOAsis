@@ -73,6 +73,7 @@ import {
   type PendingBooks,
 } from "@/lib/founding-books";
 import { connectLinkedAccount } from "@/lib/payments/bank-accounts";
+import { openRemoteAssociation } from "@/lib/data/remote-store";
 import { SameNameNote } from "@/components/app/same-name-note";
 import {
   clearPendingDraft,
@@ -230,7 +231,7 @@ function WizardQuestions({
     useSyncExternalStore(
       (fn) => pendingBooksStore.subscribe(fn),
       () => pendingBooksStore.getSnapshot(),
-      () => null,
+      () => pendingBooksStore.getServerSnapshot(),
     ),
     auth.user?.id,
   );
@@ -251,10 +252,15 @@ function WizardQuestions({
   // Every answer, and where the reader is, written as it changes so a reload
   // lands back on the same question with the same answers. Writing to
   // storage only; nothing here sets state.
+  // Not once the association exists: from then on the pending books are the
+  // record, kept under the founder's own id, and a draft left in this tab
+  // would greet the next person who signs in here with this founder's figures.
+  const [finished, setFinished] = useState(false);
+  const founded = Boolean(pendingBooks) || finished;
   useEffect(() => {
-    if (!persist || sentToEmail) return;
+    if (!persist || sentToEmail || founded) return;
     saveProgress({ draft, current, exploring, awaitingConfirmation });
-  }, [persist, sentToEmail, draft, current, exploring, awaitingConfirmation]);
+  }, [persist, sentToEmail, founded, draft, current, exploring, awaitingConfirmation]);
   // The next visit to /start reads storage afresh rather than this visit's
   // first read.
   useEffect(() => forgetRead, []);
@@ -377,6 +383,7 @@ function WizardQuestions({
             rosterSaved: books.rows.length === 0,
           };
           savePendingBooks(pendingNow);
+          clearProgress();
         });
       } catch (error) {
         setFailure(
@@ -409,11 +416,26 @@ function WizardQuestions({
       setBusy(false);
       return;
     }
-    clearPendingBooks();
-    clearProgress();
     // Straight to the plan rather than the dashboard. A board that lands on
     // an empty workspace has to work out what to do next; one that lands
     // on a plan is asked, in the order that gets money moving first.
+    await toPlanOf(after, true);
+  }
+
+  /**
+   * The plan of the association these books belong to, opened first. After
+   * a reload the browser opens whichever association it remembers, which for
+   * a founder who already belongs to one is not the one just founded. The
+   * books are forgotten only after it is open, so the panel stays up meanwhile.
+   */
+  async function toPlanOf(pendingNow: PendingBooks, forget: boolean) {
+    setBusy(true);
+    await openRemoteAssociation(pendingNow.associationId, pendingNow.userId);
+    if (forget) {
+      setFinished(true);
+      clearPendingBooks(pendingNow.userId);
+      clearProgress();
+    }
     router.push("/start/plan");
   }
 
@@ -709,12 +731,8 @@ function WizardQuestions({
         pending={pendingBooks}
         busy={busy}
         onRetry={() => void saveBooks(pendingBooks)}
-        onLater={() => router.push("/start/plan")}
-        onDiscard={() => {
-          clearPendingBooks();
-          clearProgress();
-          router.push("/start/plan");
-        }}
+        onLater={() => void toPlanOf(pendingBooks, false)}
+        onDiscard={() => void toPlanOf(pendingBooks, true)}
       />
     );
   }
