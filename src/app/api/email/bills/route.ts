@@ -5,6 +5,7 @@ import { CRON_BUDGET_MS, cronPlan, scheduleContinuation, walkPages } from "@/lib
 import { logger } from "@/lib/log";
 import { recordCronRun } from "@/lib/cron-runs";
 import { sendDuesEmails } from "@/lib/email/send";
+import { routeMailOrigin } from "@/lib/email/mail-origin";
 import { createPacer } from "@/lib/email/pace";
 import { BROUGHT_FORWARD_LABEL, dueABillEmail } from "@/lib/email/bill-run";
 import { DAY_MS } from "@/lib/utils";
@@ -45,6 +46,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not for you", reference: log.requestId }, { status: 401 });
   }
   const dryRun = request.nextUrl.searchParams.get("dry") === "1";
+  // Bill links carry a sign-in token, so their origin is the one this server
+  // can vouch for. Without one the run sends nothing and says it failed.
+  const origin = routeMailOrigin(request);
+  if (!origin) {
+    log.error("no site origin for the bill links");
+    const summary = { checked: 0, mailed: 0, errors: 1, dryRun };
+    if (!dryRun)
+      await recordCronRun({
+        job: "email-bills",
+        requestId: log.requestId,
+        startedAt,
+        ok: false,
+        summary,
+        error: "Email is not configured: no site origin this server can vouch for",
+      });
+    return NextResponse.json(
+      { error: "Email is not configured", reference: log.requestId },
+      { status: 500 },
+    );
+  }
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + DAY_MS).toISOString().slice(0, 10);
   const admin = supabaseAdmin();
@@ -135,7 +156,7 @@ export async function GET(request: NextRequest) {
           associationName: a.name,
           category: "assessment",
           dueDate: due.dueOn,
-          origin: request.nextUrl.origin,
+          origin,
           dryRun,
           pacer: createPacer({ budgetMs }),
         });

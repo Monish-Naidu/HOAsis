@@ -1136,6 +1136,66 @@ export type Database = {
           },
         ];
       };
+      join_notice_deliveries: {
+        Row: {
+          attempts: number;
+          claimed_at: string | null;
+          created_at: string;
+          email: string;
+          last_error: string | null;
+          profile_id: string | null;
+          provider_id: string | null;
+          request_id: string;
+          sent_at: string | null;
+          status: string;
+          subject: string;
+          url: string;
+        };
+        Insert: {
+          attempts?: number;
+          claimed_at?: string | null;
+          created_at?: string;
+          email: string;
+          last_error?: string | null;
+          profile_id?: string | null;
+          provider_id?: string | null;
+          request_id: string;
+          sent_at?: string | null;
+          status?: string;
+          subject: string;
+          url: string;
+        };
+        Update: {
+          attempts?: number;
+          claimed_at?: string | null;
+          created_at?: string;
+          email?: string;
+          last_error?: string | null;
+          profile_id?: string | null;
+          provider_id?: string | null;
+          request_id?: string;
+          sent_at?: string | null;
+          status?: string;
+          subject?: string;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "join_notice_deliveries_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "join_notice_deliveries_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "join_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       join_requests: {
         Row: {
           association_id: string;
@@ -2976,6 +3036,15 @@ export type Database = {
         Args: { p_new_email: string; p_old_email: string; p_unit_id: string };
         Returns: string;
       };
+      claim_join_notice: {
+        Args: { p_email: string; p_request_id: string };
+        Returns: {
+          attempts: number;
+          interrupted_at: string | null;
+          subject: string;
+          url: string;
+        }[];
+      };
       claim_my_seats: { Args: never; Returns: number };
       create_association: {
         Args: {
@@ -3014,6 +3083,16 @@ export type Database = {
           unit_id: string;
           unit_label: string;
         }[];
+      };
+      finish_join_notice: {
+        Args: {
+          p_email: string;
+          p_error?: string | null;
+          p_ok: boolean;
+          p_provider_id?: string | null;
+          p_request_id: string;
+        };
+        Returns: undefined;
       };
       has_capability: {
         Args: {

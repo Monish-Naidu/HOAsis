@@ -445,6 +445,64 @@ export function joinRequestEmail(input: {
 }
 
 /**
+ * The board's notice that a request arrived or moved.
+ *
+ * One email per request event, to every seat that can answer requests, so a
+ * new ask or an owner's follow-up never waits on somebody happening to open
+ * the Requests page. The officer's next move is on that page, so the one
+ * link goes straight there.
+ */
+export function boardRequestEmail(input: {
+  associationName: string;
+  officerName: string;
+  /** True when the owner added to the thread, false when the request is new. */
+  reply: boolean;
+  reference: string;
+  title: string;
+  /** The request row's kind: "maintenance", "architectural" and so on. */
+  requestKind: string;
+  fromName: string;
+  /** The home's label as the board reads it. Empty when unknown. */
+  unitLabel: string;
+  /** The follow-up's words. Empty for a new request. */
+  note: string;
+  url: string;
+}) {
+  const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
+  const officer = input.officerName.trim().split(/\s+/)[0] || "there";
+  const from = oneLine(input.fromName) || "An owner";
+  const home = input.unitLabel.trim() ? `, ${escapeHtml(input.unitLabel.trim())}` : "";
+  const kind = oneLine(input.requestKind).toLowerCase() || "maintenance";
+  const title = oneLine(input.title);
+  const subject = input.reply
+    ? `New reply on ${input.reference}: ${title} · ${input.associationName}`
+    : `New ${kind} request ${input.reference}: ${title} · ${input.associationName}`;
+  const lead = input.reply
+    ? `${escapeHtml(from)}${home} added a reply to request ${escapeHtml(input.reference)}, "${escapeHtml(title)}".`
+    : `${escapeHtml(from)}${home} filed a ${escapeHtml(kind)} request: "${escapeHtml(title)}" (${escapeHtml(input.reference)}).`;
+  const note = input.note.trim() ? ` They wrote: "${escapeHtml(oneLine(input.note))}"` : "";
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0f1a2b;font-weight:600;">
+      ${input.reply ? `Reply on ${escapeHtml(input.reference)}` : `New ${escapeHtml(kind)} request`}
+    </h1>
+    <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#3d4a5e;">
+      Hi ${escapeHtml(officer)}. ${lead}${note}
+    </p>`;
+  return {
+    subject,
+    html: layout({
+      associationName: input.associationName,
+      preheader: `${from} is waiting on the board of ${input.associationName}.`,
+      body,
+      cta: { label: input.reply ? "Read the reply" : "Review the request", url: input.url },
+      footer:
+        "Sent to the officers who handle requests, through Your HOAsis. " +
+        "Requests wait on the Requests page until they are answered.",
+    }),
+    text: `Hi ${officer}. ${lead.replace(/<[^>]+>/g, "")}${note ? ` They wrote: "${oneLine(input.note)}"` : ""}\n\n${input.reply ? "Read the reply" : "Review the request"}: ${input.url}\n\n${input.associationName}`,
+  };
+}
+/**
  * Makes typed words safe to sit in HTML, as text or inside a double-quoted
  * attribute. Subjects and the plain text part are not HTML and never go
  * through this, or "&amp;" shows up in an inbox.
@@ -1008,12 +1066,18 @@ export function officeMessageEmail(input: {
   home: string;
   subject: string;
   body: string;
+  /** True when this is the owner following up, not opening the thread. */
+  followUp?: boolean;
   url: string;
 }) {
   const first = firstName(input.recipientName);
   const who = input.home ? `${input.fromName}, ${input.home}` : input.fromName;
-  const subject = `New message for ${input.addressedTo}: ${input.subject} · ${input.associationName}`;
-  const intro = `${first}, ${who} wrote to ${input.addressedTo}.`;
+  const subject = input.followUp
+    ? `New reply for ${input.addressedTo}: ${input.subject} · ${input.associationName}`
+    : `New message for ${input.addressedTo}: ${input.subject} · ${input.associationName}`;
+  const intro = input.followUp
+    ? `${first}, ${who} wrote again to ${input.addressedTo}.`
+    : `${first}, ${who} wrote to ${input.addressedTo}.`;
   return {
     subject,
     html: layout({

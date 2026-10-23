@@ -261,6 +261,39 @@ export async function emailNotice(
   return outcome(true);
 }
 
+/**
+ * Asks the server to tell the board about a request event: a request just
+ * filed, or an owner's reply on one. The route reads the request through
+ * the caller's own session, so nothing here decides who may ask. A failure
+ * is reported like a failed write; the event itself is already on the
+ * record. Resolves true when the board was told, false when it could not
+ * be. Only ever called in remote mode; the demo has nobody to email.
+ */
+export async function requestAlert(
+  requestId: string,
+  kind: "filed" | "reply",
+  what: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch("/api/email/request-alert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId, kind }),
+    });
+    if (response.ok) return true;
+    const answer = ((await response.json().catch(() => null)) ?? {}) as { error?: unknown };
+    const why =
+      typeof answer.error === "string" && answer.error ? answer.error : "it could not be sent";
+    reportRemoteError(`${what}: ${why}. It is saved here, but the board's alert email did not go`);
+    return false;
+  } catch {
+    reportRemoteError(
+      `${what}: the mail service could not be reached. It is saved here, but the board's alert email did not go`,
+    );
+    return false;
+  }
+}
+
 /** The demo's pinned "now", used for every timestamp the app writes. */
 
 /* -------------------------------------------------------------------------- */

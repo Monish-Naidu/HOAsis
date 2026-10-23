@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { LOOPBACK, requestOrigin } from "@/app/auth/callback/next-path";
 
 /**
@@ -30,7 +31,13 @@ export function mailOrigin({
   production: boolean;
 }): string | null {
   const configured = siteHost?.trim();
-  if (configured) return siteOrigin(configured);
+  if (configured) {
+    const site = siteOrigin(configured);
+    // A misconfigured host never produces a link in production. On a
+    // development machine the loopback rule below is still safe on its own,
+    // so a stray value must not silence every local email with it.
+    if (site || production) return site;
+  }
   if (production) return null;
   let local: URL;
   try {
@@ -40,6 +47,21 @@ export function mailOrigin({
   }
   if (!LOOPBACK.test(local.hostname)) return null;
   return `http://${local.host}`;
+}
+
+/**
+ * The mail origin for one route request, or null when there is none this
+ * server can vouch for. Every route that mints a token, reserves a delivery
+ * or sends mail with a link calls this first and refuses when it answers
+ * null: the request's own headers never choose where a sign-in link points.
+ */
+export function routeMailOrigin(request: NextRequest): string | null {
+  return mailOrigin({
+    nextUrl: request.nextUrl,
+    host: request.headers.get("host"),
+    siteHost: process.env.NEXT_PUBLIC_SITE_HOST,
+    production: process.env.NODE_ENV === "production",
+  });
 }
 
 /** Dot-separated DNS labels ending in a letter-only top level, lower case. */

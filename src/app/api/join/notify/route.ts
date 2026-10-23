@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isEmail } from "@/lib/input-checks";
 import { logger } from "@/lib/log";
 import { sendJoinRequestNotice } from "@/lib/email/join-request";
+import { routeMailOrigin } from "@/lib/email/mail-origin";
 import { clientIp, signupLimiter, tooManyRequests } from "@/lib/rate-limit";
 
 /**
@@ -41,8 +42,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // No origin this server can vouch for means no links, so nothing is
+  // minted, reserved or sent, and the request stays eligible for a safe retry.
+  const origin = routeMailOrigin(request);
+  if (!origin) {
+    log.error("no site origin for the join notice links");
+    return NextResponse.json({ error: "Email is not configured" }, { status: 503 });
+  }
+
   try {
-    const outcome = await sendJoinRequestNotice({ code, email, origin: siteOrigin(request) });
+    const outcome = await sendJoinRequestNotice({ code, email, origin });
     if (outcome.status === "no-association") {
       // The code was checked against the database on the way in, so this is
       // a stale tab more than a guess, but it is not an address to send to.
@@ -86,13 +95,4 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ error: "Could not tell the board just now." }, { status: 500 });
   }
-}
-
-/** Where links in the email should point: this deployment, never the body. */
-function siteOrigin(request: NextRequest): string {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const host = forwardedHost ?? request.headers.get("host");
-  const proto =
-    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  return host ? `${proto}://${host}` : request.nextUrl.origin;
 }

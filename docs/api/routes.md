@@ -18,6 +18,7 @@ Generated from exported Next.js route handlers. Request and response details, au
 | `/email/invite` | `POST` | `src/app/api/email/invite/route.ts` |
 | `/email/notify` | `POST` | `src/app/api/email/notify/route.ts` |
 | `/email/office-message` | `POST` | `src/app/api/email/office-message/route.ts` |
+| `/email/request-alert` | `POST` | `src/app/api/email/request-alert/route.ts` |
 | `/email/send` | `POST` | `src/app/api/email/send/route.ts` |
 | `/email/webhook` | `POST` | `src/app/api/email/webhook/route.ts` |
 | `/health` | `GET` | `src/app/api/health/route.ts` |

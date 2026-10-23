@@ -17,6 +17,7 @@ import {
   unrecordedLine,
 } from "@/lib/email/pace";
 import { remoteInviteUrl } from "@/lib/invitations";
+import { routeMailOrigin } from "@/lib/email/mail-origin";
 import { communityPath, placeLabel } from "@/lib/community-links";
 
 /**
@@ -95,6 +96,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "You cannot invite for this association" }, { status: 403 });
   }
 
+  // No origin this server can vouch for means no sign-in links, so nothing
+  // is minted and nothing is sent. Checked before a key is even read.
+  const origin = routeMailOrigin(request);
+  if (!origin) {
+    log.error("no site origin for the invitation links");
+    return NextResponse.json({ error: "Email is not configured" }, { status: 503 });
+  }
+
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     return NextResponse.json({ error: "Email is not configured" }, { status: 503 });
@@ -117,7 +126,6 @@ export async function POST(request: NextRequest) {
     .in("unit_id", unitIds.slice(0, 200))
     .is("ends_on", null);
 
-  const origin = siteOrigin(request);
   const client = new Resend(key);
   const result = {
     sent: 0,
@@ -219,8 +227,9 @@ export async function POST(request: NextRequest) {
         email,
         type: "magiclink",
         origin,
-        // Straight into this association, whichever others they hold.
-        path: communityPath(association.slug, "/resident"),
+        // Straight into this association and this home, whichever others
+        // they hold or this browser last had open.
+        path: `${communityPath(association.slug, "/resident")}?home=${m.unit_id}`,
       });
     }
 
@@ -287,13 +296,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json(result);
-}
-
-/** Where links in the email should point: this deployment, never the body. */
-function siteOrigin(request: NextRequest): string {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const host = forwardedHost ?? request.headers.get("host");
-  const proto =
-    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  return host ? `${proto}://${host}` : request.nextUrl.origin;
 }

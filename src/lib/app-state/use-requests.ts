@@ -7,6 +7,7 @@ import {
   newId,
   refuse,
   remoteWrite,
+  requestAlert,
   sessionStore,
   sliceStore,
 } from "./core";
@@ -109,13 +110,14 @@ export function useRequestsActions(deps: AppDeps) {
         // lets the insert return it. Resolves null when nothing was saved,
         // so the form stays put instead of saying "Request submitted".
         let stored = "";
+        const requestId = isUuid(request.id) ? request.id : newId();
         return remoteWrite("Sending the request", async () => {
           const { data, error } = await supabaseBrowser()
             .from("requests")
             .insert({
               // The form names the request before it is sent, so the files can
               // be filed under it once it is stored.
-              id: isUuid(request.id) ? request.id : newId(),
+              id: requestId,
               association_id: rc.id,
               unit_id: request.homeId,
               filed_by: remote.profileId,
@@ -136,7 +138,12 @@ export function useRequestsActions(deps: AppDeps) {
             .single();
           if (error) throw new Error(error.message);
           stored = data?.reference ?? "";
-        }).then((ok) => (ok ? stored : null));
+        }).then((ok) => {
+          // The board is told once the request is on the record. The alert
+          // never holds the save up, and when it cannot go the filer hears.
+          if (ok) void requestAlert(requestId, "filed", "The request");
+          return ok ? stored : null;
+        });
       }
       sliceStore(communityId, "requests").update((all) => [request, ...all]);
     },
@@ -285,7 +292,12 @@ export function useRequestsActions(deps: AppDeps) {
         if (!mine) return Promise.resolve(refuse("That request is not on your account."));
         return remoteWrite("Sending your reply", () =>
           supabaseBrowser().rpc("reply_on_request", { p_request_id: mine.id, p_body: text }),
-        );
+        ).then((ok) => {
+          // The reply is on the record either way; the board's alert is
+          // asked for next, and when it cannot go the owner hears.
+          if (ok) void requestAlert(mine.id, "reply", "Your reply");
+          return ok;
+        });
       }
       const me = sliceStore(communityId, "accounts")
         .getSnapshot()

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { errorBody, logger } from "@/lib/log";
 import { supabaseServer } from "@/lib/supabase/server";
 import { sendDuesEmails, type DuesCategory } from "@/lib/email/send";
+import { routeMailOrigin } from "@/lib/email/mail-origin";
 
 /**
  * Sending a dues run.
@@ -68,13 +69,21 @@ export async function POST(request: NextRequest) {
     .eq("id", associationId)
     .single();
 
+  // Bill links carry a sign-in token, so their origin is the one this server
+  // can vouch for, never the request's headers.
+  const origin = routeMailOrigin(request);
+  if (!origin) {
+    log.error("no site origin for the bill links");
+    return NextResponse.json({ error: "Email is not configured" }, { status: 503 });
+  }
+
   try {
     const result = await sendDuesEmails({
       associationId,
       associationName: association?.name ?? "Your association",
       category,
       dueDate,
-      origin: request.nextUrl.origin,
+      origin,
       dryRun,
     });
     if (result.unrecorded) {

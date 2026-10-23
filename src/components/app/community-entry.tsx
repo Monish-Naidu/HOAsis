@@ -32,7 +32,16 @@ async function slugExists(slug: string): Promise<boolean> {
  * association list to settle before deciding, since deciding early is how a
  * signed in person gets bounced to the front door.
  */
-export function CommunityEntry({ slug, path }: { slug: string; path: string }) {
+export function CommunityEntry({
+  slug,
+  path,
+  search = "",
+}: {
+  slug: string;
+  path: string;
+  /** The link's query string, kept through the hand-off ("?home=..."). */
+  search?: string;
+}) {
   const router = useRouter();
   const auth = useAuth();
   const remote = useRemote();
@@ -68,9 +77,10 @@ export function CommunityEntry({ slug, path }: { slug: string; path: string }) {
           return;
         }
         if (cancelled) return;
-        // Remember the ask across the sign-in, and keep the link whole.
+        // Remember the ask across the sign-in, and keep the link whole,
+        // home or thread query included.
         preferRemoteSlug(slug);
-        const next = communityPath(slug, path);
+        const next = `${communityPath(slug, path)}${search}`;
         router.replace(`/signin?next=${encodeURIComponent(next)}`);
       })();
       return () => {
@@ -87,7 +97,7 @@ export function CommunityEntry({ slug, path }: { slug: string; path: string }) {
       }
       if (outcome === "not-ready") return;
       const role = remote.associations.find((a) => a.slug === slug)?.role ?? null;
-      router.replace(landingFor(path, role));
+      router.replace(`${landingFor(path, role)}${search}`);
     })();
     return () => {
       cancelled = true;
@@ -95,7 +105,7 @@ export function CommunityEntry({ slug, path }: { slug: string; path: string }) {
     // `remote.associations` changes identity on every load; keying on status
     // and the slug is what stops this running twice for one arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, path, auth.loading, auth.user?.id, remote.status, router]);
+  }, [slug, path, search, auth.loading, auth.user?.id, remote.status, router]);
 
   return <HummingbirdLoader className="min-h-dvh" label="Opening your association" />;
 }

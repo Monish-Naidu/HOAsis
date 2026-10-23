@@ -194,6 +194,18 @@
         }
       }
     },
+    "/email/request-alert": {
+      "post": {
+        "operationId": "post_email_request_alert",
+        "summary": "POST /email/request-alert",
+        "description": "Handler source: src/app/api/email/request-alert/route.ts. See source for request, response, authorization, and side-effect details.",
+        "responses": {
+          "default": {
+            "description": "The status and response body are defined by the route handler."
+          }
+        }
+      }
+    },
     "/email/send": {
       "post": {
         "operationId": "post_email_send",

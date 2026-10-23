@@ -36,6 +36,26 @@ describe("mailOrigin", () => {
     ).toBe("https://staging.yourhoasis.com");
   });
 
+  it("falls back to the loopback rule in development when the configured site is invalid", () => {
+    expect(
+      mailOrigin({
+        nextUrl: new URL("http://127.0.0.1:3100/api/email/notify"),
+        host: "127.0.0.1:3100",
+        siteHost: "127.0.0.1:3100",
+        production: false,
+      }),
+    ).toBe("http://127.0.0.1:3100");
+    // A foreign request host is still refused, misconfiguration or not.
+    expect(
+      mailOrigin({
+        nextUrl: new URL("http://evil.example/api/email/notify"),
+        host: "evil.example",
+        siteHost: "127.0.0.1:3100",
+        production: false,
+      }),
+    ).toBeNull();
+  });
+
   it("refuses a configured site that is not a plain public host name", () => {
     for (const siteHost of [
       "https://yourhoasis.com",
