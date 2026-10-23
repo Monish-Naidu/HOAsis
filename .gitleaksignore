@@ -2,3 +2,15 @@
 # The log redaction test holds a made-up Stripe-shaped key so it can prove
 # that keys never reach a log line. It is not a credential.
 a5eeafdfe94c3f3434bbf57af7359ea271f025f3:tests/unit/log.test.ts:stripe-access-token:101
+
+# The redaction fixtures planted in 5e3e6f0 hold made-up secrets on purpose
+# (a planted Stripe-shaped key, fake JWTs, password=hunter2) so the scrubber
+# can be proven end to end. They are not credentials; the fixtures stay as
+# they are, so the scan skips exactly these findings.
+5e3e6f0b89a15d27e9fdd73eb826e3514cc41b7f:tests/unit/redact.test.ts:stripe-access-token:12
+5e3e6f0b89a15d27e9fdd73eb826e3514cc41b7f:tests/unit/ops-digest-route.test.ts:stripe-access-token:172
+5e3e6f0b89a15d27e9fdd73eb826e3514cc41b7f:tests/unit/telemetry-spans.test.ts:stripe-access-token:21
+5e3e6f0b89a15d27e9fdd73eb826e3514cc41b7f:tests/unit/telemetry-spans.test.ts:jwt:22
+5e3e6f0b89a15d27e9fdd73eb826e3514cc41b7f:tests/unit/telemetry-spans.test.ts:generic-api-key:20
+5e3e6f0b89a15d27e9fdd73eb826e3514cc41b7f:tests/integration/error-reference.test.tsx:stripe-access-token:32
+5e3e6f0b89a15d27e9fdd73eb826e3514cc41b7f:tests/integration/error-reference.test.tsx:stripe-access-token:125
