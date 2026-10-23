@@ -5,11 +5,12 @@ import {
   PAST_DUE_LOCK_DAYS,
   billingPhase,
   boardLocked,
-  checkoutTrialEnd,
+  checkoutPlan,
   lockWords,
   rowLocked,
   statusFromStripe,
   subscriptionLine,
+  trialEndLegalForCheckout,
   trialEndsOn,
   trialNoticeDue,
   type BillingFacts,
@@ -131,15 +132,70 @@ describe("trialNoticeDue", () => {
   });
 });
 
-describe("checkoutTrialEnd", () => {
-  it("carries the remaining free days into Stripe", () => {
+describe("checkoutPlan", () => {
+  const end = Math.floor(Date.UTC(2026, 11, 1, 12) / 1000);
+
+  it("carries the remaining free days into a subscription Checkout", () => {
     const now = new Date("2026-10-01T12:00:00Z");
-    expect(checkoutTrialEnd("2026-12-01", now)).toBe(Math.floor(Date.UTC(2026, 11, 1, 12) / 1000));
+    expect(checkoutPlan("2026-12-01", now)).toEqual({ mode: "subscription", trialEnd: end });
   });
 
-  it("starts billing at once when under two days remain, which Stripe would refuse anyway", () => {
-    expect(checkoutTrialEnd("2026-12-01", new Date("2026-11-30T12:00:00Z"))).toBeNull();
-    expect(checkoutTrialEnd("2026-12-01", new Date("2026-12-09T12:00:00Z"))).toBeNull();
+  it("keeps the exact end on the setup path at and inside the 48 hour boundary", () => {
+    // Stripe Checkout refuses a trial ending under 48 hours out; the exact
+    // boundary is already too close by the time the request lands, so the
+    // card is collected by setup and the subscription ends at the same second.
+    expect(checkoutPlan("2026-12-01", new Date("2026-11-29T12:00:00Z"))).toEqual({
+      mode: "setup",
+      trialEnd: end,
+    });
+    expect(checkoutPlan("2026-12-01", new Date("2026-11-30T12:00:00Z"))).toEqual({
+      mode: "setup",
+      trialEnd: end,
+    });
+    expect(checkoutPlan("2026-12-01", new Date("2026-12-01T11:59:59Z"))).toEqual({
+      mode: "setup",
+      trialEnd: end,
+    });
+  });
+
+  it("still rides along comfortably outside the margin", () => {
+    expect(checkoutPlan("2026-12-01", new Date("2026-11-29T11:54:00Z"))).toEqual({
+      mode: "subscription",
+      trialEnd: end,
+    });
+  });
+
+  it("invents no new trial once the promised end has passed", () => {
+    expect(checkoutPlan("2026-12-01", new Date("2026-12-01T12:00:00Z"))).toEqual({
+      mode: "subscription",
+      trialEnd: null,
+    });
+    expect(checkoutPlan("2026-12-01", new Date("2026-12-09T12:00:00Z"))).toEqual({
+      mode: "subscription",
+      trialEnd: null,
+    });
+    expect(checkoutPlan(null, new Date("2026-12-09T12:00:00Z"))).toEqual({
+      mode: "subscription",
+      trialEnd: null,
+    });
+  });
+});
+
+describe("trialEndLegalForCheckout", () => {
+  // The frozen twin of checkoutPlan's first branch: the checkout route asks
+  // this of an operation's frozen trial end before replaying it to Stripe.
+  const end = Math.floor(Date.UTC(2026, 11, 1, 12) / 1000);
+
+  it("holds exactly at the boundary and breaks one second inside it", () => {
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T11:54:00Z"))).toBe(true);
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T11:55:00Z"))).toBe(true);
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T11:55:01Z"))).toBe(false);
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T12:00:00Z"))).toBe(false);
+  });
+
+  it("refuses a trial end that has already passed", () => {
+    expect(trialEndLegalForCheckout(end, new Date("2026-12-01T12:00:00Z"))).toBe(false);
+    expect(trialEndLegalForCheckout(end, new Date("2026-12-09T12:00:00Z"))).toBe(false);
   });
 });
 

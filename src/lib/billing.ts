@@ -46,7 +46,8 @@ export interface BillingFacts {
   status: SubscriptionStatus;
   /** The date the free period ends, `YYYY-MM-DD`. */
   trialEndsOn: ISODate;
-  /** Homes billed: every unit, sold or not, because every unit is a record. */
+  /** Homes billed: every home on the register. A retired home (0099) is off
+   * the register, so it is not billed. */
   homes: number;
   /** A Stripe subscription exists, which means a card is on file. */
   hasSubscription: boolean;
@@ -195,21 +196,58 @@ export function trialNoticeDue(
   return { send, markSent: due.map((n) => n.key) };
 }
 
-/** Stripe refuses a trial shorter than this. */
+/** Stripe Checkout refuses a trial that ends less than this from now. */
 const MIN_STRIPE_TRIAL_MS = 2 * DAY_MS;
 
 /**
- * The `trial_end` to hand Stripe Checkout, as unix seconds.
+ * Breathing room on top of Stripe's minimum. The promise is read a moment
+ * before Stripe is asked, and exactly-48-hours is already too late by the
+ * time the request lands.
+ */
+const CHECKOUT_TRIAL_MARGIN_MS = 5 * 60 * 1000;
+
+/**
+ * Whether Checkout would still take this trial end, in unix seconds.
+ *
+ * checkoutPlan asks the same question when it plans, but a billing operation
+ * freezes the answer for every retry: a trial end that was legal when the
+ * operation opened can cross the 48 hour floor while the treasurer is away,
+ * and replaying it is a 500 forever. The checkout route asks this of the
+ * frozen value before it builds a session from it.
+ */
+export function trialEndLegalForCheckout(trialEndTs: number, now: Date): boolean {
+  return trialEndTs * 1000 - now.getTime() >= MIN_STRIPE_TRIAL_MS + CHECKOUT_TRIAL_MARGIN_MS;
+}
+
+export type CheckoutPlan =
+  /** Hosted Checkout starts the subscription; the trial rides along. */
+  | { mode: "subscription"; trialEnd: number }
+  /** Hosted Checkout only collects the card; the subscription is created at
+   * the exact end by the webhook, so a short tail is never charged early. */
+  | { mode: "setup"; trialEnd: number }
+  /** The trial is already over; billing starts the day the card is added. */
+  | { mode: "subscription"; trialEnd: null };
+
+/**
+ * How "add a card" keeps the promised trial end, as unix seconds.
  *
  * A card added on day 20 must not be charged until day 91, so the remaining
- * free days ride along as a Stripe trial. Stripe refuses a trial shorter than
- * two days, so with less than that left the subscription simply starts and
- * the first invoice is the first invoice.
+ * free days ride along as a Stripe trial. Checkout refuses a trial ending
+ * under 48 hours out, so a short tail takes the setup path instead: Stripe
+ * holds the card, and the subscription is created afterwards with the exact
+ * promised end, which the subscriptions API accepts down to the second. An
+ * association whose trial has already ended gets no new trial.
  */
-export function checkoutTrialEnd(endsOn: ISODate, now: Date): number | null {
+export function checkoutPlan(endsOn: ISODate | null, now: Date): CheckoutPlan {
+  if (!endsOn) return { mode: "subscription", trialEnd: null };
   const end = new Date(`${endsOn}T12:00:00Z`).getTime();
-  if (end - now.getTime() < MIN_STRIPE_TRIAL_MS) return null;
-  return Math.floor(end / 1000);
+  const remaining = end - now.getTime();
+  const trialEnd = Math.floor(end / 1000);
+  if (trialEndLegalForCheckout(trialEnd, now)) {
+    return { mode: "subscription", trialEnd };
+  }
+  if (remaining > 0) return { mode: "setup", trialEnd };
+  return { mode: "subscription", trialEnd: null };
 }
 
 /** A per home line for a Stripe subscription, in the shape Checkout wants. */

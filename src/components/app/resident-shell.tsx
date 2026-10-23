@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BatteryFull, Monitor, Signal, Smartphone, Wifi } from "lucide-react";
@@ -54,8 +54,22 @@ function Gated({ pathname, children }: { pathname: string; children: React.React
 export function ResidentShell({ children }: { children: React.ReactNode }) {
   const [phonePreview, setPhonePreview] = useState(false);
   const pathname = usePathname();
-  const { settings, community } = useAppState();
+  const { settings, community, mySeats, chooseHome } = useAppState();
   const home = useCurrentHome();
+
+  // An emailed link names the home it is about (?home=). Apply it once the
+  // seats are known, so a bill for one home is not shown against whichever
+  // home this browser last had open. An id that is not one of the person's
+  // own seats is ignored: it changes nothing they can see or pay.
+  const appliedLinkHome = useRef<string | null>(null);
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("home");
+    if (!wanted || appliedLinkHome.current === wanted) return;
+    if (mySeats.some((seat) => seat.homeId === wanted)) {
+      appliedLinkHome.current = wanted;
+      chooseHome(wanted);
+    }
+  }, [mySeats, chooseHome]);
   const associationName = settings.displayName;
   const tabs = visibleResidentTabs(settings);
   const badges = useResidentBadges();

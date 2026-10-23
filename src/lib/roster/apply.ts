@@ -193,9 +193,11 @@ export async function setBooksStart(
   if (books.fiscalYearStart) row.fiscal_year_start = books.fiscalYearStart;
   if (books.billingStartsOn !== undefined) row.billing_starts_on = books.billingStartsOn;
   if (!Object.keys(row).length) return;
-  const { error } = await supabaseBrowser()
+  const { error, count } = await supabaseBrowser()
     .from("associations")
-    .update(row)
+    .update(row, { count: "exact" })
     .eq("id", associationId);
   if (error) throw new Error(error.message);
+  // Row level security answers a refused update with no error and no row.
+  if (count === 0) throw new Error("the association did not take the change");
 }

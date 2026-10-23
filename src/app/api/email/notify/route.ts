@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { errorBody, logger } from "@/lib/log";
 import { supabaseServer } from "@/lib/supabase/server";
 import { sendNotification, type NotifyKind } from "@/lib/email/notify";
+import { routeMailOrigin } from "@/lib/email/mail-origin";
 import { recordAppError } from "@/lib/app-errors";
 
 /**
@@ -115,6 +116,14 @@ export async function POST(request: NextRequest) {
     return refuse("You cannot send that for this association", 403);
   }
 
+  // No site this server can vouch for means no links, so no send: refuse
+  // before a token is minted or a notice reserved, whatever was asked for.
+  const origin = routeMailOrigin(request);
+  if (!origin) {
+    log.error("no site origin for the notice links");
+    return refuse("Email is not configured", 503);
+  }
+
   const unitIds = Array.isArray(body.unitIds)
     ? body.unitIds.filter((u): u is string => typeof u === "string").slice(0, 500)
     : undefined;
@@ -139,7 +148,7 @@ export async function POST(request: NextRequest) {
       body: body.body,
       senderName: me?.full_name ?? undefined,
       senderOffice: me?.role ?? undefined,
-      origin: siteOrigin(request),
+      origin,
       dryRun: body.dryRun,
     });
     log.info("notification sent", { kind, dryRun: Boolean(body.dryRun), result });
@@ -199,13 +208,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
-
-/** Where links in the email should point: this deployment, never the body. */
-function siteOrigin(request: NextRequest): string {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const host = forwardedHost ?? request.headers.get("host");
-  const proto =
-    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  return host ? `${proto}://${host}` : request.nextUrl.origin;
 }

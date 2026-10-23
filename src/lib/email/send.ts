@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { communityPath } from "@/lib/community-links";
 import { assessmentDueEmail, pastDueEmail } from "./templates";
 import { emailSender } from "./sender";
 import { signInUrl } from "./sign-in-link";
@@ -82,14 +83,19 @@ function sender(): string {
  * account gets a magic link. Either way it is one tap from the email to
  * paying, because every step in between loses people.
  */
-async function payLink(email: string, hasAccount: boolean, origin: string): Promise<string> {
+async function payLink(
+  email: string,
+  hasAccount: boolean,
+  origin: string,
+  path: string,
+): Promise<string> {
   // A link we could not mint is not a reason to send nothing: the notice
   // still has to arrive, and signInUrl falls back to the front door.
   return signInUrl(supabaseAdmin(), {
     email,
     type: hasAccount ? "magiclink" : "invite",
     origin,
-    path: "/resident/pay",
+    path,
   });
 }
 
@@ -113,6 +119,18 @@ export async function sendDuesEmails(input: {
     already: 0,
     remaining: 0,
   };
+
+  // The link a bill carries names the association and the home, so a person
+  // with two of either lands on the bill the email is about, not on
+  // whichever one this browser last had open.
+  const { data: assoc } = await admin
+    .from("associations")
+    .select("slug")
+    .eq("id", input.associationId)
+    .maybeSingle();
+  const slug = typeof assoc?.slug === "string" && assoc.slug ? assoc.slug : null;
+  const payPath = (unitId: string) =>
+    `${slug ? communityPath(slug, "/resident/pay") : "/resident/pay"}?home=${unitId}`;
 
   // The recipient list comes from the database, which owns the opt out rule.
   // Assembling it here would mean reimplementing that rule and getting it
@@ -151,7 +169,7 @@ export async function sendDuesEmails(input: {
     unitLabel: person.unit_label,
     balanceCents: person.balance_cents > 0 ? person.balance_cents : 0,
     dueDate: input.dueDate,
-    payUrl: `${input.origin}/resident/pay`,
+    payUrl: `${input.origin}${payPath(person.unit_id)}`,
     // Statutory. There is no opt out to offer, and the footer says why.
     unsubscribeUrl: null as string | null,
     canReply: Boolean(replyTo),
@@ -202,7 +220,12 @@ export async function sendDuesEmails(input: {
 
     const built = build({
       ...message,
-      payUrl: await payLink(person.email, Boolean(person.profile_id), input.origin),
+      payUrl: await payLink(
+        person.email,
+        Boolean(person.profile_id),
+        input.origin,
+        payPath(person.unit_id),
+      ),
     });
 
     let providerId: string | null = null;

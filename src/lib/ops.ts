@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { DAY_MS } from "@/lib/utils";
 import { hasSupabase } from "@/lib/supabase/env";
 import { runHealthChecks, type HealthReport } from "@/lib/health";
-import type { CronJob } from "@/lib/cron-runs";
+import { EXPECTED_JOBS } from "@/lib/job-health";
 
 /**
  * What the owner's ops page shows: the last seven days of things that went
@@ -96,16 +96,16 @@ export interface OpsReport {
   emailFailures: EmailFailureRow[];
   autopayFailures: AutopayFailureRow[];
   stuckPayments: StuckPaymentRow[];
-  /** The latest run per job, in the order the day runs them. */
+  /** The latest run per expected job, in the order the day runs them. */
   cronRuns: CronRunRow[];
+  /** The latest successful run per expected job, for the freshness check (src/lib/job-health.ts). */
+  cronSuccesses: CronRunRow[];
   /** The newest board actions across every association. */
   activity: ActivityRow[];
   associationNames: Record<string, string>;
   /** Anything a query could not answer, so the page says so. */
   problems: string[];
 }
-
-export const CRON_JOBS: CronJob[] = ["assessments", "billing-sweep", "autopay", "email-bills"];
 
 /** The rows with the same message, most frequent first. */
 function groupErrors(rows: AppErrorRow[]): ErrorGroup[] {
@@ -128,19 +128,6 @@ function groupErrors(rows: AppErrorRow[]): ErrorGroup[] {
   return [...groups.values()].sort((a, b) => b.count - a.count || (a.latest < b.latest ? 1 : -1));
 }
 
-/** One row per job: the newest. Missing jobs are left out, and the page says so. */
-function latestPerJob(rows: CronRunRow[]): CronRunRow[] {
-  const seen = new Map<string, CronRunRow>();
-  for (const row of rows) {
-    const current = seen.get(row.job);
-    if (!current || row.started_at > current.started_at) seen.set(row.job, row);
-  }
-  return CRON_JOBS.flatMap((job) => {
-    const row = seen.get(job);
-    return row ? [row] : [];
-  });
-}
-
 export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
   const since = new Date(now.getTime() - OPS_WINDOW_DAYS * DAY_MS).toISOString();
   const stuckBefore = new Date(now.getTime() - STUCK_PAYMENT_DAYS * DAY_MS).toISOString();
@@ -157,6 +144,7 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
     autopayFailures: [],
     stuckPayments: [],
     cronRuns: [],
+    cronSuccesses: [],
     activity: [],
     associationNames: {},
     problems,
@@ -167,7 +155,19 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
   }
 
   const admin = supabaseAdmin();
-  const [errors, emails, autopay, payments, crons, activity] = await Promise.all([
+  const cronColumns = "job, started_at, finished_at, ok, error, request_id, summary";
+  // One newest row per job, and one newest success, so a busy job's
+  // continuation rows can never push a quiet job out of the window.
+  const latestRun = (job: string, okOnly: boolean) => {
+    const query = admin.from("cron_runs").select(cronColumns).eq("job", job);
+    return (okOnly ? query.eq("ok", true) : query)
+      .order("started_at", { ascending: false })
+      .limit(1);
+  };
+  const cronQueries = Promise.all(
+    EXPECTED_JOBS.flatMap(({ job }) => [latestRun(job, false), latestRun(job, true)]),
+  );
+  const [errors, emails, autopay, payments, cronResults, activity] = await Promise.all([
     admin
       .from("app_errors")
       .select(
@@ -199,11 +199,7 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
       .lt("created_at", stuckBefore)
       .order("created_at", { ascending: true })
       .limit(100),
-    admin
-      .from("cron_runs")
-      .select("job, started_at, finished_at, ok, error, request_id, summary")
-      .order("started_at", { ascending: false })
-      .limit(60),
+    cronQueries,
     admin
       .from("activity")
       .select("id, at, association_id, actor_name, subject_kind, summary")
@@ -217,19 +213,23 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
     ["email_log", emails],
     ["autopay_runs", autopay],
     ["payments", payments],
-    ["cron_runs", crons],
   ] as const) {
     if (result.error) problems.push(`${name}: ${result.error.message}`);
   }
+  const cronError = cronResults.find((result) => result.error)?.error;
+  if (cronError) problems.push(`cron_runs: ${cronError.message}`);
 
   const errorRows = (errors.data ?? []) as AppErrorRow[];
   const emailRows = (emails.data ?? []) as EmailFailureRow[];
   const autopayRows = (autopay.data ?? []) as AutopayFailureRow[];
   const paymentRows = (payments.data ?? []) as StuckPaymentRow[];
-  const cronRows = ((crons.data ?? []) as unknown as CronRunRow[]).map((r) => ({
-    ...r,
-    summary: (r.summary ?? {}) as Record<string, unknown>,
-  }));
+  const cronRow = (result: (typeof cronResults)[number]): CronRunRow[] =>
+    ((result.data ?? []) as unknown as CronRunRow[]).map((r) => ({
+      ...r,
+      summary: (r.summary ?? {}) as Record<string, unknown>,
+    }));
+  const cronRuns = cronResults.filter((_, i) => i % 2 === 0).flatMap(cronRow);
+  const cronSuccesses = cronResults.filter((_, i) => i % 2 === 1).flatMap(cronRow);
 
   // Names for the ids on screen, one query for the lot.
   const ids = new Set<string>();
@@ -257,7 +257,8 @@ export async function loadOpsReport(now = new Date()): Promise<OpsReport> {
     emailFailures: emailRows,
     autopayFailures: autopayRows,
     stuckPayments: paymentRows,
-    cronRuns: latestPerJob(cronRows),
+    cronRuns,
+    cronSuccesses,
     activity: activityRows,
     associationNames,
     problems,

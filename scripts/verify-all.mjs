@@ -7,14 +7,15 @@
  * in production unnoticed. Each script now runs whatever the one before it
  * did, and the last lines say which failed.
  *
- * These talk to the real Supabase project in .env.local. They create their
- * own associations and users and remove them when they finish.
- *
- * `pnpm db:verify:staging` points every script at .env.staging instead
- * (ENV_FILE, read by each script), so the checks can run without writing to
- * the project real associations live in.
+ * These talk to the Supabase project in the env file (ENV_FILE, read by each
+ * script, or .env.local). They create their own associations and users and
+ * remove them when they finish. Only a local stack is accepted unless
+ * VERIFY_REMOTE_HOST names the remote host (scripts/lib/verify-target.mjs);
+ * `pnpm db:verify:staging` points every script at .env.staging and still
+ * needs that name.
  */
 import { spawnSync } from "node:child_process";
+import { loadVerifyEnv } from "./lib/verify-target.mjs";
 
 const SUITES = [
   "rls",
@@ -41,6 +42,8 @@ const SUITES = [
   "owners",
   "two-homes",
   "billing-lock",
+  "billing-checkout",
+  "billing-webhook",
   "append-only",
   "rollups",
   "fiscal-years",
@@ -51,7 +54,14 @@ const SUITES = [
   "sign-out",
 ];
 
+console.log(`Database checks write to ${loadVerifyEnv().NEXT_PUBLIC_SUPABASE_URL}`);
+
 const only = process.argv.slice(2);
+const unknown = only.filter((suite) => !SUITES.includes(suite));
+if (unknown.length) {
+  console.error(`No such suite: ${unknown.join(", ")}`);
+  process.exit(1);
+}
 const failed = [];
 for (const suite of SUITES) {
   if (only.length && !only.includes(suite)) continue;

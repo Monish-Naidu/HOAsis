@@ -1,4 +1,5 @@
 import type { OpsReport } from "@/lib/ops";
+import { jobHealth } from "@/lib/job-health";
 import { DAY_MS, money } from "@/lib/utils";
 
 /**
@@ -10,6 +11,11 @@ import { DAY_MS, money } from "@/lib/utils";
  * in it. A quiet day sends nothing, so an email from here always means
  * something. Mondays send a short "all quiet" so a silent week is known to
  * be silence and not a broken digest.
+ *
+ * Every expected daily job is checked by name (src/lib/job-health.ts): a
+ * failed, missing or stale one is a section, so "all quiet" is only ever
+ * said when each of them ran on time. The digest is one of those jobs and
+ * is checked as the run in progress.
  *
  * Pure: the route reads the report and the clock and hands them here, so
  * the wording can be tested without a database.
@@ -36,7 +42,9 @@ export function buildDigest(report: OpsReport, now: string, adminUrl: string): D
   const errors = report.errors.filter((e) => e.created_at >= from);
   const emailFailures = report.emailFailures.filter((e) => e.sent_at >= from);
   const autopayFailures = report.autopayFailures.filter((a) => a.created_at >= from);
-  const cronFailures = report.cronRuns.filter((c) => !c.ok);
+  const unhealthyJobs = jobHealth(report.cronRuns, report.cronSuccesses, now, {
+    running: "ops-digest",
+  }).filter((j) => j.state !== "ok");
   const name = (id: string | null) => (id && report.associationNames[id]) || "an association";
 
   const sections: { title: string; lines: string[] }[] = [];
@@ -46,13 +54,10 @@ export function buildDigest(report: OpsReport, now: string, adminUrl: string): D
       .map(([what, check]) => `${what}: ${check.detail ?? "failing"}`);
     sections.push({ title: "Health", lines: failing });
   }
-  if (cronFailures.length) {
+  if (unhealthyJobs.length) {
     sections.push({
-      title: "Daily jobs that failed",
-      lines: cronFailures.map(
-        (c) =>
-          `${c.job}: ${c.error ?? "failed"} (${c.started_at.slice(0, 16).replace("T", " ")} UTC)`,
-      ),
+      title: "Daily jobs that did not run cleanly",
+      lines: unhealthyJobs.map((j) => `${j.job} ${j.state}: ${j.detail}`),
     });
   }
   if (errors.length) {

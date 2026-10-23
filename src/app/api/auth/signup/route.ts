@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import { emailSender } from "@/lib/email/sender";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { confirmSignupEmail } from "@/lib/email/templates";
+import { mailOrigin } from "@/lib/email/mail-origin";
 import { clientIp, signupLimiter, tooManyRequests } from "@/lib/rate-limit";
 
 /**
@@ -67,7 +68,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Email is not configured." }, { status: 503 });
   }
 
-  const origin = siteOrigin(request);
+  const origin = linkOrigin(request);
+  if (!origin) {
+    // No site this server can vouch for, so no link is minted. The browser
+    // falls back to Supabase's own mailer, which checks its own allow list.
+    log.error("no site origin for the confirmation link");
+    return NextResponse.json({ message: "Email is not configured." }, { status: 503 });
+  }
   const admin = supabaseAdmin();
 
   const { data, error } = await admin.auth.admin.generateLink({
@@ -138,11 +145,12 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-/** Where links in the email should point: this deployment, never the body. */
-function siteOrigin(request: NextRequest): string {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const host = forwardedHost ?? request.headers.get("host");
-  const proto =
-    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  return host ? `${proto}://${host}` : request.nextUrl.origin;
+/** Where links in the email should point: this deployment, never the request's headers. */
+function linkOrigin(request: NextRequest): string | null {
+  return mailOrigin({
+    nextUrl: request.nextUrl,
+    host: request.headers.get("host"),
+    siteHost: process.env.NEXT_PUBLIC_SITE_HOST,
+    production: process.env.NODE_ENV === "production",
+  });
 }

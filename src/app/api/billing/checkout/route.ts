@@ -1,22 +1,169 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { checkoutTrialEnd, subscriptionLine } from "@/lib/billing";
+import type Stripe from "stripe";
+import { checkoutPlan, subscriptionLine, trialEndLegalForCheckout } from "@/lib/billing";
+import { requestOrigin } from "@/app/auth/callback/next-path";
 import { stripe } from "@/lib/stripe/server";
+import { quantityFor } from "@/lib/stripe/subscription-quantity";
+import type { BillingOperation } from "@/lib/stripe/billing-operation";
 import { supabaseAdmin, supabaseServer } from "@/lib/supabase/server";
+import { logger } from "@/lib/log";
 
 /**
  * Adding a card, which is the whole of "after the trial".
  *
- * POST opens a hosted Stripe Checkout for a monthly subscription priced per
- * home, on the platform account (what the association pays us, not the
- * connected account residents pay into). The remaining free days ride along
- * as a Stripe trial, so a card added on day 20 is first charged on day 91,
- * which is what the front page promised. The webhook, not this route, writes
+ * POST opens a hosted Stripe Checkout priced per active home, on the platform
+ * account (what the association pays us, not the connected account residents
+ * pay into). The promised trial end rides along: a card added on day 20 is
+ * first charged on day 91, which is what the front page promised. When less
+ * than 48 hours remain, Checkout will not take a trial that short, so the
+ * session only collects the card (mode "setup") and the webhook creates the
+ * subscription ending at the exact promised second.
+ *
+ * The operation is durable before Stripe is ever called (0126): two officers
+ * pressing together, a repeated click and a retry after a lost answer all
+ * continue the same billing_operations row with the same frozen parameters
+ * and idempotency keys, so Stripe sees one customer and one usable session.
+ * The one thing frozen parameters cannot survive is time: a trial end that
+ * has slipped under Checkout's 48 hour floor is superseded and replanned
+ * rather than replayed into a refusal that would answer 500 forever.
+ * Before anything new is created, what an uncertain earlier attempt may have
+ * left behind is looked up and adopted. The webhook, not this route, writes
  * the result: Checkout can be abandoned after this returns.
  *
  * Authorization mirrors the connect route: the caller's own session answers
  * has_capability('settings'), so nobody adds a card to somebody else's board.
  */
+
+type Admin = ReturnType<typeof supabaseAdmin>;
+
+/** Remember the customer on the operation; a racer's answer wins the tie. */
+async function storeCustomerId(
+  admin: Admin,
+  op: BillingOperation,
+  customerId: string,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("billing_operations")
+    .update({ customer_id: customerId })
+    .eq("id", op.id)
+    .eq("status", "open")
+    .is("customer_id", null)
+    .select("customer_id");
+  // A write that failed is not a lost race: the caller must retry, or the
+  // customer Stripe just made would be stranded off the record.
+  if (error) throw new Error(`could not store the customer: ${error.message}`);
+  if (data?.length) return customerId;
+  const { data: again, error: rereadError } = await admin
+    .from("billing_operations")
+    .select("customer_id")
+    .eq("id", op.id)
+    .single();
+  if (rereadError) throw new Error(`could not re-read the operation: ${rereadError.message}`);
+  return again?.customer_id ?? null;
+}
+
+/** The session id belongs to the first to store it; the rest expire theirs. */
+async function storeSessionId(
+  admin: Admin,
+  op: BillingOperation,
+  sessionId: string,
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("billing_operations")
+    .update({ session_id: sessionId })
+    .eq("id", op.id)
+    .eq("status", "open")
+    .is("session_id", null)
+    .select("id");
+  if (error) throw new Error(`could not store the session: ${error.message}`);
+  return Boolean(data?.length);
+}
+
+async function readOperation(admin: Admin, id: string): Promise<BillingOperation | null> {
+  const { data, error } = await admin.from("billing_operations").select("*").eq("id", id).single();
+  if (error) throw new Error(`could not re-read the operation: ${error.message}`);
+  return (data as BillingOperation | null) ?? null;
+}
+
+/**
+ * The operation ran its course; keep the outcome on the row — but only once
+ * the session carries its subscription. A setup-mode session completes
+ * without one: the webhook creates that subscription under the operation's
+ * own key. Closing the operation first would leave the webhook no open
+ * operation to find, so the card would sit on file at Stripe while the
+ * association is never billed. No subscription, no close: the operation
+ * stays open for the webhook and the caller's card answer stands.
+ */
+async function markCompleted(
+  admin: Admin,
+  op: BillingOperation,
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+  if (!subscriptionId) return;
+  const { error } = await admin
+    .from("billing_operations")
+    .update({ status: "completed", session_id: session.id, subscription_id: subscriptionId })
+    .eq("id", op.id)
+    .eq("status", "open");
+  if (error) throw new Error(`could not close the billing operation: ${error.message}`);
+}
+
+/**
+ * Retire an open operation whose frozen parameters can no longer be carried
+ * out. The status filter is the race rule: a second officer's write matches
+ * nothing once the first has flipped the row, and both callers re-reserve
+ * afterwards, so the association still converges on one open operation
+ * (0126's partial unique index sees to that).
+ */
+async function supersedeOperation(admin: Admin, op: BillingOperation): Promise<void> {
+  const { error } = await admin
+    .from("billing_operations")
+    .update({ status: "superseded" })
+    .eq("id", op.id)
+    .eq("status", "open");
+  if (error) throw new Error(`could not supersede the stale operation: ${error.message}`);
+}
+
+/** The Checkout parameters, built only from what the operation froze. */
+function sessionParams(
+  op: BillingOperation,
+  customerId: string,
+): Stripe.Checkout.SessionCreateParams {
+  const shared = {
+    customer: customerId,
+    // The durable handle an uncertain attempt is reconciled by.
+    client_reference_id: op.id,
+    metadata: { association_id: op.association_id },
+    success_url: `${op.return_origin}/board/settings?billing=added`,
+    cancel_url: `${op.return_origin}/board/settings?billing=cancelled`,
+  };
+  if (op.mode === "setup") {
+    return {
+      ...shared,
+      mode: "setup",
+      // Setup mode collects no money, but Stripe still wants the currency
+      // the eventual subscription will charge in.
+      currency: "usd",
+      setup_intent_data: {
+        metadata: { association_id: op.association_id, billing_operation_id: op.id },
+      },
+    };
+  }
+  return {
+    ...shared,
+    mode: "subscription",
+    payment_method_collection: "always",
+    line_items: [subscriptionLine(op.quantity)],
+    subscription_data: {
+      metadata: { association_id: op.association_id },
+      ...(op.trial_end_ts ? { trial_end: op.trial_end_ts } : {}),
+    },
+  };
+}
+
 export async function POST(request: NextRequest) {
+  const log = logger("billing/checkout", request);
   let body: { associationId?: string };
   try {
     body = await request.json();
@@ -51,44 +198,202 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A card is already on file" }, { status: 409 });
   }
 
-  const { count } = await admin
+  // The register's count: active homes only, exactly what Settings shows.
+  const { count, error: countError } = await admin
     .from("units")
     .select("*", { count: "exact", head: true })
-    .eq("association_id", associationId);
-  const homes = count ?? 1;
-
-  const client = stripe();
-
-  // One Stripe customer per association, made on first use and kept.
-  let customerId = row.billing_customer_id;
-  if (!customerId) {
-    const customer = await client.customers.create({
-      name: row.name,
-      email: auth.user.email ?? undefined,
-      metadata: { association_id: associationId },
-    });
-    customerId = customer.id;
-    await admin
-      .from("associations")
-      .update({ billing_customer_id: customerId, billing_email: auth.user.email ?? null })
-      .eq("id", associationId);
+    .eq("association_id", associationId)
+    .is("retired_on", null);
+  // A count that did not come back is not zero homes.
+  if (countError || count === null) {
+    log.error("could not count the homes", { associationId, err: countError?.message });
+    return NextResponse.json({ error: "Could not count the homes" }, { status: 500 });
   }
 
-  const origin = request.nextUrl.origin;
-  const trialEnd = checkoutTrialEnd(row.trial_ends_at.slice(0, 10), new Date());
+  // The return addresses come from the origin the browser actually used, so
+  // a local session on 127.0.0.1 is not lost to localhost (and back).
+  const origin = requestOrigin(request.nextUrl, request.headers.get("host"));
+  const now = new Date();
+  const plan = checkoutPlan(row.trial_ends_at?.slice(0, 10) ?? null, now);
 
-  const session = await client.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [subscriptionLine(homes)],
-    payment_method_collection: "always",
-    subscription_data: {
-      metadata: { association_id: associationId },
-      ...(trialEnd ? { trial_end: trialEnd } : {}),
-    },
-    success_url: `${origin}/board/settings?billing=added`,
-    cancel_url: `${origin}/board/settings?billing=cancelled`,
-  });
+  // Re-reserving after a supersede runs the same call with the same plan.
+  const reserve = () =>
+    admin
+      .rpc("begin_billing_operation", {
+        p_association_id: associationId,
+        p_quantity: quantityFor(count),
+        p_trial_end_ts: plan.trialEnd,
+        p_mode: plan.mode,
+        p_customer_name: row.name,
+        p_customer_email: auth.user.email ?? null,
+        p_return_origin: origin,
+      })
+      .single();
+  const { data: reserved, error: reserveError } = await reserve();
+  if (reserveError || !reserved) {
+    log.error("could not reserve the billing operation", {
+      associationId,
+      err: reserveError?.message,
+    });
+    return NextResponse.json({ error: "Could not start checkout" }, { status: 500 });
+  }
+  let op = reserved as BillingOperation;
+  const client = stripe();
 
-  return NextResponse.json({ url: session.url });
+  // One Stripe customer per association, made once with the frozen name and
+  // email and kept. Before creating, adopt what the association row knows or
+  // what an uncertain earlier attempt already made.
+  try {
+    let customerId = op.customer_id ?? row.billing_customer_id ?? null;
+    if (customerId && !op.customer_id) {
+      customerId = await storeCustomerId(admin, op, customerId);
+    }
+    if (!customerId) {
+      const found = await client.customers.search({
+        query: `metadata['association_id']:'${associationId}'`,
+        limit: 1,
+      });
+      if (found.data[0]) customerId = await storeCustomerId(admin, op, found.data[0].id);
+    }
+    if (!customerId) {
+      const customer = await client.customers.create(
+        {
+          name: op.customer_name,
+          email: op.customer_email ?? undefined,
+          metadata: { association_id: associationId },
+        },
+        { idempotencyKey: op.customer_key },
+      );
+      customerId = await storeCustomerId(admin, op, customer.id);
+    }
+    if (!customerId) {
+      log.error("the billing operation has no customer", { associationId, op: op.id });
+      return NextResponse.json({ error: "Could not start checkout" }, { status: 500 });
+    }
+    // The webhook finds the association by this column when metadata is lost.
+    const { error: linkError } = await admin
+      .from("associations")
+      .update({ billing_customer_id: customerId, billing_email: op.customer_email })
+      .eq("id", associationId)
+      .is("billing_customer_id", null);
+    if (linkError) throw new Error(`could not record the customer: ${linkError.message}`);
+
+    // One usable Checkout session per operation. A stored session is reused
+    // while it is open, reported when it completed and replaced only once it
+    // expired, and nothing new is made until Stripe has been asked what an
+    // uncertain earlier attempt left behind.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (op.session_id) {
+        const existing = await client.checkout.sessions.retrieve(op.session_id);
+        if (existing.status === "open") return NextResponse.json({ url: existing.url });
+        if (existing.status === "complete") {
+          await markCompleted(admin, op, existing);
+          return NextResponse.json({ error: "A card is already on file" }, { status: 409 });
+        }
+        // Expired: the replacement must name the old row so two replacers
+        // cannot both succeed, and the new key is durable before the call.
+        const nextKey = `${op.session_key}-r${Date.now().toString(36)}`;
+        const { data: won } = await admin
+          .from("billing_operations")
+          .update({ session_id: null, session_key: nextKey })
+          .eq("id", op.id)
+          .eq("status", "open")
+          .eq("session_id", op.session_id)
+          .select("id");
+        if (won?.length) {
+          op = { ...op, session_id: null, session_key: nextKey };
+        } else {
+          const again = await readOperation(admin, op.id);
+          if (again) op = again;
+        }
+        continue;
+      }
+
+      const openAtStripe = await client.checkout.sessions.list({
+        customer: customerId,
+        status: "open",
+        limit: 10,
+      });
+      const ours = openAtStripe.data.find((s) => s.client_reference_id === op.id);
+      if (ours) {
+        if (await storeSessionId(admin, op, ours.id)) {
+          return NextResponse.json({ url: ours.url });
+        }
+        const again = await readOperation(admin, op.id);
+        if (again) op = again;
+        continue;
+      }
+      const doneAtStripe = await client.checkout.sessions.list({
+        customer: customerId,
+        status: "complete",
+        limit: 10,
+      });
+      const finished = doneAtStripe.data.find((s) => s.client_reference_id === op.id);
+      if (finished) {
+        await markCompleted(admin, op, finished);
+        return NextResponse.json({ error: "A card is already on file" }, { status: 409 });
+      }
+
+      // Nothing reusable exists at Stripe, so a session is about to be made
+      // from the frozen parameters. A trial end frozen days ago can have
+      // crossed Checkout's 48 hour floor since; creating with it is refused
+      // and every retry would replay the same refusal. Retire the operation
+      // and re-reserve from the current plan instead, then loop: the fresh
+      // row carries a legal plan (or the setup path) and no session yet.
+      if (
+        op.mode === "subscription" &&
+        op.trial_end_ts !== null &&
+        !trialEndLegalForCheckout(op.trial_end_ts, now)
+      ) {
+        await supersedeOperation(admin, op);
+        const { data: replanned, error: replanError } = await reserve();
+        if (replanError || !replanned) {
+          log.error("could not replan the billing operation", {
+            associationId,
+            err: replanError?.message,
+          });
+          return NextResponse.json({ error: "Could not start checkout" }, { status: 500 });
+        }
+        op = replanned as BillingOperation;
+        continue;
+      }
+
+      const session = await client.checkout.sessions.create(sessionParams(op, customerId), {
+        idempotencyKey: op.session_key,
+      });
+      if (await storeSessionId(admin, op, session.id)) {
+        return NextResponse.json({ url: session.url });
+      }
+      const again = await readOperation(admin, op.id);
+      if (again) op = again;
+      if (op.session_id && op.session_id !== session.id) {
+        // A racer stored a different session first. Ours would be a second
+        // usable checkout for the same association, so it cannot be left
+        // standing. (An equal id is the same session twice over: Stripe
+        // answered both retries with the idempotent replay, and expiring it
+        // would close the winner.)
+        await client.checkout.sessions.expire(session.id).catch((caught: unknown) => {
+          log.error("could not expire a duplicate checkout session", {
+            associationId,
+            session: session.id,
+            err: caught instanceof Error ? caught.message : "unknown error",
+          });
+        });
+      }
+    }
+
+    log.error("checkout did not settle", { associationId, op: op.id });
+    return NextResponse.json({ error: "Stripe did not settle. Try again." }, { status: 500 });
+  } catch (caught) {
+    // A lost answer is safe to retry: the operation row, its parameters and
+    // its idempotency keys are unchanged, so the retry reconciles first.
+    log.error("checkout failed", {
+      associationId,
+      err: caught instanceof Error ? caught.message : "unknown error",
+    });
+    return NextResponse.json(
+      { error: "Stripe did not answer. Try again in a moment." },
+      { status: 500 },
+    );
+  }
 }

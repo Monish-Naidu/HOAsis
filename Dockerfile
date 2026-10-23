@@ -46,7 +46,7 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static
 COPY --from=build --chown=app:app /app/public ./public
-COPY --from=build --chown=app:app /app/telemetry.mjs ./telemetry.mjs
+COPY --from=build --chown=app:app /app/telemetry.mjs /app/redact.mjs ./
 # pnpm keeps every package under node_modules/.pnpm and reaches it through a
 # link. The trace carries the files the server bundle reaches, which is the
 # whole telemetry package, but not the top-level link telemetry.mjs needs to

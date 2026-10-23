@@ -46,7 +46,7 @@ All of it is in `infra/platform.bicep` and `infra/apps.bicep`, deployed by
 | This app, `app_errors`                                 | Database                                                                    | What the server and the browsers caught, with the reference. Service role only.                                                                                                   |
 | This app, `/api/health`                                | Route                                                                       | 200 when the database answers and the Stripe, Resend and cron keys are present; 503 with the missing name otherwise. Says whether Application Insights is on.                     |
 | This app, `/admin`                                     | Page, gated on `PLATFORM_OWNER_EMAILS`                                      | All of the above for the last seven days on one page.                                                                                                                             |
-| Daily digest                                           | `/api/ops/digest`, 15:00 UTC                                                | One email to `PLATFORM_OWNER_EMAILS` when a count is non-zero.                                                                                                                    |
+| Daily digest                                           | `/api/ops/digest`, 15:00 UTC                                                | One email to `PLATFORM_OWNER_EMAILS` when a count is non-zero or a daily job did not run cleanly. Records its own run as `ops-digest`.                                            |
 | Stripe, **Developers**, **Events** and **Webhooks**    | Stripe dashboard                                                            | Every event with its payload; every delivery attempt with our status code and a **Resend** button. 30 days.                                                                       |
 | Resend, **Emails**                                     | Resend dashboard                                                            | Every send, its status ladder, the rendered message.                                                                                                                              |
 
@@ -135,6 +135,9 @@ and failures as they happen, useful for the minute after a deploy.
   `durationMs`, `associationId`, plus fields). `scrubFields` masks emails to
   `m***@gmail.com` and redacts keys and values that look like secrets
   (`token`, `client_secret`, `sk_`, `whsec_`, `re_`, JWTs, card fields).
+  The message and string values inside fields go through the same rules
+  (`redact.mjs`), so an email or token embedded in an error text is masked
+  too.
   `errorBody(log, message)` is the `{ error, reference }` shape for JSON
   errors. `consoleSink` is where lines go by default; `setLogSink` swaps it.
   Tests: `tests/unit/log.test.ts`.
@@ -145,7 +148,17 @@ and failures as they happen, useful for the minute after a deploy.
   because the hooks only see `http` and `fetch` if they are in place before
   Next creates its server; started from inside Next they miss the incoming
   requests. With no connection string nothing runs, so local dev, the unit
-  tests and the browser suite never touch the network.
+  tests and the browser suite never touch the network. Every span passes
+  `RedactingSpanProcessor` (`redact.mjs`) before the exporter or live
+  metrics read it: URL attributes keep origin and path only, query, SQL and
+  header attributes are dropped, emails and secret-shaped strings in names,
+  attributes, events and status messages are scrubbed. Trace ids, method,
+  status code and path stay. Two distro traps: `instrumentationOptions.http`
+  must say `enabled: true` or the incoming requests are not traced at all,
+  and `tracesPerSecond: 0` is what lets `samplingRatio` apply (the default
+  caps traces at five a second). Tests: `tests/unit/telemetry-spans.test.ts`
+  runs a real server and `fetch` in a child process and reads the emitted
+  spans; `tests/unit/redact.test.ts`.
 - `src/instrumentation.node.ts`: imports `telemetry.mjs`, which carries its
   packages into the standalone output (the Dockerfile adds the top-level
   link pnpm would have made) and, under a plain `next start`, starts the
@@ -168,7 +181,10 @@ and failures as they happen, useful for the minute after a deploy.
 - `src/proxy.ts`: mints or keeps `x-request-id`, forwards it to the route,
   returns it on the response.
 - `src/instrumentation.ts`: `onRequestError` writes every server error to
-  the log (hence to Application Insights) and to `app_errors`.
+  the log (hence to Application Insights) and to `app_errors`. A row that
+  cannot be stored, and a `cron_runs` row that cannot be written, leaves one
+  scrubbed `app error not stored` or `cron run not recorded` line instead,
+  never a retry.
 - `src/app/error.tsx`, `src/app/global-error.tsx`: calm message plus the
   reference; both post to `/api/log`. `ErrorReporter` (root layout) posts
   unhandled promise rejections and window errors, five per page at most.
@@ -176,8 +192,10 @@ and failures as they happen, useful for the minute after a deploy.
   trusted only for its length.
 - `src/app/api/health/route.ts`, `src/lib/health.ts`.
 - `src/app/admin/page.tsx`, `src/lib/ops.ts`: the ops page, gated on
-  `PLATFORM_OWNER_EMAILS`, 404 for everyone else. Health, latest cron run
-  per job (stale after 26 hours), errors grouped by message, latest 50
+  `PLATFORM_OWNER_EMAILS`, 404 for everyone else. Health, daily job health
+  (`src/lib/job-health.ts`: each of the five expected jobs is ok, failed,
+  missing or stale against its schedule in `infra/apps.bicep`, with 30
+  minutes of grace after the slot), errors grouped by message, latest 50
   errors, email failures, autopay failures, payments pending more than five
   days.
 - `supabase/migrations/0052_app_errors_and_cron_runs.sql`: the two tables,

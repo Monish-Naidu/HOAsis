@@ -28,9 +28,9 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
-import { loadEnv } from "./env.mjs";
+import { loadVerifyEnv } from "./lib/verify-target.mjs";
 
-const env = loadEnv();
+const env = loadVerifyEnv();
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });

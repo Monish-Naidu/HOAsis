@@ -1,5 +1,6 @@
 import type { Community } from "@/lib/data/community";
 import type { CommunityDraft } from "@/lib/data/new-community";
+import type { FoundingBooks } from "@/lib/founding-books";
 import type {
   AccessLevel,
   Account,
@@ -262,10 +263,19 @@ export interface AppState {
     accountId: string,
     input: { amountCents: number; asOf: string },
   ) => boolean | Promise<boolean>;
-  /** Builds an association from onboarding and signs its founder in. */
-  createCommunity: (draft: CommunityDraft) => Community;
-  /** Founds one in Postgres, for a signed in person. */
-  createRemoteAssociation: (draft: CommunityDraft) => Promise<string>;
+  /**
+   * Builds an association from onboarding and signs its founder in. The books
+   * the wizard asked for, when given, are applied the way the database would.
+   */
+  createCommunity: (draft: CommunityDraft, books?: FoundingBooks) => Community;
+  /**
+   * Founds one in Postgres, for a signed in person. `onFounded` hears the id
+   * the moment the association exists, before the follow-up writes.
+   */
+  createRemoteAssociation: (
+    draft: CommunityDraft,
+    onFounded?: (associationId: string) => void,
+  ) => Promise<string>;
   /** True when a real association is on screen rather than a demo. */
   isRemote: boolean;
 

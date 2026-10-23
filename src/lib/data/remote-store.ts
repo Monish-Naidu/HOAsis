@@ -270,6 +270,47 @@ export async function retryRemote(): Promise<void> {
   await loadRemote(state.profileId);
 }
 
+export type OpenResult = { ok: true } | { ok: false; message: string };
+
+function isOpen(id: string, profileId: string): boolean {
+  return (
+    state.status === "ready" &&
+    state.profileId === profileId &&
+    state.activeId === id &&
+    state.community?.id === id
+  );
+}
+
+/**
+ * Opens one association of this person's by id and waits for it, unless it
+ * is already the one on screen and `reload` is not asked for.
+ *
+ * For the wizard's pending books: the association they belong to has to be
+ * the one the plan shows, not whichever this browser remembers. Unlike
+ * `setRemoteAssociation` it does not make it the person's home association,
+ * because nobody chose it from the switcher.
+ *
+ * Says whether it is open, judged by the state afterwards. A load that fails
+ * resolves all the same and leaves the association that was open before on
+ * screen, and one that does not find the id on the list opens another; a
+ * caller that took the settled promise for success showed that one instead.
+ * `reload` is for after a write that nothing else re-reads, such as the
+ * books' dates, so what opens is what was just saved.
+ */
+export async function openRemoteAssociation(
+  id: string,
+  profileId: string,
+  options?: { reload?: boolean },
+): Promise<OpenResult> {
+  if (!hasSupabase) return { ok: true };
+  if (!options?.reload && isOpen(id, profileId)) return { ok: true };
+  preferRemoteAssociation(id);
+  await loadRemote(profileId);
+  if (isOpen(id, profileId)) return { ok: true };
+  if (state.status === "error" && state.message) return { ok: false, message: state.message };
+  return { ok: false, message: "a different association opened instead" };
+}
+
 /** Switches association without signing out, since one person can hold several. */
 export async function setRemoteAssociation(id: string): Promise<void> {
   if (!hasSupabase) return;

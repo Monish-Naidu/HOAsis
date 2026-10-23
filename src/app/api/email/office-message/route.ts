@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { routeMailOrigin } from "@/lib/email/mail-origin";
 import { sendOfficeMessageNotice } from "@/lib/email/office-message";
 import type { ThreadAddress } from "@/lib/types";
 
@@ -43,16 +44,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // No origin this server can vouch for means no links, so nothing is sent.
+  const origin = routeMailOrigin(request);
+  if (!origin) {
+    return NextResponse.json(
+      { error: "Email is not configured", sent: 0, failed: 0 },
+      { status: 503 },
+    );
+  }
+
   const { data: thread } = await supabase
     .from("threads")
     .select("id, association_id, unit_id, subject, to_role, messages")
     .eq("id", threadId)
     .maybeSingle();
   const messages = Array.isArray(thread?.messages)
-    ? (thread.messages as { fromRole?: string; from?: string; body?: string }[])
+    ? (thread.messages as { id?: string; fromRole?: string; from?: string; body?: string }[])
     : [];
-  const first = messages[0];
-  if (!thread || messages.length !== 1 || first?.fromRole !== "resident") {
+  const last = messages[messages.length - 1];
+  // The mail goes out when the board has not heard the latest word: a first
+  // message from the owner, or their follow-up after the board's reply. A
+  // thread whose last word is the board's has nothing new to tell, and that
+  // is also what stops this route re-sending mail about an old conversation.
+  if (!thread || !last || last.fromRole !== "resident") {
     return NextResponse.json({ error: "Nothing to send", sent: 0, failed: 0 }, { status: 404 });
   }
 
@@ -65,16 +79,15 @@ export async function POST(request: NextRequest) {
     unitId: thread.unit_id,
     to,
     subject: thread.subject,
-    body: first.body ?? "",
-    fromName: first.from ?? "An owner",
-    origin: siteOrigin(request),
+    body: last.body ?? "",
+    fromName: last.from ?? "An owner",
+    followUp: messages.length > 1,
+    // One send per follow-up and address: a repeat of this call finds the
+    // same last message and the provider folds it into the first attempt.
+    // The first message keeps its long-standing key, so a notice already
+    // sent under it is not sent again.
+    messageKey: messages.length > 1 ? (last.id ?? `${thread.id}-${messages.length}`) : undefined,
+    origin,
   });
   return NextResponse.json(result);
-}
-
-function siteOrigin(request: NextRequest): string {
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  const proto =
-    request.headers.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  return host ? `${proto}://${host}` : request.nextUrl.origin;
 }

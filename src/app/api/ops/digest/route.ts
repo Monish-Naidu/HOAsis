@@ -6,6 +6,7 @@ import { platformOwnerEmails } from "@/lib/platform-owner";
 import { emailSender, resendKey } from "@/lib/email/sender";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/log";
+import { recordCronRun } from "@/lib/cron-runs";
 
 /**
  * The daily digest, after the three money jobs have run (infra/apps.bicep).
@@ -13,6 +14,9 @@ import { logger } from "@/lib/log";
  * Reads the same report /admin shows and emails the platform owners when
  * there is something in it. Authorised the way the other crons are, with
  * CRON_SECRET. `?dry=1` builds the email and sends nothing.
+ *
+ * Records its own run in cron_runs as `ops-digest`, so a digest that
+ * failed or never ran shows on /admin and in the next digest.
  *
  * Also the morning the books close: every fiscal year that ended and has
  * no row yet gets one (close_ended_fiscal_years, 0109), before the report
@@ -35,13 +39,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not for you", reference: log.requestId }, { status: 401 });
   }
   const dryRun = request.nextUrl.searchParams.get("dry") === "1";
-  const now = new Date().toISOString();
+  const startedAt = Date.now();
+  const now = new Date(startedAt).toISOString();
+  const problems: string[] = [];
+
+  // The digest's own row, written once it knows how it went, so tomorrow's
+  // digest and /admin can see a day it failed or did not run. A dry run is
+  // a person looking, not the schedule, and records nothing.
+  const finish = async (summary: Record<string, unknown>, failure?: string) => {
+    if (failure) problems.push(failure);
+    if (dryRun) return;
+    await recordCronRun({
+      job: "ops-digest",
+      requestId: log.requestId,
+      startedAt,
+      ok: problems.length === 0,
+      summary,
+      error: problems.length ? problems.join("; ") : null,
+    });
+  };
+
   if (!dryRun) {
     const { data: closed, error: closeError } = await supabaseAdmin().rpc(
       "close_ended_fiscal_years",
     );
-    if (closeError) log.error("fiscal years did not close", { err: closeError.message });
-    else if (closed) log.info("fiscal years closed", { count: closed });
+    if (closeError) {
+      log.error("fiscal years did not close", { err: closeError.message });
+      problems.push(`fiscal years did not close: ${closeError.message}`);
+    } else if (closed) log.info("fiscal years closed", { count: closed });
   }
   const report = await loadOpsReport(new Date(now));
   const digest = buildDigest(report, now, `${request.nextUrl.origin}/admin`);
@@ -54,6 +79,12 @@ export async function GET(request: NextRequest) {
       recipients: to.length,
       subject: digest.subject,
     });
+    await finish(
+      { sent: 0, wouldSend: digest.send, recipients: to.length },
+      digest.send && to.length === 0
+        ? "nobody to send to: PLATFORM_OWNER_EMAILS is empty"
+        : undefined,
+    );
     return NextResponse.json({
       sent: 0,
       wouldSend: digest.send,
@@ -66,6 +97,7 @@ export async function GET(request: NextRequest) {
   const key = resendKey();
   if (!key) {
     log.error("digest could not be sent: no email key");
+    await finish({ sent: 0, recipients: to.length }, "email is not set up");
     return NextResponse.json(
       { error: "Email is not set up", subject: digest.subject },
       { status: 500 },
@@ -80,8 +112,10 @@ export async function GET(request: NextRequest) {
   });
   if (sent.error) {
     log.error("digest failed to send", { err: sent.error.message });
+    await finish({ sent: 0, recipients: to.length }, `send failed: ${sent.error.message}`);
     return NextResponse.json({ error: sent.error.message }, { status: 500 });
   }
   log.info("digest sent", { recipients: to.length, subject: digest.subject });
+  await finish({ sent: to.length });
   return NextResponse.json({ sent: to.length, subject: digest.subject });
 }

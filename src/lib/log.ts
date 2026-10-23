@@ -14,12 +14,19 @@
  *
  * What never goes out: secrets, tokens, card data, full email addresses.
  * `scrubFields` masks an email to its first letter and domain and redacts
- * anything that looks like a key, wherever it sits in the object. The rule
- * is applied to every field, so a route cannot forget.
+ * anything that looks like a key, wherever it sits in the object, including
+ * one embedded in a longer string such as a URL's query or an error message
+ * (the rules are in redact.mjs, shared with the telemetry span scrubber).
+ * The rule is applied to every field and to the message, so a route cannot
+ * forget.
  *
  * No Next imports: the same helpers run in the browser (the error pages mint
  * a reference) and in the Edge runtime (the proxy).
  */
+
+import { maskEmail, scrubText } from "../../redact.mjs";
+
+export { maskEmail };
 
 export const REQUEST_ID_HEADER = "x-request-id";
 
@@ -76,7 +83,6 @@ export function requestIdFrom(headers: HeaderReader): string {
 
 /* ------------------------------------------------------------------ scrubbing */
 
-const EMAIL = /([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
 const SECRET_KEY =
   /secret|token|password|passwd|authorization|cookie|api[_-]?key|card|cvc|cvv|\bpan\b|account_?number|routing|ssn|hashed|action_link|client_secret/i;
 const SECRET_VALUE = /^(sk|rk|whsec|re|pk)_[A-Za-z0-9]|_secret_|^eyJ[A-Za-z0-9_-]{10,}/;
@@ -84,19 +90,15 @@ const MAX_STRING = 300;
 const MAX_STACK = 1500;
 const MAX_DEPTH = 4;
 
-/** `monish@gmail.com` becomes `m***@gmail.com`. Anything else is returned as is. */
-export function maskEmail(value: string): string {
-  return value.replace(EMAIL, (_, first: string, domain: string) => `${first}***@${domain}`);
-}
-
 /**
  * Masks what must never be printed, then cuts to fit. The mask runs first, so
- * a cut can never leave half an address behind with no domain left to match.
- * The limit is a parameter because a stack earns more room than a field.
+ * a cut can never leave half an address or a token behind with nothing left
+ * to match. The limit is a parameter because a stack earns more room than a
+ * field.
  */
 function scrubString(value: string, limit = MAX_STRING): string {
   if (SECRET_VALUE.test(value)) return "[redacted]";
-  const masked = maskEmail(value);
+  const masked = scrubText(value);
   return masked.length > limit ? `${masked.slice(0, limit)}…` : masked;
 }
 
@@ -209,7 +211,7 @@ export function logger(
       const line: LogLine = {
         ts: new Date(now()).toISOString(),
         level,
-        msg,
+        msg: scrubText(msg),
         requestId,
         route,
         durationMs: now() - startedAt,

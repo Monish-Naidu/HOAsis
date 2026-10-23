@@ -14,6 +14,7 @@ import {
 } from "./core";
 import { todayIsoDate } from "@/lib/utils";
 import { officeOf } from "@/lib/board-offices";
+import { reportRemoteError } from "@/lib/data/remote-store";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type {
   Announcement,
@@ -392,9 +393,27 @@ export function useCommunicationsActions(deps: AppDeps) {
     async (threadId: string, homeId: string, body: string) => {
       if (!body.trim()) return false;
       if (remote.community) {
-        return remoteWrite("Sending your reply", () =>
+        const ok = await remoteWrite("Sending your reply", () =>
           supabaseBrowser().rpc("reply_as_owner", { p_thread_id: threadId, p_body: body.trim() }),
         );
+        // The office is told about the follow-up, the same mail a first
+        // message sends. The reply is saved either way, so when the email
+        // cannot go the owner hears that rather than nothing.
+        if (ok) {
+          void fetch("/api/email/office-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ threadId }),
+          }).then(
+            (response) => {
+              if (!response.ok) {
+                reportRemoteError("Your reply is saved, but the board's alert email did not go");
+              }
+            },
+            () => reportRemoteError("Your reply is saved, but the board's alert email did not go"),
+          );
+        }
+        return ok;
       }
       const home = sliceStore(communityId, "homes")
         .getSnapshot()

@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { communityPath } from "@/lib/community-links";
 import type { Database } from "@/lib/supabase/database.types";
 import { remoteInviteUrl } from "@/lib/invitations";
 import { clockTime } from "@/lib/utils";
@@ -176,7 +177,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
 
   const { data: association } = await admin
     .from("associations")
-    .select("name, join_code, contact_email")
+    .select("name, join_code, contact_email, slug")
     .eq("id", input.associationId)
     .single();
   if (!association) throw new Error("No such association");
@@ -200,13 +201,19 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
 
   const key = resendKey();
   const client = input.dryRun ? null : key ? new Resend(key) : null;
-  let path = LANDING[input.kind];
+  let landing = LANDING[input.kind];
   if (input.kind === "request" && content.reference)
-    path = `/resident/requests/${content.reference}`;
+    landing = `/resident/requests/${content.reference}`;
   // The notice of a move or a cancellation lands on the meeting itself, where
   // the new date and the reason are, not on the list it sits in.
   if ((input.kind === "meeting-moved" || input.kind === "meeting-cancelled") && input.id)
-    path = meetingPage(input.id);
+    landing = meetingPage(input.id);
+  // The link names the association, so a member of two is not shown whichever
+  // one this browser last had open. A notice about one home (a letter, a
+  // message, a request update) names the home too, for the same reason.
+  const path = association.slug ? communityPath(association.slug, landing) : landing;
+  const unitScoped = Boolean(content.unitIds);
+  const pathFor = (person: Recipient) => `${path}${unitScoped ? `?home=${person.unit_id}` : ""}`;
 
   // Resend allows two requests a second, and the function has a time limit.
   // The pacer keeps under the first and stops the loop before the second
@@ -228,7 +235,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
     ? new Set<string>()
     : await recentlySent(admin, { associationId: input.associationId, category });
 
-  const plainUrl = `${input.origin}${path}`;
+  const plainUrl = (person: Recipient) => `${input.origin}${pathFor(person)}`;
   const build = (person: Recipient, url: string) =>
     content.build({
       associationName: association.name,
@@ -246,7 +253,7 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
   // sign-in link is minted for somebody who will not be sent anything.
   const hasIt = (person: Recipient) =>
     alreadySent.size > 0 &&
-    alreadySent.has(sentKey(person.email, build(person, plainUrl).subject, person.unit_id));
+    alreadySent.has(sentKey(person.email, build(person, plainUrl(person)).subject, person.unit_id));
 
   for (let index = 0; index < people.length; index++) {
     const person = people[index];
@@ -264,8 +271,8 @@ export async function sendNotification(input: NotifyInput): Promise<NotifyResult
       continue;
     }
     const url = input.dryRun
-      ? plainUrl
-      : await signInLink(admin, person, path, input.origin, association.join_code);
+      ? plainUrl(person)
+      : await signInLink(admin, person, pathFor(person), input.origin, association.join_code);
     const built = build(person, url);
 
     if (input.dryRun) {

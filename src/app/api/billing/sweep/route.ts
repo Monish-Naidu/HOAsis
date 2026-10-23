@@ -131,10 +131,12 @@ export async function GET(request: NextRequest) {
             return;
           }
 
+          // The register's count: retired homes are not billed.
           const { count } = await admin
             .from("units")
             .select("*", { count: "exact", head: true })
-            .eq("association_id", row.id);
+            .eq("association_id", row.id)
+            .is("retired_on", null);
           const homes = count ?? 0;
 
           const result = await sendTrialNotice({
@@ -197,10 +199,12 @@ export async function GET(request: NextRequest) {
           async (row) => {
             if (!row.billing_subscription_id) return;
             report.subscriptions++;
+            // The register's count: retired homes are not billed.
             const { count, error: countError } = await admin
               .from("units")
               .select("*", { count: "exact", head: true })
-              .eq("association_id", row.id);
+              .eq("association_id", row.id)
+              .is("retired_on", null);
             // A count that did not come back is not zero homes. Billing one
             // home because the database blinked would be its own bug.
             if (countError || count === null) {

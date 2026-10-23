@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { addressLabel } from "@/lib/board-offices";
+import { communityPath } from "@/lib/community-links";
 import { emailSender, resendKey } from "@/lib/email/sender";
 import { readReplyTo } from "@/lib/email/reply-to";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -90,13 +91,17 @@ export async function sendOfficeMessageNotice(input: {
   subject: string;
   body: string;
   fromName: string;
+  /** True when the owner is following up rather than opening the thread. */
+  followUp?: boolean;
+  /** Stable identity of the message being announced, for the send's key. */
+  messageKey?: string;
   origin: string;
 }): Promise<{ sent: number; failed: number }> {
   const result = { sent: 0, failed: 0 };
   try {
     const admin = supabaseAdmin();
     const [{ data: association }, { data: unit }, { data: seats }, replyTo] = await Promise.all([
-      admin.from("associations").select("name").eq("id", input.associationId).maybeSingle(),
+      admin.from("associations").select("name, slug").eq("id", input.associationId).maybeSingle(),
       input.unitId
         ? admin.from("units").select("label").eq("id", input.unitId).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -122,7 +127,14 @@ export async function sendOfficeMessageNotice(input: {
     const { office, people } = officeRecipients(input.to, seats ?? [], accountEmails);
     const key = resendKey();
     const client = key ? new Resend(key) : null;
-    const url = new URL("/board/communications", input.origin);
+    // The link names the association, so an officer in two of them is not
+    // shown whichever one this browser last had open.
+    const url = new URL(
+      association.slug
+        ? communityPath(association.slug, "/board/communications")
+        : "/board/communications",
+      input.origin,
+    );
     url.searchParams.set("thread", input.threadId);
 
     for (const person of people) {
@@ -134,6 +146,7 @@ export async function sendOfficeMessageNotice(input: {
         home: unit?.label ?? "",
         subject: input.subject,
         body: input.body,
+        followUp: input.followUp,
         url: url.toString(),
       });
 
@@ -153,8 +166,14 @@ export async function sendOfficeMessageNotice(input: {
               // The board's contact address, so a plain reply reaches somebody.
               ...(replyTo ? { replyTo } : {}),
             },
-            // Once per thread and address, however many times the browser asks.
-            { idempotencyKey: `thread-new/${input.threadId}/${person.email.toLowerCase()}` },
+            // Once per message and address, however many times the browser
+            // asks. The first message's key keeps its old shape, so a notice
+            // already sent under it is not sent again.
+            {
+              idempotencyKey: input.messageKey
+                ? `thread-message/${input.threadId}/${input.messageKey}/${person.email.toLowerCase()}`
+                : `thread-new/${input.threadId}/${person.email.toLowerCase()}`,
+            },
           );
           providerId = sent.data?.id ?? null;
           error = sent.error?.message ?? null;

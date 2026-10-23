@@ -43,6 +43,7 @@ import {
   reservableSpaceNames,
 } from "@/lib/data/new-community";
 import { isRecord } from "@/lib/core/guards";
+import { type FoundingBooks, withFoundingBooks } from "@/lib/founding-books";
 import type { SettingsPatch } from "./types";
 
 /**
@@ -296,133 +297,137 @@ export function useSettingsActions(deps: AppDeps) {
    * must never write to the database, and a real association must never be
    * something one browser knows about.
    */
-  const createRemoteAssociation = useCallback(async (draft: CommunityDraft) => {
-    const supabase = supabaseBrowser();
-    const { data, error } = await supabase.rpc("create_association", {
-      p_name: draft.name,
-      p_city: draft.city,
-      p_state: draft.state,
-      p_dues_cents: draft.duesCents,
-      p_dues_cadence: draft.duesCadence,
-      p_due_day: draft.dueDay,
-      p_founder_name: draft.founder.name,
-      p_founder_unit: draft.founder.unit,
-      p_households: draft.households,
-      // The three answers, kept. They were being asked and then discarded on
-      // this path, so a real board got the generic plan, which is the one
-      // outcome the questions exist to prevent.
-      p_property_type: draft.propertyType ?? null,
-      p_origin: draft.origin ?? null,
-      p_collects: draft.collects,
-      p_shared_spaces: draft.sharedSpaces,
-      p_previously: draft.previously ?? undefined,
-      p_founder_address: draft.founder.address?.trim() || undefined,
-      // Every kind of home, each home's kind, and what each kind pays.
-      p_home_types: draft.homeTypes?.length ? draft.homeTypes : undefined,
-      p_dues_by_type: draft.duesByType ?? undefined,
-      p_founder_home_type: draft.founder.homeType ?? undefined,
-    });
-    if (error) throw new Error(error.message);
-
-    const associationId = data as string;
-
-    // The late fee the founder chose, or none, as the collections policy.
-    // Written here rather than through `updateSettings`, which acts on the
-    // association already open and this one is not yet. The association
-    // exists by now, so a failure is said and not thrown.
-    {
-      const { data: row, error: readError } = await supabase
-        .from("associations")
-        .select("settings")
-        .eq("id", associationId)
-        .single();
-      const stored = (row?.settings as Record<string, unknown> | null) ?? {};
-      const { error: policyError } = readError
-        ? { error: readError }
-        : await supabase
-            .from("associations")
-            .update({ settings: { ...stored, collectionPolicy: draftCollectionPolicy(draft) } })
-            .eq("id", associationId);
-      if (policyError) {
-        reportRemoteError(
-          `Your association is set up, but its late fee setting was not saved (${policyError.message}). No late fee is charged until you set one in Finances, Past due.`,
-        );
-      }
-    }
-
-    // The shared spaces named during setup become the amenities owners can
-    // reserve. Without this the plan asked for them a second time.
-    const spaces = reservableSpaceNames(draft.sharedSpaces, draft.customSpaces);
-    // The association exists by now, so a failure below is said and the
-    // founder still lands in it; throwing would send them back into the
-    // wizard to found the same association a second time.
-    if (spaces.length) {
-      const { error: spacesError } = await supabase.from("amenities").insert(
-        spaces.map((name) => ({
-          association_id: associationId,
-          name,
-          detail: "",
-          reservable: true,
-          status: "open",
-        })),
-      );
-      if (spacesError) {
-        reportRemoteError(
-          `Your association is set up, but its shared spaces were not saved (${spacesError.message}). Add them from your setup steps.`,
-        );
-      }
-    }
-
-    // The account the books are kept against. The wizard stopped asking for
-    // a bank on 2026-10-04, which left a new association with nowhere for a
-    // recorded check to land and no account to give a starting balance. It
-    // gets a plainly named one; it is a ledger, not a connection, and online
-    // money still goes through Stripe.
-    {
-      const { error: bankError } = await supabase.from("bank_accounts").insert({
-        association_id: associationId,
-        kind: "operating",
-        institution: draft.bankAccount?.institution ?? "Operating account",
-        mask: draft.bankAccount?.mask ?? "",
+  const createRemoteAssociation = useCallback(
+    async (draft: CommunityDraft, onFounded?: (associationId: string) => void) => {
+      const supabase = supabaseBrowser();
+      const { data, error } = await supabase.rpc("create_association", {
+        p_name: draft.name,
+        p_city: draft.city,
+        p_state: draft.state,
+        p_dues_cents: draft.duesCents,
+        p_dues_cadence: draft.duesCadence,
+        p_due_day: draft.dueDay,
+        p_founder_name: draft.founder.name,
+        p_founder_unit: draft.founder.unit,
+        p_households: draft.households,
+        // The three answers, kept. They were being asked and then discarded on
+        // this path, so a real board got the generic plan, which is the one
+        // outcome the questions exist to prevent.
+        p_property_type: draft.propertyType ?? null,
+        p_origin: draft.origin ?? null,
+        p_collects: draft.collects,
+        p_shared_spaces: draft.sharedSpaces,
+        p_previously: draft.previously ?? undefined,
+        p_founder_address: draft.founder.address?.trim() || undefined,
+        // Every kind of home, each home's kind, and what each kind pays.
+        p_home_types: draft.homeTypes?.length ? draft.homeTypes : undefined,
+        p_dues_by_type: draft.duesByType ?? undefined,
+        p_founder_home_type: draft.founder.homeType ?? undefined,
       });
-      if (bankError) {
-        reportRemoteError(
-          `Your association is set up, but its operating account was not created (${bankError.message}). Add it on Finances.`,
-        );
-      }
-    }
+      if (error) throw new Error(error.message);
 
-    // Each home's own dues amount, now the homes exist. create_association
-    // takes none, so they follow it through set_home_dues, the way balances
-    // follow an import. The association exists, so a failure is said and the
-    // founder still lands in it; Change dues on a household finishes the job.
-    {
-      const own = [
-        ...(draft.founder.duesCents
-          ? [{ unit: draft.founder.unit, duesCents: draft.founder.duesCents }]
-          : []),
-        ...draft.households
-          .filter((h) => h.duesCents && h.duesCents > 0)
-          .map((h) => ({ unit: h.unit, duesCents: h.duesCents as number })),
-      ];
-      if (draft.duesByHome && own.length) {
-        try {
-          await writeHomeDues(associationId, own);
-        } catch (duesError) {
+      const associationId = data as string;
+      onFounded?.(associationId);
+
+      // The late fee the founder chose, or none, as the collections policy.
+      // Written here rather than through `updateSettings`, which acts on the
+      // association already open and this one is not yet. The association
+      // exists by now, so a failure is said and not thrown.
+      {
+        const { data: row, error: readError } = await supabase
+          .from("associations")
+          .select("settings")
+          .eq("id", associationId)
+          .single();
+        const stored = (row?.settings as Record<string, unknown> | null) ?? {};
+        const { error: policyError } = readError
+          ? { error: readError }
+          : await supabase
+              .from("associations")
+              .update({ settings: { ...stored, collectionPolicy: draftCollectionPolicy(draft) } })
+              .eq("id", associationId);
+        if (policyError) {
           reportRemoteError(
-            `Your association is set up, but some homes were not given their own dues (${
-              duesError instanceof Error ? duesError.message : "it was not saved"
-            }). Open Homeowners and use Change dues on those homes. Until then they pay the usual amount.`,
+            `Your association is set up, but its late fee setting was not saved (${policyError.message}). No late fee is charged until you set one in Finances, Past due.`,
           );
         }
       }
-    }
 
-    // Land in the one just founded, not in whichever this browser had open.
-    preferRemoteAssociation(associationId);
-    await loadRemote(sessionUserId());
-    return associationId;
-  }, []);
+      // The shared spaces named during setup become the amenities owners can
+      // reserve. Without this the plan asked for them a second time.
+      const spaces = reservableSpaceNames(draft.sharedSpaces, draft.customSpaces);
+      // The association exists by now, so a failure below is said and the
+      // founder still lands in it; throwing would send them back into the
+      // wizard to found the same association a second time.
+      if (spaces.length) {
+        const { error: spacesError } = await supabase.from("amenities").insert(
+          spaces.map((name) => ({
+            association_id: associationId,
+            name,
+            detail: "",
+            reservable: true,
+            status: "open",
+          })),
+        );
+        if (spacesError) {
+          reportRemoteError(
+            `Your association is set up, but its shared spaces were not saved (${spacesError.message}). Add them from your setup steps.`,
+          );
+        }
+      }
+
+      // The account the books are kept against. The wizard stopped asking for
+      // a bank on 2026-10-04, which left a new association with nowhere for a
+      // recorded check to land and no account to give a starting balance. It
+      // gets a plainly named one; it is a ledger, not a connection, and online
+      // money still goes through Stripe.
+      {
+        const { error: bankError } = await supabase.from("bank_accounts").insert({
+          association_id: associationId,
+          kind: "operating",
+          institution: draft.bankAccount?.institution ?? "Operating account",
+          mask: draft.bankAccount?.mask ?? "",
+        });
+        if (bankError) {
+          reportRemoteError(
+            `Your association is set up, but its operating account was not created (${bankError.message}). Add it on Finances.`,
+          );
+        }
+      }
+
+      // Each home's own dues amount, now the homes exist. create_association
+      // takes none, so they follow it through set_home_dues, the way balances
+      // follow an import. The association exists, so a failure is said and the
+      // founder still lands in it; Change dues on a household finishes the job.
+      {
+        const own = [
+          ...(draft.founder.duesCents
+            ? [{ unit: draft.founder.unit, duesCents: draft.founder.duesCents }]
+            : []),
+          ...draft.households
+            .filter((h) => h.duesCents && h.duesCents > 0)
+            .map((h) => ({ unit: h.unit, duesCents: h.duesCents as number })),
+        ];
+        if (draft.duesByHome && own.length) {
+          try {
+            await writeHomeDues(associationId, own);
+          } catch (duesError) {
+            reportRemoteError(
+              `Your association is set up, but some homes were not given their own dues (${
+                duesError instanceof Error ? duesError.message : "it was not saved"
+              }). Open Homeowners and use Change dues on those homes. Until then they pay the usual amount.`,
+            );
+          }
+        }
+      }
+
+      // Land in the one just founded, not in whichever this browser had open.
+      preferRemoteAssociation(associationId);
+      await loadRemote(sessionUserId());
+      return associationId;
+    },
+    [],
+  );
 
   /**
    * Setup tasks a board has declared do not apply to them.
@@ -484,9 +489,10 @@ export function useSettingsActions(deps: AppDeps) {
    * and stored on the community, so nothing downstream reads a wall clock
    * during render.
    */
-  const createCommunity = useCallback((draft: CommunityDraft) => {
+  const createCommunity = useCallback((draft: CommunityDraft, books?: FoundingBooks) => {
     const asOf = new Date().toISOString().slice(0, 10);
-    const built = buildCommunity(draft, asOf);
+    const plain = buildCommunity(draft, asOf);
+    const built = books ? withFoundingBooks(plain, books, draft.dueDay) : plain;
     saveCreatedCommunity(built);
     // Seed each slice from the new community so its stores exist before any
     // screen reads them.

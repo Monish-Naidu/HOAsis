@@ -544,9 +544,10 @@ try {
 
   // Its own block: the claim checks reuse names the seat checks above declared.
   {
-    // 9. The board is told once per request (0116). The send is the notify
-    //    route's; what the database promises is the claim, so this makes the
-    //    claim the way the route makes it.
+    // 9. The board is told once per request and officer (0116, 0128). The
+    //    send is the notify route's; what the database promises is the
+    //    per-recipient claim, so this makes the claim the way the route
+    //    makes it.
     const notifyEmail = mail("waiter");
     const waiter = await signUp(notifyEmail, "Wes Waits");
     await waiter.client.rpc("request_to_join", {
@@ -567,33 +568,183 @@ try {
       Boolean(fresh) && fresh.board_notified_at === null,
       JSON.stringify(fresh),
     );
-    const now = new Date().toISOString();
-    const claim = (client) =>
-      client
-        .from("join_requests")
-        .update({ board_notified_at: now })
-        .eq("id", fresh.id)
-        .is("board_notified_at", null)
-        .eq("status", "pending")
-        .select("id");
-    const first = await claim(admin);
-    check(
-      "the first claim takes the request, so the notice goes out once",
-      (first.data ?? []).length === 1 && !first.error,
-      first.error?.message ?? `${(first.data ?? []).length} rows`,
+
+    // Each officer's copy is reserved first, with the words and link it will
+    // carry on every attempt.
+    const founderMail = mail("founder");
+    const secondOfficer = mail("officer2");
+    // ignoreDuplicates, as the route reserves: a repeat keeps the first copy.
+    const reserve = (email, subject, url) =>
+      admin.from("join_notice_deliveries").upsert(
+        {
+          request_id: fresh.id,
+          email,
+          subject,
+          url,
+        },
+        { onConflict: "request_id,email", ignoreDuplicates: true },
+      );
+    const reservedA = await reserve(
+      founderMail,
+      "Wes Waits asked to join Willow Creek Estates",
+      `https://yourhoasis.test/r/${fresh.id}/a`,
     );
-    const secondClaim = await claim(admin);
-    check(
-      "a second submit claims nothing",
-      (secondClaim.data ?? []).length === 0 && !secondClaim.error,
-      secondClaim.error?.message ?? `${(secondClaim.data ?? []).length} rows`,
+    const reservedB = await reserve(
+      secondOfficer,
+      "Wes Waits asked to join Willow Creek Estates",
+      `https://yourhoasis.test/r/${fresh.id}/b`,
     );
-    const byResident = await claim(owner3.client);
     check(
-      "a resident cannot claim a request",
-      Boolean(byResident.error) || (byResident.data ?? []).length === 0,
-      byResident.error?.message ?? `${(byResident.data ?? []).length} rows`,
+      "each officer's copy is reserved before any send",
+      !reservedA.error && !reservedB.error,
+      reservedA.error?.message ?? reservedB.error?.message ?? "",
     );
+    // A concurrent reservation writes the same row; the first writer's copy stands.
+    await reserve(founderMail, "A different subject", "https://evil.example/");
+    const { data: reread } = await admin
+      .from("join_notice_deliveries")
+      .select("subject, url")
+      .eq("request_id", fresh.id)
+      .eq("email", founderMail)
+      .single();
+    check(
+      "a repeat reservation keeps the first words and link",
+      reread?.subject === "Wes Waits asked to join Willow Creek Estates" &&
+        !String(reread?.url).includes("evil.example"),
+      JSON.stringify(reread),
+    );
+
+    const claim = (client, email) =>
+      client.rpc("claim_join_notice", { p_request_id: fresh.id, p_email: email });
+    const claimA1 = await claim(admin, founderMail);
+    check(
+      "the first claim hands out the reserved words and link",
+      (claimA1.data ?? []).length === 1 &&
+        claimA1.data[0].subject === "Wes Waits asked to join Willow Creek Estates" &&
+        claimA1.data[0].url === `https://yourhoasis.test/r/${fresh.id}/a` &&
+        claimA1.data[0].attempts === 1 &&
+        claimA1.data[0].interrupted_at === null,
+      JSON.stringify(claimA1.data ?? claimA1.error),
+    );
+    const claimA2 = await claim(admin, founderMail);
+    check(
+      "a copy under a fresh claim is not handed out twice",
+      (claimA2.data ?? []).length === 0 && !claimA2.error,
+      claimA2.error?.message ?? `${(claimA2.data ?? []).length} rows`,
+    );
+    const claimB = await claim(admin, secondOfficer);
+    check(
+      "the other officer's copy is claimed on its own",
+      (claimB.data ?? []).length === 1,
+      claimB.error?.message ?? `${(claimB.data ?? []).length} rows`,
+    );
+    const byResident = await claim(owner3.client, founderMail);
+    check(
+      "a resident cannot claim a notice",
+      Boolean(byResident.error),
+      byResident.error?.message ?? "no error",
+    );
+    const readByResident = await owner3.client
+      .from("join_notice_deliveries")
+      .select("email")
+      .eq("request_id", fresh.id);
+    check(
+      "a resident cannot read the deliveries",
+      Boolean(readByResident.error),
+      readByResident.error?.message ?? "no error",
+    );
+
+    // One officer's copy goes; the request is not "told" until every copy has.
+    const finishA = await admin.rpc("finish_join_notice", {
+      p_request_id: fresh.id,
+      p_email: founderMail,
+      p_ok: true,
+      p_provider_id: "email-1",
+    });
+    check("a sent copy is stamped", !finishA.error, finishA.error?.message ?? "");
+    const { data: halfway } = await admin
+      .from("join_requests")
+      .select("board_notified_at")
+      .eq("id", fresh.id)
+      .single();
+    check(
+      "the request is not told while a copy is still waiting",
+      halfway?.board_notified_at === null,
+      JSON.stringify(halfway),
+    );
+
+    // A failed send leaves that copy claimable; the sent one stays sent.
+    await admin.rpc("finish_join_notice", {
+      p_request_id: fresh.id,
+      p_email: secondOfficer,
+      p_ok: false,
+      p_error: "domain not verified",
+    });
+    const claimB2 = await claim(admin, secondOfficer);
+    check(
+      "the failed copy can be claimed again, with the same payload",
+      (claimB2.data ?? []).length === 1 &&
+        claimB2.data[0].url === `https://yourhoasis.test/r/${fresh.id}/b` &&
+        claimB2.data[0].interrupted_at === null,
+      JSON.stringify(claimB2.data ?? claimB2.error),
+    );
+    const claimA3 = await claim(admin, founderMail);
+    check(
+      "the copy that went is never claimed again",
+      (claimA3.data ?? []).length === 0,
+      claimA3.error?.message ?? `${(claimA3.data ?? []).length} rows`,
+    );
+    await admin.rpc("finish_join_notice", {
+      p_request_id: fresh.id,
+      p_email: secondOfficer,
+      p_ok: true,
+      p_provider_id: "email-2",
+    });
+    const { data: told } = await admin
+      .from("join_requests")
+      .select("board_notified_at")
+      .eq("id", fresh.id)
+      .single();
+    check(
+      "the request is told once every copy has gone",
+      typeof told?.board_notified_at === "string",
+      JSON.stringify(told),
+    );
+
+    // An interrupted attempt: claimed, then nothing. After the lease runs
+    // out the next claim hands it out again and says it was interrupted, so
+    // the sender can check the mail log before writing twice.
+    await reserve(
+      mail("officer3"),
+      "Wes Waits asked to join Willow Creek Estates",
+      `https://yourhoasis.test/r/${fresh.id}/c`,
+    );
+    const claimC1 = await claim(admin, mail("officer3"));
+    check(
+      "a third copy is claimed",
+      (claimC1.data ?? []).length === 1,
+      claimC1.error?.message ?? "",
+    );
+    await admin
+      .from("join_notice_deliveries")
+      .update({ claimed_at: new Date(Date.now() - 11 * 60_000).toISOString() })
+      .eq("request_id", fresh.id)
+      .eq("email", mail("officer3"));
+    const claimC2 = await claim(admin, mail("officer3"));
+    check(
+      "an expired lease is handed out again and says it was interrupted",
+      (claimC2.data ?? []).length === 1 && claimC2.data[0].interrupted_at !== null,
+      JSON.stringify(claimC2.data ?? claimC2.error),
+    );
+    // A decided request has nothing left to tell: no claim is handed out.
+    await admin.from("join_requests").update({ status: "approved" }).eq("id", fresh.id);
+    const claimDecided = await claim(admin, mail("officer3"));
+    check(
+      "a decided request hands out nothing",
+      (claimDecided.data ?? []).length === 0,
+      claimDecided.error?.message ?? `${(claimDecided.data ?? []).length} rows`,
+    );
+
     const { error: logError } = await admin.from("email_log").insert({
       association_id: associationId,
       profile_id: null,

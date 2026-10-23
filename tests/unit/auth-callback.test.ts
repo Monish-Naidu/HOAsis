@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createFakeSupabase } from "../helpers/fake-supabase";
-import { sameOriginPath } from "@/app/auth/callback/next-path";
+import { requestOrigin, sameOriginPath } from "@/app/auth/callback/next-path";
 
 /**
  * Where a link lands after it has proved who somebody is. Two promises:
@@ -49,6 +49,42 @@ describe("sameOriginPath", () => {
   });
 });
 
+describe("requestOrigin", () => {
+  const parsed = (href: string) => new URL(href);
+
+  it("keeps 127.0.0.1 and [::1], which Next.js reports as localhost, on the same port", () => {
+    expect(requestOrigin(parsed("http://localhost:3100/auth/callback"), "127.0.0.1:3100")).toBe(
+      "http://127.0.0.1:3100",
+    );
+    expect(requestOrigin(parsed("http://localhost:3100/auth/callback"), "[::1]:3100")).toBe(
+      "http://[::1]:3100",
+    );
+    expect(requestOrigin(parsed("http://localhost:3100/auth/callback"), "localhost:3100")).toBe(
+      "http://localhost:3100",
+    );
+  });
+
+  it("never lets the Host header pick another site or port", () => {
+    const local = parsed("http://localhost:3100/auth/callback");
+    for (const host of [
+      "evil.example",
+      "evil.example:3100",
+      "127.0.0.1:3100@evil.example",
+      "127.0.0.1:9999",
+      "127.0.0.1.evil.example:3100",
+      "127.0.0.1:3100/evil",
+      "",
+    ]) {
+      expect(requestOrigin(local, host)).toBe("http://localhost:3100");
+    }
+    expect(requestOrigin(local, null)).toBe("http://localhost:3100");
+  });
+
+  it("leaves a real deployment's origin alone whatever the header says", () => {
+    expect(requestOrigin(parsed(`${ORIGIN}/auth/callback`), "127.0.0.1")).toBe(ORIGIN);
+    expect(requestOrigin(parsed(`${ORIGIN}/auth/callback`), "evil.example")).toBe(ORIGIN);
+  });
+});
 const fake = createFakeSupabase({ "rpc:my_associations": { data: [{ role: "resident" }] } });
 
 vi.mock("@/lib/supabase/server", () => ({ supabaseServer: async () => fake.client }));
@@ -113,6 +149,44 @@ describe("the callback route", () => {
       fake.on("rpc:my_join_requests", { data: asked });
       const response = await callback("token_hash=hash_123&type=signup");
       expect(new URL(response.headers.get("location")!).pathname).toBe("/resident");
+    }
+  });
+});
+
+describe("the callback on a loopback address", () => {
+  // What Next.js hands the route for a link opened on http://127.0.0.1:3100:
+  // a URL that says localhost, and the Host header the browser sent.
+  function local(query: string, headers: Record<string, string>) {
+    return GET(new NextRequest(`http://localhost:3100/auth/callback?${query}`, { headers }));
+  }
+
+  it("lands on the address the link was opened on, where the session cookie is", async () => {
+    const response = await local("token_hash=hash_123&type=magiclink&next=%2Fboard", {
+      host: "127.0.0.1:3100",
+    });
+    expect(response.headers.get("location")).toBe("http://127.0.0.1:3100/board");
+  });
+
+  it("sends a failed link to sign in on that same address", async () => {
+    fake.once("auth.verifyOtp", { error: { message: "expired" } });
+    const response = await local("token_hash=spent&type=magiclink&next=%2Fboard", {
+      host: "127.0.0.1:3100",
+    });
+    const location = new URL(response.headers.get("location")!);
+    expect(location.origin).toBe("http://127.0.0.1:3100");
+    expect(location.pathname).toBe("/signin");
+    expect(location.searchParams.get("next")).toBe("/board");
+  });
+
+  it("ignores a forwarded or foreign host, and still drops a foreign next", async () => {
+    for (const next of ["//evil.example", "https://evil.example/x", "/%5Cevil.example"]) {
+      const response = await local(`token_hash=hash_123&type=magiclink&next=${next}`, {
+        host: "evil.example",
+        "x-forwarded-host": "evil.example",
+      });
+      const location = new URL(response.headers.get("location")!);
+      expect(location.origin).toBe("http://localhost:3100");
+      expect(location.pathname).toBe("/resident");
     }
   });
 });

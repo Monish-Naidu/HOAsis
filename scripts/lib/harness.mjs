@@ -12,6 +12,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "../env.mjs";
+import { loadVerifyEnv } from "./verify-target.mjs";
 
 export { loadEnv };
 
@@ -47,7 +48,7 @@ export function createHarness({
   demotePresident = false,
   swallowUserDeleteErrors = true,
 }) {
-  const env = loadEnv();
+  const env = loadVerifyEnv();
   const authOptions = { auth: { persistSession: false } };
   const admin = createClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
