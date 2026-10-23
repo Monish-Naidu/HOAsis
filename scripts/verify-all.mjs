@@ -25,6 +25,7 @@ const SUITES = [
   "stripe",
   "community-life",
   "email",
+  "email-webhook",
   "signin-routing",
   "safety",
   "scale",
