@@ -69,7 +69,8 @@ function DocumentsScreen() {
     }))
     .filter((g) => g.docs.length);
 
-  const fillable = community.forms.filter((f) => (f.fields ?? []).length > 0);
+  // Forms to fill in here, and uploaded forms that have a file to open.
+  const fillable = community.forms.filter((f) => (f.fields ?? []).length > 0 || f.fileUrl);
   const nothing = q && grouped.length === 0 && articleHits.length === 0;
 
   return (
@@ -143,7 +144,9 @@ function DocumentsScreen() {
 
       {!q && fillable.length > 0 ? (
         <section>
-          <SectionTitle>Fill in and sign here</SectionTitle>
+          {/* Both kinds: forms filled in on the page, and uploaded forms that
+              open as a file to print and sign by hand. */}
+          <SectionTitle>Forms</SectionTitle>
           <Card className="divide-y divide-border">
             {fillable.map((form) => (
               <Link
@@ -159,7 +162,7 @@ function DocumentsScreen() {
                   <span className="block truncate text-footnote text-fg-muted">
                     {form.decisionDays
                       ? `The board answers within ${form.decisionDays} days`
-                      : form.description}
+                      : form.description || form.fileName}
                   </span>
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-fg-subtle" />

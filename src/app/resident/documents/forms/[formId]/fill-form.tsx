@@ -81,10 +81,22 @@ export function FillForm({ formId }: { formId: string }) {
         <Card className="p-5">
           <p className="text-headline font-semibold text-fg">{form.label}</p>
           <p className="mt-1.5 text-body leading-relaxed text-fg-muted">{form.description}</p>
-          {/* There is no file behind a form, so nothing here offers one. */}
+          {/* A form the board uploaded has its file; one from before files
+              were kept, or a baseline form, has none and says so. */}
+          {form.fileUrl ? (
+            <a
+              href={form.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex h-10 items-center rounded-lg border border-border-2 bg-surface px-4 text-body font-medium text-fg transition-colors hover:bg-surface-2"
+            >
+              Open the form ({form.fileName})
+            </a>
+          ) : null}
           <Callout tone="info" className="mt-4" title="This one is still a printed form">
-            Ask the board for a copy, fill it in, and attach it to a request. Ask them to add the
-            questions here and you will be able to complete it on your phone instead.
+            {form.fileUrl
+              ? "Open the file, print it, sign it by hand, and attach it to a request. Ask the board to add the questions here and you will be able to complete it on your phone instead."
+              : "Ask the board for a copy, fill it in, and attach it to a request. Ask them to add the questions here and you will be able to complete it on your phone instead."}
           </Callout>
         </Card>
       </div>

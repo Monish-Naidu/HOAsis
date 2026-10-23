@@ -1189,6 +1189,15 @@ export interface ArchitecturalForm {
   source: "baseline" | "uploaded";
   updatedDate: ISODate;
   /**
+   * Where the form's file opens from: a short lived signed link for a real
+   * association, a data URL in the demo. Absent while a form has no file,
+   * which is every baseline form and every upload from before files were
+   * kept.
+   */
+  fileUrl?: string;
+  /** The file's path in Storage, so removing the form takes the bytes too. */
+  storagePath?: string;
+  /**
    * The questions, when the form can be filled in here.
    *
    * A form with no fields is a PDF to print, sign by hand, and scan, which is

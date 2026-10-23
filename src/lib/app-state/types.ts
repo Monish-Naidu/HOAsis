@@ -113,6 +113,11 @@ export interface AppState {
   updateSettings: (patch: SettingsPatch) => boolean | Promise<boolean>;
   setAmenities: (next: Community["amenities"]) => void;
   setForms: (next: Community["forms"]) => void;
+  /**
+   * A form and its file, saved together. Resolves false when nothing was
+   * saved, so the screen keeps what was typed and picked for one more try.
+   */
+  uploadForm: (label: string, file: File) => Promise<boolean>;
   removeForm: (formId: string) => () => void;
   removeAmenity: (amenityId: string) => () => void;
   addVendor: (vendor: Community["vendors"][number]) => void;

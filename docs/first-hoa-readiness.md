@@ -71,10 +71,10 @@ confirmed and a fix is assigned), **Untested** (no check has run yet),
 
 ## Files
 
-| Item                                          | Status  | Evidence                                                                     | Next action              |
-| --------------------------------------------- | ------- | ---------------------------------------------------------------------------- | ------------------------ |
-| Storage upload and download                   | Working | Local private bucket upload, download and cleanup (`verify-local.mjs`, 8/8). | None.                    |
-| Form uploads keep the file, not only its name | Fixing  | Audit: the visible form upload path stores metadata only.                    | Notifications milestone. |
+| Item                                          | Status  | Evidence                                                                          | Next action |
+| --------------------------------------------- | ------- | --------------------------------------------------------------------------------- | ----------- |
+| Storage upload and download                   | Working | Local private bucket upload, download and cleanup (`verify-local.mjs`, 8/8).      | None.       |
+| Form uploads keep the file, not only its name | Working | Bytes in the private bucket under the forms row (`verify-form-files.mjs`, 18/18). | None.       |
 
 ## Telemetry and job health
 

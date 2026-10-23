@@ -761,7 +761,30 @@ export async function loadCommunity(
       .eq("association_id", associationId)
       .order("remaining_life_years"),
     supabase.from("message_templates").select("*").eq("association_id", associationId),
-    supabase.from("forms").select("*").eq("association_id", associationId).order("updated_on"),
+    // Forms open through the same short lived signed links as documents, out
+    // of the same private bucket, so a form row is a plain link on every
+    // screen and Storage applies the membership rule the table does.
+    supabase
+      .from("forms")
+      .select("*")
+      .eq("association_id", associationId)
+      .order("updated_on")
+      .then(async (result) => {
+        const paths = (result.data ?? [])
+          .map((f) => f.storage_path)
+          .filter((path): path is string => Boolean(path));
+        const urlByPath = new Map<string, string>();
+        if (paths.length) {
+          const { data: signed } = await supabase.storage
+            .from("documents")
+            .createSignedUrls(paths, SIGNED_URL_SECONDS);
+          for (const item of signed ?? []) {
+            if (item.path && item.signedUrl && !item.error)
+              urlByPath.set(item.path, item.signedUrl);
+          }
+        }
+        return { ...result, urlByPath };
+      }),
     supabase.from("shared_costs").select("*").eq("association_id", associationId),
     supabase
       .from("shared_cost_bills")
@@ -1689,6 +1712,10 @@ export async function loadCommunity(
         fields: f.fields ?? undefined,
         governedBy: f.governed_by ?? undefined,
         decisionDays: f.decision_days ?? undefined,
+        storagePath: f.storage_path ?? undefined,
+        // A signed link only once Storage agrees the reader may open it; a
+        // row whose file is missing or unreadable simply has none.
+        fileUrl: f.storage_path ? formRows.urlByPath.get(f.storage_path) : undefined,
       })),
     ],
     // A stock template edited by the board is a row that replaces it, keyed

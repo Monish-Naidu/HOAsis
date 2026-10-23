@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import type { DocumentRecord, ISODate } from "@/lib/types";
 
 /**
@@ -98,6 +100,58 @@ export function storagePathFor(
   fileName: string,
 ): string {
   return `${associationId}/${documentId}.${extensionOf(fileName) || "pdf"}`;
+}
+
+/**
+ * Where an uploaded form's file lives in the documents bucket. The forms
+ * folder is what the storage policies key the settings capability on (0130),
+ * so the path is built here, once, and nowhere else.
+ */
+export function formStoragePath(associationId: string, formId: string, fileName: string): string {
+  return `${associationId}/forms/${formId}.${extensionOf(fileName) || "pdf"}`;
+}
+
+export type FormFileOutcome =
+  { id: string; storagePath: string; error: null } | { id: null; storagePath: null; error: string };
+
+/**
+ * An uploaded form's bytes and its row, in that order. The row is what makes
+ * the file reachable, so a row the database refuses takes the bytes back out
+ * with it: a failed upload leaves nothing saved, and nothing on the list
+ * claims a file that is not there.
+ */
+export async function uploadFormFile(
+  supabase: SupabaseClient,
+  associationId: string,
+  label: string,
+  file: File,
+  today: ISODate,
+): Promise<FormFileOutcome> {
+  const id = crypto.randomUUID();
+  const storagePath = formStoragePath(associationId, id, file.name);
+  const { error: putError } = await supabase.storage
+    .from("documents")
+    .upload(storagePath, file, { contentType: mimeTypeOf(file.name, file.type) });
+  if (putError) return { id: null, storagePath: null, error: putError.message };
+  const { error: rowError } = await supabase.from("forms").insert({
+    id,
+    association_id: associationId,
+    label,
+    file_name: file.name,
+    size_label: formatSize(file.size),
+    storage_path: storagePath,
+    updated_on: today,
+  });
+  if (rowError) {
+    await supabase.storage.from("documents").remove([storagePath]);
+    return { id: null, storagePath: null, error: rowError.message };
+  }
+  return { id, storagePath, error: null };
+}
+
+/** The bytes behind a form's row, once the row is gone. */
+export async function removeFormFile(supabase: SupabaseClient, storagePath: string): Promise<void> {
+  await supabase.storage.from("documents").remove([storagePath]);
 }
 
 /** What a demo keeps of an upload: everything but the bytes. */
