@@ -696,3 +696,96 @@ describe("database faults stay retryable", () => {
     expect(stripeFake.checkout.sessions.create).toHaveBeenCalledTimes(1);
   });
 });
+describe("a stale frozen trial end", () => {
+  // The defect a reviewer caught: an open subscription-mode operation whose
+  // frozen trial end is no longer Checkout-legal (under 48 hours out, or
+  // past) makes every retry replay the same parameters, Stripe refuses the
+  // trial end, and the route answers 500 forever. With no card on file the
+  // portal 404s, so the association has no way to add a card at all.
+  function staleOp(trialEndTs: number): BillingOperation {
+    return {
+      ...opFrom({
+        p_mode: "subscription",
+        p_quantity: 3,
+        p_trial_end_ts: trialEndTs,
+        p_customer_name: "Test HOA",
+        p_customer_email: "p@example.com",
+        p_return_origin: "http://localhost:3100",
+      }),
+      customer_id: "cus_1",
+    };
+  }
+
+  /** begin_billing_operation honestly: an open row answers; none, a fresh one. */
+  function reserveFreshWhenNoneOpen() {
+    let reserved = 1; // the pre-seeded stale row is op-1
+    adminFake.on("rpc:begin_billing_operation", (call) => {
+      const params = call.args[1] as Record<string, unknown>;
+      if (!state.op || state.op.status !== "open") {
+        reserved += 1;
+        const id = `op-${reserved}`;
+        state.op = {
+          ...opFrom(params),
+          id,
+          customer_key: `bill-cus-${id}`,
+          session_key: `bill-sess-${id}`,
+          subscription_key: `bill-sub-${id}`,
+        };
+      }
+      return { data: state.op };
+    });
+  }
+
+  it("supersedes an open operation whose trial end is under 48 hours out and replans", async () => {
+    signIn();
+    setupAdmin({ association: { trial_ends_at: trialDate(1) } });
+    state.op = staleOp(Math.floor(Date.now() / 1000) + 36 * 3600);
+    reserveFreshWhenNoneOpen();
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+
+    // The stale row is retired, and the fresh reservation follows the
+    // current plan: under 48 hours left, so setup mode with the exact end.
+    const supersedes = adminFake
+      .writes()
+      .filter(
+        (c) =>
+          c.target === "billing_operations" &&
+          (c.argsOf("update")?.[0] as Record<string, unknown>)?.status === "superseded",
+      );
+    expect(supersedes).toHaveLength(1);
+    expect(state.op).toMatchObject({ id: "op-2", status: "open", mode: "setup" });
+    expect(adminFake.callsTo("rpc:begin_billing_operation")).toHaveLength(2);
+
+    // What reaches Stripe is the corrected plan, not the frozen illegal one.
+    expect(stripeFake.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    const [params] = stripeFake.checkout.sessions.create.mock.calls[0];
+    expect(params.mode).toBe("setup");
+    expect(params.subscription_data).toBeUndefined();
+    expect((await response.json()).url).toContain("cs_1");
+  });
+
+  it("keeps a frozen trial end that is still Checkout-legal", async () => {
+    signIn();
+    setupAdmin({ association: { trial_ends_at: trialDate(90) } });
+    const legal = Math.floor(Date.now() / 1000) + 72 * 3600;
+    state.op = staleOp(legal);
+
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    const supersedes = adminFake
+      .writes()
+      .filter(
+        (c) =>
+          c.target === "billing_operations" &&
+          (c.argsOf("update")?.[0] as Record<string, unknown>)?.status === "superseded",
+      );
+    expect(supersedes).toHaveLength(0);
+    expect(stripeFake.checkout.sessions.create).toHaveBeenCalledTimes(1);
+    const [params] = stripeFake.checkout.sessions.create.mock.calls[0];
+    expect(params.mode).toBe("subscription");
+    expect(params.subscription_data.trial_end).toBe(legal);
+    expect(adminFake.callsTo("rpc:begin_billing_operation")).toHaveLength(1);
+  });
+});

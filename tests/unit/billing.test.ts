@@ -10,6 +10,7 @@ import {
   rowLocked,
   statusFromStripe,
   subscriptionLine,
+  trialEndLegalForCheckout,
   trialEndsOn,
   trialNoticeDue,
   type BillingFacts,
@@ -177,6 +178,24 @@ describe("checkoutPlan", () => {
       mode: "subscription",
       trialEnd: null,
     });
+  });
+});
+
+describe("trialEndLegalForCheckout", () => {
+  // The frozen twin of checkoutPlan's first branch: the checkout route asks
+  // this of an operation's frozen trial end before replaying it to Stripe.
+  const end = Math.floor(Date.UTC(2026, 11, 1, 12) / 1000);
+
+  it("holds exactly at the boundary and breaks one second inside it", () => {
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T11:54:00Z"))).toBe(true);
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T11:55:00Z"))).toBe(true);
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T11:55:01Z"))).toBe(false);
+    expect(trialEndLegalForCheckout(end, new Date("2026-11-29T12:00:00Z"))).toBe(false);
+  });
+
+  it("refuses a trial end that has already passed", () => {
+    expect(trialEndLegalForCheckout(end, new Date("2026-12-01T12:00:00Z"))).toBe(false);
+    expect(trialEndLegalForCheckout(end, new Date("2026-12-09T12:00:00Z"))).toBe(false);
   });
 });
 

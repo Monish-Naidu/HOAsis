@@ -206,6 +206,19 @@ const MIN_STRIPE_TRIAL_MS = 2 * DAY_MS;
  */
 const CHECKOUT_TRIAL_MARGIN_MS = 5 * 60 * 1000;
 
+/**
+ * Whether Checkout would still take this trial end, in unix seconds.
+ *
+ * checkoutPlan asks the same question when it plans, but a billing operation
+ * freezes the answer for every retry: a trial end that was legal when the
+ * operation opened can cross the 48 hour floor while the treasurer is away,
+ * and replaying it is a 500 forever. The checkout route asks this of the
+ * frozen value before it builds a session from it.
+ */
+export function trialEndLegalForCheckout(trialEndTs: number, now: Date): boolean {
+  return trialEndTs * 1000 - now.getTime() >= MIN_STRIPE_TRIAL_MS + CHECKOUT_TRIAL_MARGIN_MS;
+}
+
 export type CheckoutPlan =
   /** Hosted Checkout starts the subscription; the trial rides along. */
   | { mode: "subscription"; trialEnd: number }
@@ -230,7 +243,7 @@ export function checkoutPlan(endsOn: ISODate | null, now: Date): CheckoutPlan {
   const end = new Date(`${endsOn}T12:00:00Z`).getTime();
   const remaining = end - now.getTime();
   const trialEnd = Math.floor(end / 1000);
-  if (remaining >= MIN_STRIPE_TRIAL_MS + CHECKOUT_TRIAL_MARGIN_MS) {
+  if (trialEndLegalForCheckout(trialEnd, now)) {
     return { mode: "subscription", trialEnd };
   }
   if (remaining > 0) return { mode: "setup", trialEnd };

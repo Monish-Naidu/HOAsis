@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type Stripe from "stripe";
-import { checkoutPlan, subscriptionLine } from "@/lib/billing";
+import { checkoutPlan, subscriptionLine, trialEndLegalForCheckout } from "@/lib/billing";
 import { requestOrigin } from "@/app/auth/callback/next-path";
 import { stripe } from "@/lib/stripe/server";
 import { quantityFor } from "@/lib/stripe/subscription-quantity";
@@ -23,6 +23,9 @@ import { logger } from "@/lib/log";
  * pressing together, a repeated click and a retry after a lost answer all
  * continue the same billing_operations row with the same frozen parameters
  * and idempotency keys, so Stripe sees one customer and one usable session.
+ * The one thing frozen parameters cannot survive is time: a trial end that
+ * has slipped under Checkout's 48 hour floor is superseded and replanned
+ * rather than replayed into a refusal that would answer 500 forever.
  * Before anything new is created, what an uncertain earlier attempt may have
  * left behind is looked up and adopted. The webhook, not this route, writes
  * the result: Checkout can be abandoned after this returns.
@@ -104,6 +107,22 @@ async function markCompleted(
     .eq("id", op.id)
     .eq("status", "open");
   if (error) throw new Error(`could not close the billing operation: ${error.message}`);
+}
+
+/**
+ * Retire an open operation whose frozen parameters can no longer be carried
+ * out. The status filter is the race rule: a second officer's write matches
+ * nothing once the first has flipped the row, and both callers re-reserve
+ * afterwards, so the association still converges on one open operation
+ * (0126's partial unique index sees to that).
+ */
+async function supersedeOperation(admin: Admin, op: BillingOperation): Promise<void> {
+  const { error } = await admin
+    .from("billing_operations")
+    .update({ status: "superseded" })
+    .eq("id", op.id)
+    .eq("status", "open");
+  if (error) throw new Error(`could not supersede the stale operation: ${error.message}`);
 }
 
 /** The Checkout parameters, built only from what the operation froze. */
@@ -194,19 +213,23 @@ export async function POST(request: NextRequest) {
   // The return addresses come from the origin the browser actually used, so
   // a local session on 127.0.0.1 is not lost to localhost (and back).
   const origin = requestOrigin(request.nextUrl, request.headers.get("host"));
-  const plan = checkoutPlan(row.trial_ends_at?.slice(0, 10) ?? null, new Date());
+  const now = new Date();
+  const plan = checkoutPlan(row.trial_ends_at?.slice(0, 10) ?? null, now);
 
-  const { data: reserved, error: reserveError } = await admin
-    .rpc("begin_billing_operation", {
-      p_association_id: associationId,
-      p_quantity: quantityFor(count),
-      p_trial_end_ts: plan.trialEnd,
-      p_mode: plan.mode,
-      p_customer_name: row.name,
-      p_customer_email: auth.user.email ?? null,
-      p_return_origin: origin,
-    })
-    .single();
+  // Re-reserving after a supersede runs the same call with the same plan.
+  const reserve = () =>
+    admin
+      .rpc("begin_billing_operation", {
+        p_association_id: associationId,
+        p_quantity: quantityFor(count),
+        p_trial_end_ts: plan.trialEnd,
+        p_mode: plan.mode,
+        p_customer_name: row.name,
+        p_customer_email: auth.user.email ?? null,
+        p_return_origin: origin,
+      })
+      .single();
+  const { data: reserved, error: reserveError } = await reserve();
   if (reserveError || !reserved) {
     log.error("could not reserve the billing operation", {
       associationId,
@@ -309,6 +332,30 @@ export async function POST(request: NextRequest) {
       if (finished) {
         await markCompleted(admin, op, finished);
         return NextResponse.json({ error: "A card is already on file" }, { status: 409 });
+      }
+
+      // Nothing reusable exists at Stripe, so a session is about to be made
+      // from the frozen parameters. A trial end frozen days ago can have
+      // crossed Checkout's 48 hour floor since; creating with it is refused
+      // and every retry would replay the same refusal. Retire the operation
+      // and re-reserve from the current plan instead, then loop: the fresh
+      // row carries a legal plan (or the setup path) and no session yet.
+      if (
+        op.mode === "subscription" &&
+        op.trial_end_ts !== null &&
+        !trialEndLegalForCheckout(op.trial_end_ts, now)
+      ) {
+        await supersedeOperation(admin, op);
+        const { data: replanned, error: replanError } = await reserve();
+        if (replanError || !replanned) {
+          log.error("could not replan the billing operation", {
+            associationId,
+            err: replanError?.message,
+          });
+          return NextResponse.json({ error: "Could not start checkout" }, { status: 500 });
+        }
+        op = replanned as BillingOperation;
+        continue;
       }
 
       const session = await client.checkout.sessions.create(sessionParams(op, customerId), {
