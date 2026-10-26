@@ -71,10 +71,10 @@ confirmed and a fix is assigned), **Untested** (no check has run yet),
 
 ## Files
 
-| Item                                          | Status  | Evidence                                                                          | Next action |
-| --------------------------------------------- | ------- | --------------------------------------------------------------------------------- | ----------- |
-| Storage upload and download                   | Working | Local private bucket upload, download and cleanup (`verify-local.mjs`, 8/8).      | None.       |
-| Form uploads keep the file, not only its name | Working | Bytes in the private bucket under the forms row (`verify-form-files.mjs`, 18/18). | None.       |
+| Item                                          | Status  | Evidence                                                                                                                                                                                                                                                                                                                       | Next action |
+| --------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| Storage upload and download                   | Working | Local private bucket upload, download and cleanup (`verify-local.mjs`, 8/8).                                                                                                                                                                                                                                                   | None.       |
+| Form uploads keep the file, not only its name | Working | Bytes in the private bucket under the forms row (`verify-form-files.mjs`, 18/18). Browser: board upload, reload and resident open are byte-identical (sha256 match), an aborted upload leaves no row or bytes and retries clean; demo upload survives reload with the same bytes (`tests/e2e/05-forms-and-documents.spec.ts`). | None.       |
 
 ## Telemetry and job health
 
