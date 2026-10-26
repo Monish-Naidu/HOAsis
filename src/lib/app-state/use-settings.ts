@@ -17,6 +17,7 @@ import {
   isUuid,
   latest,
   logDemoActivity,
+  mayChange,
   MUTABLE_SLICES,
   newId,
   refuse,
@@ -26,6 +27,8 @@ import {
   sessionUserId,
   sliceStore,
 } from "./core";
+import { formatSize, removeFormFile, uploadFormFile } from "@/lib/documents";
+import type { ArchitecturalForm } from "@/lib/types";
 import { activityWords } from "@/lib/activity";
 import { saveCreatedCommunity } from "@/lib/data/created-communities";
 import {
@@ -51,7 +54,7 @@ import type { SettingsPatch } from "./types";
  * templates, creating an association, and the setup plan's skipped tasks.
  */
 export function useSettingsActions(deps: AppDeps) {
-  const { remote, communityId, localDismissals } = deps;
+  const { remote, communityId, localDismissals, can } = deps;
 
   const updateSettings = useCallback(
     (patch: SettingsPatch) => {
@@ -213,10 +216,66 @@ export function useSettingsActions(deps: AppDeps) {
         const gone = rc.forms
           .filter((f) => f.source === "uploaded" && !keep.has(f.id) && there.has(f.id))
           .map((f) => f.id);
-        if (gone.length) return supabase.from("forms").delete({ count: "exact" }).in("id", gone);
+        if (gone.length) {
+          // The bytes go with the rows. If this leg fails the result is an
+          // orphan nothing can reach, not a form that looks kept and opens
+          // to nothing.
+          const paths = rc.forms
+            .filter((f) => gone.includes(f.id) && f.storagePath)
+            .map((f) => f.storagePath as string);
+          const goneResult = await supabase.from("forms").delete({ count: "exact" }).in("id", gone);
+          if (!goneResult.error && goneResult.count !== 0 && paths.length) {
+            await supabase.storage.from("documents").remove(paths);
+          }
+          return goneResult;
+        }
       });
     },
     [remote.community, communityId],
+  );
+
+  /**
+   * A form and its file, saved together.
+   *
+   * A real association puts the bytes in Storage and then tells the forms
+   * table about them; a failure at either step leaves nothing saved, so the
+   * screen can honestly say "not saved, try again" and nothing on the list
+   * claims a file that is not there. The demo keeps the bytes as a data URL
+   * in the same stored value as the rest of the form, so the two persist for
+   * exactly the demo's existing local store lifetime, and forget together.
+   */
+  const uploadForm = useCallback(
+    async (label: string, file: File): Promise<boolean> => {
+      // The demo has no database to refuse a seat that may only look, so the
+      // refusal is said here, the way every other demo write says it.
+      if (!remote.community && !mayChange(can, "settings")) return false;
+      if (!remote.community) {
+        const fileUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error ?? new Error("the file could not be read"));
+          reader.readAsDataURL(file);
+        });
+        const form: ArchitecturalForm = {
+          id: `form-${Date.now()}`,
+          label,
+          description: "Uploaded by the board",
+          fileName: file.name,
+          size: formatSize(file.size),
+          source: "uploaded",
+          updatedDate: todayIsoDate(),
+          fileUrl,
+        };
+        sliceStore(communityId, "forms").update((all) => [...all, form]);
+        return true;
+      }
+      const rc = remote.community;
+      return remoteWrite("Saving the form", async () => {
+        const outcome = await uploadFormFile(supabaseBrowser(), rc.id, label, file, todayIsoDate());
+        return { error: outcome.error ? { message: outcome.error } : null };
+      });
+    },
+    [can, remote.community, communityId],
   );
 
   const removeForm = useCallback(
@@ -232,6 +291,9 @@ export function useSettingsActions(deps: AppDeps) {
         return () => {};
       }
       const rc = remote.community;
+      // The undo restores the listing only: the file is already gone, so the
+      // row comes back without a storage path rather than pointing at bytes
+      // that are not there.
       const row = {
         id: form.id,
         association_id: rc.id,
@@ -244,9 +306,17 @@ export function useSettingsActions(deps: AppDeps) {
         governed_by: form.governedBy ?? null,
         decision_days: form.decisionDays ?? null,
       };
-      void remoteWrite("Removing the form", () =>
-        supabaseBrowser().from("forms").delete({ count: "exact" }).eq("id", formId),
-      );
+      void remoteWrite("Removing the form", async () => {
+        const supabase = supabaseBrowser();
+        const gone = await supabase.from("forms").delete({ count: "exact" }).eq("id", formId);
+        // The bytes go with the row. If this leg fails the result is an
+        // orphan nothing can reach, not a form that looks kept and opens to
+        // nothing.
+        if (!gone.error && gone.count !== 0 && form.storagePath) {
+          await removeFormFile(supabase, form.storagePath);
+        }
+        return gone;
+      });
       return () => {
         void remoteWrite("Restoring the form", () => supabaseBrowser().from("forms").insert(row));
       };
@@ -672,6 +742,7 @@ export function useSettingsActions(deps: AppDeps) {
     updateSettings,
     setAmenities,
     setForms,
+    uploadForm,
     removeForm,
     removeAmenity,
     resetDemo,

@@ -1033,6 +1033,7 @@ export type Database = {
           id: string;
           label: string;
           size_label: string;
+          storage_path: string | null;
           updated_on: string;
         };
         Insert: {
@@ -1046,6 +1047,7 @@ export type Database = {
           id?: string;
           label: string;
           size_label?: string;
+          storage_path?: string | null;
           updated_on?: string;
         };
         Update: {
@@ -1059,6 +1061,7 @@ export type Database = {
           id?: string;
           label?: string;
           size_label?: string;
+          storage_path?: string | null;
           updated_on?: string;
         };
         Relationships: [

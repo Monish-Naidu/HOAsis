@@ -414,6 +414,36 @@ test.describe("forms", () => {
     );
   });
 
+  test("a form the board uploads opens with the same bytes, after a reload", async ({ page }) => {
+    await seedSession(page, { seat: SEATS.president, view: "board" });
+    await page.goto("/board/settings");
+    await page.waitForLoadState("networkidle");
+
+    const bytes = Buffer.from("%PDF-1.4\npool rules, byte counted\n%%EOF\n");
+    await page.getByLabel("New form label").fill("Pool rules");
+    await page.setInputFiles('input[aria-label="New form file"]', {
+      name: "pool-rules.pdf",
+      mimeType: "application/pdf",
+      buffer: bytes,
+    });
+    await page.getByRole("button", { name: "Upload" }).click();
+    await expect(page.getByText("Added Pool rules.")).toBeVisible();
+
+    const readBack = async (when: string) => {
+      const href = await page.getByRole("link", { name: "Open Pool rules" }).getAttribute("href");
+      expect(href, `no file link for the uploaded form ${when}`).toMatch(/^data:/);
+      const returned = Buffer.from(href!.split(",")[1], "base64");
+      expect(returned.equals(bytes), `the bytes changed ${when}`).toBe(true);
+    };
+    await readBack("right after upload");
+
+    // A reload is the demo's idea of coming back later: the bytes must still
+    // be there, attached to the form, not just its name.
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await readBack("after a reload");
+  });
+
   test("a form with no questions says to ask the board for a copy", async ({ page }) => {
     await seedSession(page, { seat: SEATS.resident, view: "resident" });
     await page.goto("/resident/documents/forms/form-landscape");

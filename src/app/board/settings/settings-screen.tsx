@@ -40,7 +40,7 @@ import {
 import { checkNewEmail } from "@/lib/email-change";
 import { amenityNameProblem, duplicateHolderNote } from "@/lib/amenity-checks";
 import { roleChangeMessage, waitingRoleMessage } from "@/lib/app-state/role-change";
-import { DOCUMENT_ACCEPT, formatSize, rejectReason } from "@/lib/documents";
+import { DOCUMENT_ACCEPT, rejectReason } from "@/lib/documents";
 import { DangerZone } from "@/components/app/danger-zone";
 import { RecordsExportCard } from "@/components/app/records-export-card";
 import { SameNameNote } from "@/components/app/same-name-note";
@@ -60,12 +60,11 @@ import {
   type Capability,
   ROLE_LABEL,
   type AccountRole,
-  type ArchitecturalForm,
   type CommunityAmenity,
 } from "@/lib/types";
 import { activityText } from "@/lib/activity";
 import { useHomeLabel } from "@/components/app/use-home-label";
-import { cn, daysFromToday, formatDate, localStamp, relativeDays, todayIsoDate } from "@/lib/utils";
+import { cn, daysFromToday, formatDate, localStamp, relativeDays } from "@/lib/utils";
 import { homeLabel } from "@/lib/wording";
 import { moduleOn } from "@/lib/modules";
 import { NEXT_ACCESS } from "@/lib/access";
@@ -93,7 +92,6 @@ export function SettingsScreen() {
     amenities,
     setAmenities,
     forms,
-    setForms,
     setCapability,
     setHomeRole,
     updateAssociation,
@@ -151,9 +149,7 @@ export function SettingsScreen() {
 
   const [newAmenity, setNewAmenity] = useState("");
   const [name, setName] = useState(settings.displayName);
-  const [newFormLabel, setNewFormLabel] = useState("");
-  const [newFormFile, setNewFormFile] = useState<File | null>(null);
-  const formFileInput = useRef<HTMLInputElement>(null);
+
   const [appointing, setAppointing] = useState<{ homeId: string; role: AccountRole } | null>(null);
 
   const roleFromLabel = (label?: string): AccountRole =>
@@ -234,33 +230,6 @@ export function SettingsScreen() {
 
   function patchAmenity(id: string, patch: Partial<CommunityAmenity>) {
     setAmenities(amenities.map((a) => (a.id === id ? { ...a, ...patch } : a)));
-  }
-
-  // Why Upload is off. A label with no file used to save a form that was
-  // 0 KB, which owners then downloaded as an empty page.
-  const formFileProblem = newFormFile ? rejectReason(newFormFile) : null;
-  const formWhyNot = !newFormLabel.trim()
-    ? "Give the form a label."
-    : !newFormFile
-      ? "Choose the file."
-      : formFileProblem;
-
-  function addForm() {
-    const label = newFormLabel.trim();
-    if (!label || !newFormFile || formFileProblem) return;
-    const form: ArchitecturalForm = {
-      id: `form-${Date.now()}`,
-      label,
-      description: "Uploaded by the board",
-      fileName: newFormFile.name,
-      size: formatSize(newFormFile.size),
-      source: "uploaded",
-      updatedDate: todayIsoDate(),
-    };
-    setForms([...forms, form]);
-    setNewFormLabel("");
-    setNewFormFile(null);
-    if (formFileInput.current) formFileInput.current.value = "";
   }
 
   // Appointing is never blocked by a seat already being held; it is said.
@@ -1099,6 +1068,19 @@ export function SettingsScreen() {
                           {f.size} · updated {formatDate(f.updatedDate, "long")}
                         </p>
                       </div>
+                      {/* A form with a file opens it; one without is a label
+                          and a name, which is all it ever had. */}
+                      {f.fileUrl ? (
+                        <a
+                          href={f.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Open ${f.label}`}
+                          className="mt-0.5 shrink-0 rounded-md px-2 py-1 text-footnote font-medium text-brand transition-colors hover:bg-surface-2"
+                        >
+                          Open
+                        </a>
+                      ) : null}
                       <button
                         type="button"
                         aria-label={`Remove ${f.label}`}
@@ -1113,50 +1095,7 @@ export function SettingsScreen() {
                     </div>
                   ))}
                 </div>
-                <form
-                  className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    addForm();
-                  }}
-                >
-                  <input
-                    value={newFormLabel}
-                    onChange={(e) => setNewFormLabel(e.target.value)}
-                    placeholder="What residents call it"
-                    aria-label="New form label"
-                    className={cn(fieldClass, "min-w-[12rem] flex-1")}
-                  />
-                  <input
-                    ref={formFileInput}
-                    type="file"
-                    accept={DOCUMENT_ACCEPT}
-                    aria-label="New form file"
-                    onChange={(e) => setNewFormFile(e.target.files?.[0] ?? null)}
-                    className="min-w-0 max-w-full text-footnote text-fg-muted file:mr-3 file:rounded-lg file:border file:border-border-2 file:bg-surface file:px-3 file:py-2 file:text-footnote file:font-medium file:text-fg"
-                  />
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    size="md"
-                    className="shrink-0"
-                    disabled={Boolean(formWhyNot)}
-                  >
-                    <Upload className="size-3.5" />
-                    Upload
-                  </Button>
-                  {formWhyNot ? (
-                    <p
-                      role={formFileProblem ? "alert" : undefined}
-                      className={cn(
-                        "w-full text-footnote",
-                        formFileProblem ? "text-danger" : "text-fg-subtle",
-                      )}
-                    >
-                      {formWhyNot}
-                    </p>
-                  ) : null}
-                </form>
+                <FormUploadForm />
               </Card>
             </section>
           </div>
@@ -1317,6 +1256,103 @@ export function BillsByEmailRow({
  * since. That is done while rendering, not in an effect, so there is no
  * frame showing the last association's text.
  */
+/**
+ * The board's form upload: a label and the file, saved together.
+ *
+ * The save is waited on, because the file is saved with the label: a failure
+ * says so here and keeps both, so trying again is one press and nothing half
+ * saved shows up on the list.
+ */
+export function FormUploadForm() {
+  const { uploadForm } = useAppState();
+  const { notify } = useToast();
+  const [newFormLabel, setNewFormLabel] = useState("");
+  const [newFormFile, setNewFormFile] = useState<File | null>(null);
+  const formFileInput = useRef<HTMLInputElement>(null);
+  const [formSaving, setFormSaving] = useState(false);
+  const [formSaveFailed, setFormSaveFailed] = useState(false);
+
+  // Why Upload is off. A label with no file used to save a form that was
+  // 0 KB, which owners then downloaded as an empty page.
+  const formFileProblem = newFormFile ? rejectReason(newFormFile) : null;
+  const formWhyNot = !newFormLabel.trim()
+    ? "Give the form a label."
+    : !newFormFile
+      ? "Choose the file."
+      : formFileProblem;
+
+  async function addForm() {
+    const label = newFormLabel.trim();
+    if (!label || !newFormFile || formFileProblem || formSaving) return;
+    setFormSaving(true);
+    setFormSaveFailed(false);
+    const ok = await uploadForm(label, newFormFile);
+    setFormSaving(false);
+    if (ok) {
+      setNewFormLabel("");
+      setNewFormFile(null);
+      if (formFileInput.current) formFileInput.current.value = "";
+      notify(`Added ${label}.`);
+    } else {
+      setFormSaveFailed(true);
+    }
+  }
+
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void addForm();
+      }}
+    >
+      <input
+        value={newFormLabel}
+        onChange={(e) => {
+          setNewFormLabel(e.target.value);
+          setFormSaveFailed(false);
+        }}
+        placeholder="What residents call it"
+        aria-label="New form label"
+        className={cn(fieldClass, "min-w-[12rem] flex-1")}
+      />
+      <input
+        ref={formFileInput}
+        type="file"
+        accept={DOCUMENT_ACCEPT}
+        aria-label="New form file"
+        onChange={(e) => {
+          setNewFormFile(e.target.files?.[0] ?? null);
+          setFormSaveFailed(false);
+        }}
+        className="min-w-0 max-w-full text-footnote text-fg-muted file:mr-3 file:rounded-lg file:border file:border-border-2 file:bg-surface file:px-3 file:py-2 file:text-footnote file:font-medium file:text-fg"
+      />
+      <Button
+        type="submit"
+        variant="secondary"
+        size="md"
+        className="shrink-0"
+        disabled={Boolean(formWhyNot) || formSaving}
+      >
+        <Upload className="size-3.5" />
+        {formSaving ? "Saving…" : "Upload"}
+      </Button>
+      {formSaveFailed ? (
+        <p role="alert" className="w-full text-footnote text-danger">
+          The form was not saved. Try again.
+        </p>
+      ) : formWhyNot ? (
+        <p
+          role={formFileProblem ? "alert" : undefined}
+          className={cn("w-full text-footnote", formFileProblem ? "text-danger" : "text-fg-subtle")}
+        >
+          {formWhyNot}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
 export function DraftField({
   value,
   onCommit,

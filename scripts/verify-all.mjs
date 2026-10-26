@@ -49,6 +49,7 @@ const SUITES = [
   "rollups",
   "fiscal-years",
   "attachments",
+  "form-files",
   "meetings",
   "voting",
   "fines",
