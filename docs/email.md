@@ -92,6 +92,14 @@ A webhook (Resend, Webhooks) posts every `email.*` event to
 `scripts/azure/secrets.sh`. The route returns 500 and logs an error
 while that secret is missing, which also fires the errors alert.
 
+Events arrive at least once and in any order, so the status ladder
+(sent, delivered, opened/clicked, then the failures) is applied by
+`apply_email_delivery` (0129) under the message's row lock: a late
+"sent" cannot erase a "delivered", however events interleave. Any
+database fault answers 500 so Resend retries; an event for a message
+nobody logged is acknowledged as unknown and changes nothing; a bad
+signature is a 400 before anything is read or written.
+
 `EMAIL_FROM` in `.env.azure` is `Your HOAsis <hello@yourhoasis.com>`.
 A change to either value is applied with:
 

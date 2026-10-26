@@ -2934,6 +2934,10 @@ export type Database = {
       };
     };
     Functions: {
+      apply_email_delivery: {
+        Args: { p_provider_id: string; p_status: string; p_status_at: string };
+        Returns: string;
+      };
       activity_actor: {
         Args: { p_association: string };
         Returns: {

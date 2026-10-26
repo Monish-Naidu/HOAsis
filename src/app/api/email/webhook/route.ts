@@ -12,9 +12,12 @@ import type { EmailDeliveryStatus } from "@/lib/types";
  * bounced, and when. Resend posts every one of those events here, signed,
  * and each one lands on the row `email_log` already holds for the send.
  *
- * Events arrive at least once and out of order, so a later "sent" must not
- * erase an earlier "delivered". The ladder below is the only ordering rule.
- * Runs under the service role because nobody is signed in on a webhook.
+ * Events arrive at least once and out of order, so the status ladder is
+ * applied by the database under the message's row lock (0129): a later
+ * "sent" cannot erase an earlier "delivered", however the events interleave.
+ * A database fault answers 500, so the provider retries instead of the event
+ * being acknowledged and lost. Runs under the service role because nobody is
+ * signed in on a webhook.
  */
 export const runtime = "nodejs";
 
@@ -27,18 +30,6 @@ const STATUS: Record<string, EmailDeliveryStatus> = {
   "email.bounced": "bounced",
   "email.complained": "complained",
   "email.failed": "failed",
-};
-
-/** How far along a message is. A higher rung never gives way to a lower one. */
-const RUNG: Record<EmailDeliveryStatus, number> = {
-  sent: 1,
-  delayed: 1,
-  delivered: 2,
-  opened: 3,
-  clicked: 3,
-  bounced: 4,
-  failed: 4,
-  complained: 4,
 };
 
 export async function POST(request: NextRequest) {
@@ -82,26 +73,22 @@ export async function POST(request: NextRequest) {
   const emailId = data.email_id;
   if (!emailId) return NextResponse.json({ received: true, ignored: "no email id" });
 
-  const admin = supabaseAdmin();
-  const { data: row } = await admin
-    .from("email_log")
-    .select("id, status")
-    .eq("provider_id", emailId)
-    .maybeSingle();
-  if (!row) return NextResponse.json({ received: true, ignored: "unknown email" });
-
-  const current = row.status as EmailDeliveryStatus | null;
-  if (current && RUNG[current] > RUNG[status]) {
-    return NextResponse.json({ received: true, kept: current });
-  }
-
-  const { error } = await admin
-    .from("email_log")
-    .update({ status, status_at: event.created_at })
-    .eq("id", row.id);
+  // One atomic call: the ladder is decided and written under the row lock,
+  // so this route never reads a status apart from the write that follows it.
+  const { data: outcome, error } = await supabaseAdmin().rpc("apply_email_delivery", {
+    p_provider_id: emailId,
+    p_status: status,
+    p_status_at: event.created_at,
+  });
   if (error) {
-    log.error("could not update email_log", { err: error.message, emailLogId: row.id });
+    log.error("could not apply delivery event", { err: error.message, type: event.type });
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (outcome === "unknown-email") {
+    return NextResponse.json({ received: true, ignored: "unknown email" });
+  }
+  if (outcome === "kept") {
+    return NextResponse.json({ received: true, kept: true });
   }
   return NextResponse.json({ received: true, status });
 }
