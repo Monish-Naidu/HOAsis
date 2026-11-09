@@ -32,6 +32,7 @@ jobs:
     needs: has-key
     if: needs.has-key.outputs.present == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: write
