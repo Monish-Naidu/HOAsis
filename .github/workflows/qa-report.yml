@@ -1,0 +1,91 @@
+# Trusted default-branch reporter. Never check out PR code or execute artifact content.
+name: QA report
+
+on:
+  workflow_run:
+    workflows: [QA]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: qa-report-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Locate PR and reject stale runs
+        uses: actions/github-script@v7
+        id: pr
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            let prs = run.pull_requests;
+            if (!prs.length) {
+              const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                ...context.repo, commit_sha: run.head_sha
+              });
+              prs = response.data;
+            }
+            for (const candidate of prs) {
+              const { data: pr } = await github.rest.pulls.get({
+                ...context.repo, pull_number: candidate.number
+              });
+              if (pr.state === 'open' && pr.head.sha === run.head_sha) {
+                core.setOutput('number', pr.number);
+                return;
+              }
+            }
+            core.notice('No current open PR for this run; no stale comment posted.');
+      - name: Download report data only
+        if: steps.pr.outputs.number != ''
+        id: artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: qa-results
+          path: qa-evidence
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Post or update one marked QA comment
+        if: always() && steps.pr.outputs.number != ''
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- qa-report -->';
+            const run = context.payload.workflow_run;
+            const number = Number(process.env.PR_NUMBER);
+            // Recheck after artifact download, in case a new push finished meanwhile.
+            const { data: current } = await github.rest.pulls.get({
+              ...context.repo, pull_number: number
+            });
+            if (current.head.sha !== run.head_sha) return;
+            let report = '## QA Report\n\nOutcome: BLOCKED\n\nNo valid report artifact. Inspect the workflow log.';
+            const file = 'qa-evidence/report.md';
+            if (fs.existsSync(file) && fs.lstatSync(file).isFile() && fs.statSync(file).size <= 1000000) {
+              const text = fs.readFileSync(file, 'utf8');
+              if (text.startsWith('## QA Report')) report = text.slice(0, 54000);
+            }
+            // Artifact text is untrusted data: never evaluate it or use its URLs.
+            // Suppress mentions and remove hidden comment markers.
+            report = report.replace(/@/g, '@\u200b').replace(/<!--[\s\S]*?-->/g, '');
+            const body = `${marker}\n${report}\n\n---\nWorkflow conclusion: **${run.conclusion}**. [Run and downloadable evidence](${run.html_url}) (14-day retention).`;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo, issue_number: number, per_page: 100
+            });
+            const existing = comments.find(c => c.user?.type === 'Bot' && c.body?.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({...context.repo, comment_id: existing.id, body});
+            } else {
+              await github.rest.issues.createComment({...context.repo, issue_number: number, body});
+            }

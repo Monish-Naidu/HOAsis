@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
@@ -136,9 +136,11 @@ describe("settings", () => {
     await user.upload(screen.getByLabelText("New form file"), file);
     expect(upload).toBeEnabled();
     await user.click(upload);
-    const saved = seen.state.forms.find((f) => f.label === "Fence request")!;
-    expect(saved.fileName).toBe("fence.pdf");
-    expect(saved.size).toBe("3 B");
+    // The click starts an asynchronous file read before the form is saved.
+    await waitFor(() => {
+      const saved = seen.state.forms.find((f) => f.label === "Fence request");
+      expect(saved).toMatchObject({ fileName: "fence.pdf", size: "3 B" });
+    });
   });
 
   it("warns, and does not block, when a second person is made Treasurer", async () => {

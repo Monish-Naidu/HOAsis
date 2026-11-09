@@ -63,3 +63,6 @@ scripts/.qa/
 
 # Association exports (scripts/export-association.mjs): personal data, never committed
 /exports/
+
+# Local functional QA evidence.
+/qa-results/

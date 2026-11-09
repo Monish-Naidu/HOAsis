@@ -1,0 +1,105 @@
+project: Your HOAsis
+platform: github
+default_target: local_demo
+imagemagick: false
+video_evidence: false
+droid_control:
+  plugin: droid-control@factory-plugins
+  compose: false
+environments:
+  local_demo:
+    url: http://127.0.0.1:3101
+    restrictions:
+      - Use scripts/qa/run.py; never reuse port 3000 or an existing server.
+      - Fresh source copy excludes every .env* file and uses an environment allowlist.
+      - Demo fixtures prove UI behavior only, not permissions or real integrations.
+  live_public:
+    url: https://www.yourhoasis.com
+    restrictions:
+      - Explicit user request only, separate from PR verification.
+      - Read-only public pages; no login, submissions, email, payments, or data changes.
+auth:
+  method: fixture-persona-switcher
+  provider: demo
+  credentials_source: none
+personas:
+  - name: president
+    fixture_id: acct-arya
+    test_focus: [board, permissions, settings]
+    cannot_do: [prove database authorization from demo]
+  - name: treasurer
+    fixture_id: acct-dana
+    test_focus: [finances, vendors, requests, documents, compliance]
+    cannot_do: [grant capabilities, change messages without capability]
+  - name: secretary
+    fixture_id: acct-sofia
+    test_focus: [documents, communications, voting, requests]
+    cannot_do: [change finances, grant capabilities]
+  - name: vice-president
+    fixture_id: acct-ellis
+    test_focus: [requests, voting, communications, forum]
+    cannot_do: [change finances, grant capabilities]
+  - name: resident
+    fixture_id: acct-monish
+    test_focus: [own home, payments demo, requests, forms]
+    cannot_do: [board mutations, another home private data]
+  - name: second-resident
+    fixture_id: acct-nina
+    test_focus: [home isolation, resident navigation]
+    cannot_do: [board mutations, another home private data]
+  - name: founder
+    fixture_id: fresh-browser-state
+    test_focus: [setup, imports, empty states]
+    cannot_do: [send real invitations, create hosted accounts]
+apps:
+  web:
+    skill: qa-web
+    test_tool: agent-browser
+    path_patterns: [src/**, public/**]
+    exclude_patterns:
+      - src/app/api/**
+      - src/lib/email/**
+      - src/lib/stripe/**
+      - src/lib/payments/**
+      - src/lib/supabase/**
+      - src/instrumentation*
+    build_command: node node_modules/next/dist/bin/next dev --webpack --hostname 127.0.0.1
+  backend:
+    skill: qa-backend
+    test_tool: local-http
+    path_patterns:
+      - src/app/api/**
+      - src/app/auth/**
+      - src/proxy.ts
+      - src/lib/app-state/**
+      - src/lib/supabase/**
+      - src/lib/payments/**
+      - src/lib/stripe/**
+      - src/lib/email/**
+      - src/lib/meetings/**
+      - src/lib/data/remote*
+      - src/lib/data/remote*/**
+      - src/lib/health*
+      - src/lib/billing*
+      - src/lib/cron*
+      - src/lib/auth*
+      - src/instrumentation*
+      - supabase/**
+feature_flags:
+  provider: local-module-flags
+  how_to_override: Use visible demo settings only; do not set hosted environment keys.
+integrations:
+  database: { provider: Supabase, availability: blocked }
+  payments: { provider: Stripe, availability: blocked }
+  email: { provider: Resend, availability: blocked }
+  telemetry: { provider: Azure Application Insights, availability: blocked }
+cleanup:
+  auto_cleanup: true
+  strategy: qa-owned-only
+  instructions: Close the run browser session; runner removes its temporary source/profile and terminates only its process groups. Retain evidence.
+ci:
+  credential_reference: FACTORY_API_KEY
+  required_check: functional
+  readiness_seconds: 180
+  agent_timeout_seconds: 900
+failure_learning: suggest_in_report
