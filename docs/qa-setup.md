@@ -41,9 +41,15 @@ token, not an additional repository secret. Only the trusted reporter has PR-wri
 permission. The functional agent does not receive that token.
 
 The repository's `FACTORY_API_KEY` secret metadata was verified after setup.
-The workflow pins `agent-browser@0.27.0`, installed and checked under Node 22.
-Later browser releases declare Node 24 and must not be substituted without
-rechecking this workflow's required Node 22 compatibility.
+Plugin verification accepts the older `Active:` list and Droid 1.6's table.
+The table must name the exact plugin, enabled at project scope.
+Droid can bring its own `agent-browser`, which comes first on PATH (the first
+hosted run's agent used 0.37.1 from it). When none is present at setup, the
+workflow installs `agent-browser@0.27.0` from npm, because later npm releases
+declare Node 24 and this job uses Node 22, and logs the driver it found. The
+runner gives each run a short
+session name and socket directory, since a full run ID exceeded the Linux socket
+path limit, and a failed browser close no longer replaces the agent's report.
 
 After these files reach the default branch through the normal approved PR process,
 run QA once so its check is registered. In repository Settings, Rules, Rulesets
@@ -141,7 +147,7 @@ select a hosted target.
 
 ## Installation verification and remaining notes
 
-The 31 offline contract tests pass. Generated JSON/YAML, skill frontmatter and mirrors are validated by
+The 33 offline contract tests pass. Generated JSON/YAML, skill frontmatter and mirrors are validated by
 `scripts/qa/test_qa.py`. Tests include the report status matrix, missing reports
 and evidence, omitted apps, backend blocks, fork boundaries, runtime switches,
 native Next environment loading, startup failure reporting, and six offline
@@ -149,9 +155,19 @@ sticky-comment cases. The plugin is active at project scope.
 
 The installation rehearsal served `/demo` with HTTP 200 and `/api/health` with
 HTTP 503, naming the absent Supabase, Stripe, Resend, and cron credentials.
-No production calls or GitHub comments were made. Hosted Actions execution,
-fresh-Ubuntu provisioning, and a credentialed Droid functional run still need
-their first CI run after approval.
+No production calls or GitHub comments were made in that rehearsal.
+The first hosted app-diff run installed Droid 1.6 and the plugin, then correctly
+failed closed because plugin verification expected the older list format.
+Verification now accepts both formats, with regressions against the actual
+workflow script. The second hosted run reached the credentialed agent, which
+drove the demo and saved evidence, but the runner's browser close failed on the
+overlong session name and replaced the agent's report with a BLOCKED setup row.
+After that fix, the third hosted run kept the agent's own report: 15 rows across
+web and backend, browser close succeeded, and the gate failed on real findings.
+
+Backend-dependent pull requests always fail `functional`, because backend rows
+stay BLOCKED. Branch protection on `main` therefore requires the check but lets
+admins bypass it. Read the BLOCKED rows in the QA comment before bypassing.
 
 The full `pnpm check` gate passed in the isolated QA release worktree based on
 `origin/main`: 187 test files, 2,530 tests, and a production build with 142 generated

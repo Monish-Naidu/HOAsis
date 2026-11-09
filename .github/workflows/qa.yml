@@ -67,11 +67,19 @@ jobs:
           from pathlib import Path
           listing = (Path(os.environ["RUNNER_TEMP"]) / "qa-plugins.txt").read_text()
           active = re.search(r"(?m)^Active:\n((?:[ \t]+.*\n)*)", listing)
-          if not active or "droid-control@factory-plugins" not in active[1]:
+          plugin = re.escape("droid-control@factory-plugins")
+          legacy = active and re.search(rf"(?m)^[ \t]+{plugin}(?=[ \t]|$)", active[1])
+          enabled = re.search(rf"(?m)^{plugin}[ \t]+Enabled[ \t]+project[ \t]+\S+[ \t]*$", listing)
+          if not (legacy or enabled):
               raise SystemExit("Required project QA plugin is not active.")
           PY
-          # Later releases require Node 24; the application and this job use Node 22.
-          npm install --global agent-browser@0.27.0
+          # Droid ships its own agent-browser, which shadows any npm copy on PATH.
+          # Install from npm only when Droid did not provide one; 0.28.0 and later
+          # from npm require Node 24, and this job uses Node 22.
+          if ! command -v agent-browser >/dev/null; then
+            npm install --global agent-browser@0.27.0
+          fi
+          echo "Browser driver: $(command -v agent-browser), $(agent-browser --version)"
           agent-browser install --with-deps
       - name: Install optional recording prerequisites
         if: env.QA_AUTHORIZED == 'true' && steps.scope.outputs.applicable == 'true' && steps.scope.outputs.video == 'true'
