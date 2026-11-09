@@ -1,0 +1,149 @@
+name: QA
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      diff_base:
+        description: Explicit base ref or SHA to compare with the selected branch
+        required: true
+        default: origin/main
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  functional:
+    name: functional
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      QA_DIFF_BASE: ${{ github.event.pull_request.base.sha || inputs.diff_base }}
+      QA_DIFF_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      QA_AUTHORIZED: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.QA_DIFF_HEAD }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install QA config reader
+        run: python3 -m pip install -r scripts/qa/requirements.txt
+      - name: Select affected apps and runtime evidence switches
+        id: scope
+        run: python3 -B scripts/qa/run.py scope --base "$QA_DIFF_BASE" --head "$QA_DIFF_HEAD"
+      - name: Install branch dependencies
+        if: env.QA_AUTHORIZED == 'true' && steps.scope.outputs.applicable == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Install Droid and browser prerequisites
+        if: env.QA_AUTHORIZED == 'true' && steps.scope.outputs.applicable == 'true'
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          curl -fsSL https://app.factory.ai/cli -o "$RUNNER_TEMP/install-droid.sh"
+          sh "$RUNNER_TEMP/install-droid.sh"
+          export PATH="$HOME/.local/bin:$HOME/.factory/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.factory/bin" >> "$GITHUB_PATH"
+          if ! droid plugin marketplace list | grep -q 'factory-plugins'; then
+            droid plugin marketplace add Factory-AI/factory-plugins
+          fi
+          droid plugin install droid-control@factory-plugins --scope project
+          droid plugin list --scope project | tee "$RUNNER_TEMP/qa-plugins.txt"
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          listing = (Path(os.environ["RUNNER_TEMP"]) / "qa-plugins.txt").read_text()
+          active = re.search(r"(?m)^Active:\n((?:[ \t]+.*\n)*)", listing)
+          if not active or "droid-control@factory-plugins" not in active[1]:
+              raise SystemExit("Required project QA plugin is not active.")
+          PY
+          # Later releases require Node 24; the application and this job use Node 22.
+          npm install --global agent-browser@0.27.0
+          agent-browser install --with-deps
+      - name: Install optional recording prerequisites
+        if: env.QA_AUTHORIZED == 'true' && steps.scope.outputs.applicable == 'true' && steps.scope.outputs.video == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+      - name: Prepare optional Compose toolchain
+        if: env.QA_AUTHORIZED == 'true' && steps.scope.outputs.applicable == 'true' && steps.scope.outputs.compose == 'true'
+        run: |
+          # The installed Compose atom resolves its renderer and locked dependencies.
+          # Current official renderer uses Cargo; older plugin versions use Node.
+          command -v cargo
+          command -v node
+          command -v ffmpeg
+          command -v ffprobe
+      - name: Run functional QA against the branch demo
+        id: qa
+        if: env.QA_AUTHORIZED == 'true'
+        timeout-minutes: 19
+        continue-on-error: true
+        env:
+          FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
+        run: python3 -B scripts/qa/run.py run --base "$QA_DIFF_BASE" --head "$QA_DIFF_HEAD"
+      - name: Record blocked fork setup
+        id: fork
+        if: env.QA_AUTHORIZED != 'true'
+        continue-on-error: true
+        run: python3 -B scripts/qa/run.py blocked --base "$QA_DIFF_BASE" --head "$QA_DIFF_HEAD" --reason "Fork PR setup blocked. No authorized Factory credentials; never expose repository secrets to fork code."
+      - name: Ensure failure report exists
+        if: always()
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ env.QA_DIFF_HEAD }}
+        run: |
+          mkdir -p qa-results
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          directory = Path("qa-results")
+          if not all((directory / name).is_file() for name in ["report.md", "report.json", "status.json"]):
+              (directory / "report.md").write_text("## QA Report\n\nOutcome: BLOCKED\n\nQA setup, agent, or report generation did not complete. Inspect the workflow log.\n")
+              (directory / "report.json").write_text(json.dumps({"tests": [], "actions": ["Inspect workflow log."]}))
+              (directory / "status.json").write_text(json.dumps({"outcome": "BLOCKED", "passed": False}))
+          (directory / "context.json").write_text(json.dumps({"pr": os.environ.get("PR_NUMBER", ""), "head": os.environ.get("HEAD_SHA", "")}))
+          PY
+      - name: Retain QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results
+          path: |
+            qa-results/report.md
+            qa-results/report.json
+            qa-results/status.json
+            qa-results/context.json
+            qa-results/scope.json
+            qa-results/**/*.txt
+            qa-results/**/*.png
+            qa-results/**/*.webm
+            qa-results/**/*.mp4
+          if-no-files-found: error
+          retention-days: 14
+      - name: Enforce functional QA result
+        if: always()
+        env:
+          AGENT_STEP: ${{ steps.qa.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          status = json.loads(Path("qa-results/status.json").read_text())
+          if os.environ["AGENT_STEP"] != "success" or status.get("passed") is not True:
+              raise SystemExit("Functional QA failed or blocked. Read QA artifacts.")
+          print("Functional QA gate:", status["outcome"])
+          PY

@@ -1,0 +1,16 @@
+version: 1
+source: User-approved implementation plan, 2026-11-08
+answers:
+  target: Fresh local branch demo on loopback, preferred port 3101, never 3000.
+  live_target: Explicit read-only public-page requests only; never PR evidence.
+  personas: Fixture president, treasurer, secretary, vice-president, two residents, fresh founder.
+  credentials: References only; FACTORY_API_KEY authenticates Droid, not the application.
+  flows: Diff-selected web menu and adjacent negative cases; backend-dependent coverage blocked.
+  integrations: No real services or hosted credentials; isolated signed-in QA is future work.
+  cleanup: Only run-owned browser profile, temporary source, and process groups.
+  imagemagick: Do not install.
+  ci: GitHub pull requests and manual runs; required functional check; local demo, not live site.
+  evidence: Text snapshots and downloadable screenshots; no video uploads.
+  failure_learning: Suggest exact edits in report only.
+  handoff: Validate, review explicit files, pnpm check; leave uncommitted, do not push or deploy.
+status: generated
