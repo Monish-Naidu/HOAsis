@@ -56,6 +56,32 @@ class QAContracts(unittest.TestCase):
             self.assertTrue(metadata["description"])
             self.assertEqual(content, (qa.ROOT / f".claude/skills/{name}/SKILL.md").read_text())
 
+    def test_workflow_plugin_status_formats(self):
+        workflow = yaml.safe_load((qa.ROOT / ".github/workflows/qa.yml").read_text())
+        step = next(step for step in workflow["jobs"]["functional"]["steps"]
+                    if step.get("name") == "Install Droid and browser prerequisites")
+        script = step["run"].split("python3 - <<'PY'\n", 1)[1].split("\nPY", 1)[0]
+        header = "PLUGIN                         STATUS   SOURCE   VERSION\n"
+        plugin = "droid-control@factory-plugins"
+        cases = [
+            (header + f"{plugin}  Enabled  project  e63e519a7361\n", True),
+            (header + f"{plugin}\tEnabled\tproject\te63e519a7361\n", True),
+            (f"Active:\n  {plugin} (e63e519)\n\nDisabled:\n", True),
+            (header + f"{plugin}  Disabled  project  e63e519a7361\n", False),
+            (header + f"{plugin}  Enabled  user  e63e519a7361\n", False),
+            (header + f"other-{plugin}  Enabled  project  e63e519a7361\n", False),
+            (header + f"{plugin}-other  Enabled  project  e63e519a7361\n", False),
+            (f"Active:\n  other-plugin\n\nDisabled:\n  {plugin}\n", False),
+            (f"Active:\n  other-{plugin}\n", False),
+            ("", False),
+        ]
+        for listing, expected in cases:
+            with self.subTest(listing=listing):
+                (self.directory / "qa-plugins.txt").write_text(listing)
+                result = subprocess.run([sys.executable, "-c", script], capture_output=True,
+                                        env={**os.environ, "RUNNER_TEMP": str(self.directory)})
+                self.assertEqual(result.returncode == 0, expected, result.stderr.decode())
+
     def test_environment_is_allowlisted_not_blanked(self):
         with patch.dict(os.environ, {"STRIPE_SECRET_KEY": "sentinel", "NODE_OPTIONS": "sentinel",
                                      "NEXT_PUBLIC_SUPABASE_URL": "sentinel", "FACTORY_API_KEY": "sentinel"}):

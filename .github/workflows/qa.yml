@@ -67,7 +67,10 @@ jobs:
           from pathlib import Path
           listing = (Path(os.environ["RUNNER_TEMP"]) / "qa-plugins.txt").read_text()
           active = re.search(r"(?m)^Active:\n((?:[ \t]+.*\n)*)", listing)
-          if not active or "droid-control@factory-plugins" not in active[1]:
+          plugin = re.escape("droid-control@factory-plugins")
+          legacy = active and re.search(rf"(?m)^[ \t]+{plugin}(?=[ \t]|$)", active[1])
+          enabled = re.search(rf"(?m)^{plugin}[ \t]+Enabled[ \t]+project[ \t]+\S+[ \t]*$", listing)
+          if not (legacy or enabled):
               raise SystemExit("Required project QA plugin is not active.")
           PY
           # Later releases require Node 24; the application and this job use Node 22.
