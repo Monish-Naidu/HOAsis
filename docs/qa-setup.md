@@ -43,10 +43,11 @@ permission. The functional agent does not receive that token.
 The repository's `FACTORY_API_KEY` secret metadata was verified after setup.
 Plugin verification accepts the older `Active:` list and Droid 1.6's table.
 The table must name the exact plugin, enabled at project scope.
-The agent drives the `agent-browser` that Droid installs (0.37.1 in the first
-hosted run); the workflow logs its path and version. Only when Droid provides none
-does it install `agent-browser@0.27.0` from npm, because later npm releases
-declare Node 24 and this job uses Node 22. The runner gives each run a short
+Droid can bring its own `agent-browser`, which comes first on PATH (the first
+hosted run's agent used 0.37.1 from it). When none is present at setup, the
+workflow installs `agent-browser@0.27.0` from npm, because later npm releases
+declare Node 24 and this job uses Node 22, and logs the driver it found. The
+runner gives each run a short
 session name and socket directory, since a full run ID exceeded the Linux socket
 path limit, and a failed browser close no longer replaces the agent's report.
 
@@ -161,6 +162,12 @@ Verification now accepts both formats, with regressions against the actual
 workflow script. The second hosted run reached the credentialed agent, which
 drove the demo and saved evidence, but the runner's browser close failed on the
 overlong session name and replaced the agent's report with a BLOCKED setup row.
+After that fix, the third hosted run kept the agent's own report: 15 rows across
+web and backend, browser close succeeded, and the gate failed on real findings.
+
+Backend-dependent pull requests always fail `functional`, because backend rows
+stay BLOCKED. Branch protection on `main` therefore requires the check but lets
+admins bypass it. Read the BLOCKED rows in the QA comment before bypassing.
 
 The full `pnpm check` gate passed in the isolated QA release worktree based on
 `origin/main`: 187 test files, 2,530 tests, and a production build with 142 generated
