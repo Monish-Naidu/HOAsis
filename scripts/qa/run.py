@@ -167,6 +167,9 @@ def demo_server(root, results, config):
         profile = run_dir / "browser-profile"
         browser_config = run_dir / "browser.json"
         browser_config.write_text("{}\n")
+        # A short socket directory keeps agent-browser under the Unix socket path limit.
+        socket_dir = run_dir / "s"
+        socket_dir.mkdir()
         copy_source(root, source)
         node = shutil.which("node")
         if not node:
@@ -182,7 +185,7 @@ def demo_server(root, results, config):
             try:
                 wait_ready(url, process, config["ci"]["readiness_seconds"])
                 yield {"url": url, "profile": str(profile), "source": str(source),
-                       "browser_config": str(browser_config)}
+                       "browser_config": str(browser_config), "socket_dir": str(socket_dir)}
             finally:
                 stop_group(process)
 
@@ -305,14 +308,16 @@ def finalize(results, scope, agent_exit=0, generated=False):
 
 def run_agent(root, results, scope, server, config):
     run_id = str(uuid.uuid4())
+    session = browser_session(run_id)
     environment = {k: v for k, v in os.environ.items()
                    if k in {"PATH", "HOME", "LANG", "TMPDIR", "FACTORY_API_KEY"}}
     environment.update({
         "CI": "true", "FACTORY_DISABLE_KEYRING": "true",
         "QA_BASE_URL": server["url"], "QA_BROWSER_PROFILE": server["profile"],
-        "QA_RUN_ID": run_id, "AGENT_BROWSER_SESSION": f"{run_id}-browser",
+        "QA_RUN_ID": run_id, "AGENT_BROWSER_SESSION": session,
         "AGENT_BROWSER_PROFILE": server["profile"],
         "AGENT_BROWSER_CONFIG": server["browser_config"],
+        "AGENT_BROWSER_SOCKET_DIR": server["socket_dir"],
         "AGENT_BROWSER_NAMESPACE": run_id,
         "QA_RESULTS_DIR": str(results), "QA_DIFF_BASE": scope["base"],
         "QA_DIFF_HEAD": scope["head"],
@@ -340,10 +345,31 @@ def run_agent(root, results, scope, server, config):
             # Close the exact run session even when the agent times out.
             browser = shutil.which("agent-browser")
             if browser:
-                cleanup_env = {k: v for k, v in environment.items() if k != "FACTORY_API_KEY"}
-                subprocess.run([browser, "--session", f"{run_id}-browser", "close"],
-                               cwd=root, env=cleanup_env, stdout=log, stderr=subprocess.STDOUT,
-                               timeout=15, check=True)
+                close_session(browser, session, root, environment, log)
+
+
+def browser_session(run_id):
+    # agent-browser names a Unix socket after the session. A full UUID pushed
+    # the path past the 103-byte socket limit on GitHub's Linux runners.
+    return "qa-" + run_id.split("-")[0]
+
+
+def close_session(browser, session, root, environment, log):
+    # A failed close must not replace the agent's report: the run's evidence
+    # still decides the result, and the runner owns the process group.
+    cleanup_env = {k: v for k, v in environment.items() if k != "FACTORY_API_KEY"}
+    log.flush()
+    try:
+        closed = subprocess.run([browser, "--session", session, "close"],
+                                cwd=root, env=cleanup_env, stdout=log,
+                                stderr=subprocess.STDOUT, timeout=15)
+        message = None if closed.returncode == 0 else f"exited {closed.returncode}"
+    except (OSError, subprocess.TimeoutExpired) as error:
+        message = str(error)
+    if message:
+        log.write(f"Browser session {session} close failed: {message}\n")
+        print(f"Warning: browser session {session} close failed: {message}")
+    return message is None
 
 
 def main():

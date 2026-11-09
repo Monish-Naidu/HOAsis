@@ -204,6 +204,33 @@ class QAContracts(unittest.TestCase):
             self.assertEqual(qa.setup_report(self.directory, {**self.scope, "apps": apps},
                                             "Fork PR setup blocked"), 1)
 
+    def test_browser_session_fits_socket_limit_and_close_failure_keeps_report(self):
+        session = qa.browser_session("91084e59-5d0e-4683-96d9-cbc96210eca8")
+        self.assertEqual(session, "qa-91084e59")
+        socket_dir = self.directory / "s"
+        server = {"url": "http://127.0.0.1:3101", "profile": str(self.directory / "p"),
+                  "browser_config": str(self.directory / "b.json"), "socket_dir": str(socket_dir)}
+        scope = {**self.scope, "base": "a", "head": "b"}
+        for close in [subprocess.CompletedProcess([], 1),
+                      subprocess.TimeoutExpired("close", 15), OSError("gone")]:
+            with self.subTest(close=close):
+                with patch.object(qa.subprocess, "Popen") as popen, \
+                        patch.object(qa, "stop_group"), \
+                        patch.object(qa.shutil, "which", return_value="/bin/agent-browser"), \
+                        patch.object(qa.subprocess, "run", side_effect=[close]) as run:
+                    popen.return_value.wait.return_value = 0
+                    code = qa.run_agent(qa.ROOT, self.directory, scope, server,
+                                        {"ci": {"agent_timeout_seconds": 5}})
+                self.assertEqual(code, 0)
+                agent_env = popen.call_args.kwargs["env"]
+                close_args = run.call_args
+                self.assertEqual(close_args.args[0][2], agent_env["AGENT_BROWSER_SESSION"])
+                self.assertEqual(agent_env["AGENT_BROWSER_SOCKET_DIR"], str(socket_dir))
+                self.assertEqual(close_args.kwargs["env"]["AGENT_BROWSER_SOCKET_DIR"], str(socket_dir))
+                self.assertNotIn("FACTORY_API_KEY", close_args.kwargs["env"])
+                self.assertLess(len(str(socket_dir / agent_env["AGENT_BROWSER_SESSION"])) + 5, 103)
+                self.assertIn("close failed", (self.directory / "agent.log").read_text())
+
     def test_evidence_fences_cannot_break_snapshot(self):
         self.report()
         (self.directory / "capture.txt").write_text("``` @someone <script>test</script>")
