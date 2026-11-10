@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -60,7 +60,17 @@ vi.mock("@/lib/app-state", async (original) => ({
   }),
 }));
 
+// A stale deployment variable must never become another person's front door.
+const oldTestLogin = {
+  label: "Credential exposure canary",
+  who: "Isolated test account",
+  email: "credential-canary@example.invalid",
+  password: "signin-credential-must-not-ship",
+};
+vi.stubEnv("NEXT_PUBLIC_TEST_LOGINS", JSON.stringify([oldTestLogin]));
 const { SignInPanel } = await import("@/app/signin/sign-in-panel");
+
+afterAll(() => vi.unstubAllEnvs());
 
 beforeEach(() => {
   query = "";
@@ -69,6 +79,18 @@ beforeEach(() => {
 });
 
 describe("a stranger sent to sign in", () => {
+  it("never offers or preloads configured real-account test credentials", () => {
+    const { container } = render(<SignInPanel />);
+    expect(screen.queryByText("Test logins")).not.toBeInTheDocument();
+    expect(screen.queryByText(oldTestLogin.label)).not.toBeInTheDocument();
+    expect(container.innerHTML).not.toContain(oldTestLogin.email);
+    expect(container.innerHTML).not.toContain(oldTestLogin.password);
+    expect(screen.getByLabelText(/Email/i)).toHaveValue("");
+    expect(screen.getByLabelText(/Password/i)).toHaveValue("");
+    expect(signInWithPassword).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Open the demo" })).toHaveAttribute("href", "/demo");
+  });
+
   it("is told which page they were on their way to", () => {
     query = "next=%2Fresident%2Fpay";
     render(<SignInPanel />);
@@ -99,6 +121,7 @@ describe("a failed sign in", () => {
       .find((b) => b.getAttribute("type") === "submit");
     await user.click(submit!);
     expect(await screen.findByRole("alert")).toHaveTextContent("do not match");
+    expect(signInWithPassword).toHaveBeenCalledExactlyOnceWith("gwen@example.com", "wrong horse");
 
     await user.click(screen.getByRole("button", { name: "Create account" }));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
