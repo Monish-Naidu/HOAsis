@@ -27,6 +27,39 @@ test.describe("public site", () => {
     });
   }
 
+  test("sign in ships no real-account test shortcut or credentials", async ({ page }) => {
+    await clearState(page);
+    const response = await page.goto("/signin");
+    expect(response?.status()).toBe(200);
+    await waitForHydration(page);
+    await expect(page.getByText("Test logins", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Open the demo" })).toBeVisible();
+
+    // The optional marker is private to the test runner. A build with stale
+    // public configuration must not ship it, even inside an unrendered module.
+    const forbidden = [
+      "NEXT_PUBLIC_TEST_LOGINS",
+      "Real accounts on a real association.",
+      process.env.E2E_SIGNIN_CREDENTIAL_CANARY,
+    ].filter((value): value is string => Boolean(value));
+    const payloads = [await response!.text(), await page.content()];
+    const scripts = await page
+      .locator("script[src]")
+      .evaluateAll((nodes) => nodes.map((node) => (node as HTMLScriptElement).src));
+    expect(scripts.length, "sign-in JavaScript was not inspected").toBeGreaterThan(0);
+    for (const src of scripts) {
+      expect(new URL(src).origin).toBe(new URL(page.url()).origin);
+      const script = await page.request.get(src);
+      expect(script.ok(), "a sign-in script could not be read").toBe(true);
+      payloads.push(await script.text());
+    }
+    // Only report the verdict, never credential-bearing response contents.
+    expect(
+      payloads.some((body) => forbidden.some((value) => body.includes(value))),
+      "sign-in HTML or JavaScript contains a forbidden test-login value",
+    ).toBe(false);
+  });
+
   test("every internal link resolves", async ({ page }) => {
     await clearState(page);
     await page.goto("/");
