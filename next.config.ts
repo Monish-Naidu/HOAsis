@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   // The container image (Dockerfile) runs the standalone server, which is
   // the whole app and the parts of node_modules it reaches, nothing else.
   // Only when asked for: `next start` and the browser suite want the
@@ -24,6 +25,28 @@ const nextConfig: NextConfig = {
     process.env.BUILD_STANDALONE === "1"
       ? { "/**": ["./node_modules/.pnpm/@swc+helpers*/node_modules/@swc/helpers/**"] }
       : undefined,
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+          {
+            key: "Content-Security-Policy",
+            // These directives do not restrict Next's static inline scripts
+            // or Stripe's child frames. This is not a full script policy.
+            value: "base-uri 'self'; object-src 'none'; frame-ancestors 'none'",
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       // The board shell lived at /admin until 2026-09-01. Old deep links keep

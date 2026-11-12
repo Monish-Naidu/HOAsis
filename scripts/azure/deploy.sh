@@ -30,15 +30,12 @@ done
 echo "Building $image"
 az acr build --registry "$acr" --image "hoasis-web:$tag" --file "$ROOT/Dockerfile" "${args[@]}" "$ROOT" --only-show-errors
 
+previous_revision=$(az containerapp show -g "$AZ_RG" -n "$AZ_WEB_APP" \
+  --query "properties.latestRevisionName" -o tsv --only-show-errors)
 echo "Rolling $AZ_WEB_APP to $tag"
-az containerapp update -g "$AZ_RG" -n "$AZ_WEB_APP" --image "$image" --only-show-errors \
-  --query "properties.latestRevisionName" -o tsv
+revision=$(az containerapp update -g "$AZ_RG" -n "$AZ_WEB_APP" --image "$image" --only-show-errors \
+  --query "properties.latestRevisionName" -o tsv)
 
-fqdn="$(web_fqdn)"
-for _ in $(seq 1 30); do
-  if curl -fsS -o /dev/null "https://$fqdn/api/health"; then echo "healthy: https://$fqdn"; exit 0; fi
-  sleep 5
-done
-echo "The app did not answer healthy within 150 seconds; check its logs:" >&2
-echo "  az containerapp logs show -g $AZ_RG -n $AZ_WEB_APP --tail 100" >&2
-exit 1
+# A shared hostname can still serve the old revision while its replacement fails.
+node "$ROOT/scripts/azure/wait-for-rollout.mjs" \
+  "$AZ_RG" "$AZ_WEB_APP" "$revision" "$image" "$previous_revision"
